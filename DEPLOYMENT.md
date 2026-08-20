@@ -1,58 +1,86 @@
-# AWS Online Deployment
+# Deployment: GitHub Pages + Cloudflare Worker + Neon
 
 Use this setup:
 
 - **Frontend**: GitHub Pages, serving the `public/` folder.
-- **Backend**: AWS Elastic Beanstalk, running `server.js`.
-- **Database**: AWS RDS PostgreSQL.
+- **Backend**: Cloudflare Worker.
+- **Database**: Neon PostgreSQL.
+- **File storage**: Cloudflare R2 is recommended for uploaded photos, PDFs, and records.
 
-GitHub Pages cannot run the backend. It only hosts HTML/CSS/JS.
+GitHub Pages cannot run backend code. Cloudflare Worker will provide the `/api/...` backend.
 
-## 1. Create AWS RDS PostgreSQL
+## Important Current Status
 
-Create an RDS PostgreSQL database and copy its connection string.
+The current working backend is `server.js`, which is an Express/Node backend.
+
+Cloudflare Workers do **not** run Express servers, local filesystem storage, `multer`, or `pdfkit` in the same way. So the backend must be migrated from `server.js` into a Worker API.
+
+The frontend is already prepared for a separate backend through:
+
+```text
+public/config.js
+```
+
+## 1. Create Neon PostgreSQL
+
+1. Go to Neon.
+2. Create a new project.
+3. Copy the pooled PostgreSQL connection string.
 
 It will look like:
 
 ```bash
-postgresql://USERNAME:PASSWORD@RDS-ENDPOINT:5432/DATABASE_NAME
+postgresql://USER:PASSWORD@HOST.neon.tech/DATABASE?sslmode=require
 ```
 
-Use that as `DATABASE_URL` in Elastic Beanstalk.
-
-## 2. Deploy Backend To AWS Elastic Beanstalk
-
-The backend is already prepared for Elastic Beanstalk with:
+This will be the Worker secret:
 
 ```text
-Procfile
+DATABASE_URL
 ```
 
-Elastic Beanstalk should run:
+## 2. Create Cloudflare Worker Backend
+
+Install Wrangler in the Worker project:
 
 ```bash
-npm start
+npm install -D wrangler
 ```
 
-Upload/deploy the project folder as a Node.js app.
-
-Set these Elastic Beanstalk environment variables:
+Login:
 
 ```bash
-DATABASE_URL=postgresql://USERNAME:PASSWORD@RDS-ENDPOINT:5432/DATABASE_NAME
+npx wrangler login
+```
+
+Set Worker secrets:
+
+```bash
+npx wrangler secret put DATABASE_URL
+npx wrangler secret put JWT_SECRET
+npx wrangler secret put SMTP_USER
+npx wrangler secret put SMTP_PASS
+```
+
+Use these Worker environment variables:
+
+```text
 FRONTEND_PUBLIC_URL=https://YOUR_GITHUB_USERNAME.github.io/YOUR_REPO_NAME
 ALLOWED_ORIGINS=https://YOUR_GITHUB_USERNAME.github.io/YOUR_REPO_NAME
-JWT_SECRET=make-this-a-long-random-secret
-SMTP_USER=your-gmail@gmail.com
-SMTP_PASS=your-16-digit-gmail-app-password
 SMTP_FROM=your-gmail@gmail.com
 SMTP_FROM_NAME=Plasma Lab LIMS
 ```
 
-If RDS SSL causes a connection issue inside your AWS setup, set:
+Deploy:
 
 ```bash
-DATABASE_SSL=false
+npx wrangler deploy
+```
+
+The Worker backend URL will look like:
+
+```text
+https://plasma-lab-lims-api.YOUR_SUBDOMAIN.workers.dev
 ```
 
 ## 3. Configure GitHub Pages Frontend
@@ -63,27 +91,19 @@ Edit:
 public/config.js
 ```
 
-Put your AWS backend URL:
+Set the Cloudflare Worker API URL:
 
 ```js
 window.PLASMA_LIMS_CONFIG = {
-  API_BASE: "https://YOUR-AWS-BACKEND-URL"
-};
-```
-
-Example:
-
-```js
-window.PLASMA_LIMS_CONFIG = {
-  API_BASE: "https://plasma-lab-lims.ap-south-1.elasticbeanstalk.com"
+  API_BASE: "https://plasma-lab-lims-api.YOUR_SUBDOMAIN.workers.dev"
 };
 ```
 
 Then publish the `public/` folder with GitHub Pages.
 
-## 4. QR Code Fix
+## 4. QR Code Behavior
 
-Once `FRONTEND_PUBLIC_URL` is set on AWS, newly printed QR labels will contain:
+After the Worker backend is deployed with `FRONTEND_PUBLIC_URL`, newly printed QR labels should contain:
 
 ```text
 https://YOUR_GITHUB_USERNAME.github.io/YOUR_REPO_NAME/?sample=PL-2026-000043
@@ -91,12 +111,28 @@ https://YOUR_GITHUB_USERNAME.github.io/YOUR_REPO_NAME/?sample=PL-2026-000043
 
 So a normal phone camera opens the sample page directly.
 
-Old labels printed before this change may still show JSON. Reprint those QR labels after deploying.
+Old QR labels printed before this change may still show JSON. Reprint those QR labels after deployment.
 
-## 5. AWS Security Checklist
+## 5. File Uploads
 
-- Allow Elastic Beanstalk to connect to RDS PostgreSQL.
-- Do not expose RDS publicly unless necessary.
-- Keep `JWT_SECRET`, `DATABASE_URL`, and Gmail app password only in AWS environment variables.
-- Keep `ALLOWED_ORIGINS` restricted to the GitHub Pages URL.
-- Use HTTPS backend URL in `public/config.js`.
+The current local backend stores uploaded files in:
+
+```text
+uploads/
+```
+
+Cloudflare Workers do not have permanent local disk. For online deployment, uploaded sample photos, written records, PDFs, and raw data should move to:
+
+```text
+Cloudflare R2
+```
+
+## 6. Recommended Migration Order
+
+1. Keep GitHub Pages frontend.
+2. Create Worker API.
+3. Move auth/login/signup/OTP endpoints first.
+4. Move samples, storage, users, and results endpoints.
+5. Move QR label generation.
+6. Move file uploads to R2.
+7. Move reports/PDF generation last, or generate printable HTML reports instead of PDF inside Worker.

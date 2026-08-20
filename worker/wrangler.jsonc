@@ -1,0 +1,12 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "plasma-lab-lims-api",
+  "main": "src/index.js",
+  "compatibility_date": "2026-08-20",
+  "vars": {
+    "FRONTEND_PUBLIC_URL": "https://YOUR_GITHUB_USERNAME.github.io/YOUR_REPO_NAME",
+    "ALLOWED_ORIGINS": "https://YOUR_GITHUB_USERNAME.github.io/YOUR_REPO_NAME",
+    "SMTP_FROM": "",
+    "SMTP_FROM_NAME": "Plasma Lab LIMS"
+  }
+}

@@ -8,7 +8,7 @@ A working local LIMS-style website for bottle preparation, QR labels, sample sto
 2. Run `npm start`.
 3. Open `http://localhost:4317`.
 
-For online hosting with GitHub Pages frontend, AWS backend, and AWS RDS PostgreSQL, see `DEPLOYMENT.md`.
+For online hosting with GitHub Pages frontend, Cloudflare Worker backend, and Neon PostgreSQL, see `DEPLOYMENT.md`.
 
 Default admin login:
 
@@ -83,10 +83,10 @@ If Gmail SMTP is not set, email OTP runs in local mode and prints the OTP in the
 ## Stored Data
 
 - Main local database: `data/db.json`
-- Online database: PostgreSQL when `DATABASE_URL` is set
+- Online database: Neon PostgreSQL when `DATABASE_URL` is set
 - Automatic local database backups: `data/backups/`
 - Daily and weekly readable exports: `data/exports/`
 - Uploaded files: `uploads/`
 - Browser mirror cache: local browser storage
 
-The local database uses atomic writes, rotating raw backups, and daily/weekly readable exports. For online hosting, set `DATABASE_URL` to use PostgreSQL. For very large long-term data, the next upgrade is a fully normalized PostgreSQL schema with managed backups.
+The local database uses atomic writes, rotating raw backups, and daily/weekly readable exports. For online hosting, set `DATABASE_URL` to the Neon PostgreSQL connection string. For very large long-term data, the next upgrade is a fully normalized PostgreSQL schema with managed backups.
