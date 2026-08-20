@@ -4,9 +4,9 @@ This folder is the Cloudflare Worker backend target for Plasma Lab LIMS.
 
 Current status:
 
-- Worker deployment scaffold is ready.
-- `/api/health` is implemented.
-- Full LIMS endpoints still need to be migrated from `../server.js`.
+- Worker backend is deployed and connected to Neon PostgreSQL.
+- Core LIMS endpoints are implemented for online use.
+- Small uploads are stored in Neon for the demo; move production files to R2.
 
 ## Setup
 
@@ -21,15 +21,23 @@ Set secrets:
 ```bash
 npx wrangler secret put DATABASE_URL
 npx wrangler secret put JWT_SECRET
-npx wrangler secret put SMTP_USER
-npx wrangler secret put SMTP_PASS
+npx wrangler secret put RESEND_API_KEY
+npx wrangler secret put SMTP_FROM
 ```
+
+Optional Gmail bridge:
+
+```bash
+npx wrangler secret put GMAIL_APPS_SCRIPT_URL
+```
+
+Gmail SMTP app passwords cannot be used directly by a Cloudflare Worker. Use an HTTP email provider such as Resend, or a Gmail Apps Script web app that accepts `to`, `otp`, and `subject`.
 
 Update `wrangler.jsonc`:
 
 ```jsonc
-"FRONTEND_PUBLIC_URL": "https://YOUR_GITHUB_USERNAME.github.io/YOUR_REPO_NAME",
-"ALLOWED_ORIGINS": "https://YOUR_GITHUB_USERNAME.github.io/YOUR_REPO_NAME"
+"FRONTEND_PUBLIC_URL": "https://vishwasprabhakara.github.io/plasma_lab_lims/",
+"ALLOWED_ORIGINS": "https://vishwasprabhakara.github.io"
 ```
 
 Run locally:
@@ -54,6 +62,6 @@ Set:
 
 ```js
 window.PLASMA_LIMS_CONFIG = {
-  API_BASE: "https://plasma-lab-lims-api.YOUR_SUBDOMAIN.workers.dev"
+  API_BASE: "https://plasma-lab-lims-api.vishwas-borewellworkersdev.workers.dev"
 };
 ```

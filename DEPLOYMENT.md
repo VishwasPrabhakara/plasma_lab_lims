@@ -9,17 +9,12 @@ Use this setup:
 
 GitHub Pages cannot run backend code. Cloudflare Worker will provide the `/api/...` backend.
 
-## Important Current Status
+## Current Live URLs
 
-The current working backend is `server.js`, which is an Express/Node backend.
+- Frontend: `https://vishwasprabhakara.github.io/plasma_lab_lims/`
+- Backend API: `https://plasma-lab-lims-api.vishwas-borewellworkersdev.workers.dev`
 
-Cloudflare Workers do **not** run Express servers, local filesystem storage, `multer`, or `pdfkit` in the same way. So the backend must be migrated from `server.js` into a Worker API.
-
-The frontend is already prepared for a separate backend through:
-
-```text
-public/config.js
-```
+The frontend is wired through `public/config.js`.
 
 ## 1. Create Neon PostgreSQL
 
@@ -58,18 +53,19 @@ Set Worker secrets:
 ```bash
 npx wrangler secret put DATABASE_URL
 npx wrangler secret put JWT_SECRET
-npx wrangler secret put SMTP_USER
-npx wrangler secret put SMTP_PASS
+npx wrangler secret put RESEND_API_KEY
+npx wrangler secret put SMTP_FROM
 ```
 
 Use these Worker environment variables:
 
 ```text
-FRONTEND_PUBLIC_URL=https://YOUR_GITHUB_USERNAME.github.io/YOUR_REPO_NAME
-ALLOWED_ORIGINS=https://YOUR_GITHUB_USERNAME.github.io/YOUR_REPO_NAME
-SMTP_FROM=your-gmail@gmail.com
+FRONTEND_PUBLIC_URL=https://vishwasprabhakara.github.io/plasma_lab_lims/
+ALLOWED_ORIGINS=https://vishwasprabhakara.github.io
 SMTP_FROM_NAME=Plasma Lab LIMS
 ```
+
+Cloudflare Workers cannot use Gmail SMTP directly because Workers do not provide raw SMTP/TCP sockets for Nodemailer. For online OTP email, use `RESEND_API_KEY` plus `SMTP_FROM`, or add a Gmail Apps Script bridge URL as `GMAIL_APPS_SCRIPT_URL`.
 
 Deploy:
 
@@ -95,7 +91,7 @@ Set the Cloudflare Worker API URL:
 
 ```js
 window.PLASMA_LIMS_CONFIG = {
-  API_BASE: "https://plasma-lab-lims-api.YOUR_SUBDOMAIN.workers.dev"
+  API_BASE: "https://plasma-lab-lims-api.vishwas-borewellworkersdev.workers.dev"
 };
 ```
 
@@ -115,24 +111,26 @@ Old QR labels printed before this change may still show JSON. Reprint those QR l
 
 ## 5. File Uploads
 
-The current local backend stores uploaded files in:
-
-```text
-uploads/
-```
-
-Cloudflare Workers do not have permanent local disk. For online deployment, uploaded sample photos, written records, PDFs, and raw data should move to:
+Small uploaded photos/scans are accepted by the Worker and stored in Neon as data URLs for the current demo. For heavier real lab use, uploaded sample photos, written records, PDFs, and raw data should move to:
 
 ```text
 Cloudflare R2
 ```
 
-## 6. Recommended Migration Order
+## 6. Current Migration Coverage
 
-1. Keep GitHub Pages frontend.
-2. Create Worker API.
-3. Move auth/login/signup/OTP endpoints first.
-4. Move samples, storage, users, and results endpoints.
-5. Move QR label generation.
-6. Move file uploads to R2.
-7. Move reports/PDF generation last, or generate printable HTML reports instead of PDF inside Worker.
+Implemented online:
+
+1. Login, admin-created users, role checks, remember-me token expiry.
+2. Signup and password-reset API routes, with HTTP email-provider support.
+3. Users, people, storage, tests, samples, bulk sample creation, storage movement, lifecycle, approvals.
+4. Result entry, pasted bulk result entry, Excel-like sheet result entry.
+5. QR SVG, tube-size QR label printing, and bulk tube QR label printing.
+6. Search-by-sample QR flow: phone camera opens the GitHub Pages sample URL.
+7. Readable backup export and database health view.
+
+Still recommended next:
+
+1. Move uploaded files from Neon data URLs to Cloudflare R2.
+2. Add a true PDF generation service if final signed PDF files are required.
+3. Add Hyperdrive in front of Neon for production-scale PostgreSQL pooling.
