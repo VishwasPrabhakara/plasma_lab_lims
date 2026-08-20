@@ -88,10 +88,28 @@ function clearSession() {
 
 function safe(handler) {
   return async event => {
+    const control = event?.submitter || event?.currentTarget;
+    const canLock = control && "disabled" in control;
+    if (canLock && control.disabled) return;
+    if (canLock) {
+      control.dataset.readyLabel = control.textContent;
+      if (control.dataset.busyLabel) control.textContent = control.dataset.busyLabel;
+      control.disabled = true;
+      control.setAttribute("aria-busy", "true");
+      control.dataset.busy = "true";
+    }
     try {
       await handler(event);
     } catch (error) {
       toast(error.message || "Action failed");
+    } finally {
+      if (canLock) {
+        control.disabled = false;
+        if (control.dataset.readyLabel) control.textContent = control.dataset.readyLabel;
+        control.removeAttribute("aria-busy");
+        delete control.dataset.readyLabel;
+        delete control.dataset.busy;
+      }
     }
   };
 }
@@ -144,11 +162,13 @@ function renderRoleNav() {
 async function load() {
   const data = await api("/api/bootstrap");
   Object.assign(state, data);
-  state.alerts = await api("/api/alerts").catch(() => null);
+  state.alerts = data.alerts || null;
   if (can("admin")) {
-    const exportsData = await api("/api/exports").catch(() => ({ files: [], health: null }));
-    state.exports = exportsData.files || [];
-    state.health = exportsData.health || null;
+    state.exports = data.files || [];
+    state.health = data.health || null;
+  } else {
+    state.exports = [];
+    state.health = null;
   }
   localStorage.setItem("plasma-lab-cache", JSON.stringify(data));
   if (!state.selectedId && state.samples[0]) state.selectedId = state.samples[0].id;

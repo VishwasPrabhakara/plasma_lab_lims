@@ -63,12 +63,12 @@
             </div>
             <div class="inline-action two">
               <input name="email" type="email" autocomplete="email" required placeholder="Email">
-              <button type="button" class="primary compact-btn" id="sendEmailOtp">Send OTP</button>
+              <button type="button" class="primary compact-btn" id="sendEmailOtp" data-busy-label="Sending...">Send OTP</button>
             </div>
             <div class="live-check" id="emailCheck"></div>
             <div class="otp-inline hidden" id="emailOtpBox">
               <div class="otp-demo" id="emailOtpDemo"></div>
-              <div class="inline-action"><input name="emailOtp" inputmode="numeric" maxlength="6" placeholder="Email OTP"><button type="button" id="verifyEmailOtp">Verify</button><button type="button" id="resendEmailOtp">Resend</button></div>
+              <div class="inline-action"><input name="emailOtp" inputmode="numeric" maxlength="6" placeholder="Email OTP"><button type="button" id="verifyEmailOtp" data-busy-label="Checking...">Verify</button><button type="button" id="resendEmailOtp" data-busy-label="Sending...">Resend</button></div>
             </div>
           </div>
           <div class="auth-step locked" data-step="phone">
@@ -108,7 +108,7 @@
             <h2>Reset password</h2>
           </div>
           <input name="identifier" type="email" autocomplete="username" required placeholder="Registered email">
-          <button class="primary">Send Email OTP</button>
+          <button class="primary" data-busy-label="Sending...">Send Email OTP</button>
           <p class="auth-links">Remembered password? <a href="#" data-auth="login">Login</a></p>
         </form>
         <form id="resetConfirmForm" class="auth-slide">

@@ -35,6 +35,7 @@ button {
 }
 button:hover, .button-link:hover { transform: translateY(-1px); box-shadow: 0 8px 18px rgba(28, 43, 54, .10); }
 button:disabled { cursor: not-allowed; opacity: .55; transform: none; box-shadow: none; }
+button[data-busy="true"] { opacity: .72; }
 button.primary { background: var(--teal); color: #fff; }
 button.ghost { background: rgba(255,255,255,.12); color: #fff; }
 button.ghost-light { background: #eef5f6; color: #275761; font-weight: 900; }

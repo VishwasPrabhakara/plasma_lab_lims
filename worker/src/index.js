@@ -299,6 +299,20 @@ async function sendOtpEmail(env, to, otp, subject = "Plasma Lab LIMS verificatio
   return false;
 }
 
+function emailDeliveryConfigured(env) {
+  return Boolean((env.RESEND_API_KEY && env.SMTP_FROM) || env.GMAIL_APPS_SCRIPT_URL);
+}
+
+function sendOtpInBackground(ctx, env, to, otp, subject) {
+  if (!emailDeliveryConfigured(env)) return false;
+  const task = sendOtpEmail(env, to, otp, subject).catch(error => {
+    console.error(JSON.stringify({ event: "otp_email_failed", to, error: error.message }));
+  });
+  if (ctx?.waitUntil) ctx.waitUntil(task);
+  else void task;
+  return true;
+}
+
 function nextSampleId(db) {
   const year = new Date().getFullYear();
   const nums = db.samples
@@ -399,7 +413,7 @@ async function fileToDataUrl(file) {
   return `data:${file.type || "application/octet-stream"};base64,${btoa(binary)}`;
 }
 
-async function handle(request, env) {
+async function handle(request, env, ctx) {
   const url = new URL(request.url);
   const path = parsePath(url);
   const method = request.method;
@@ -414,8 +428,6 @@ async function handle(request, env) {
     const db = await readDb(env);
     const user = db.users.find(item => item.email.toLowerCase() === String(body.email || "").toLowerCase() && item.active);
     if (!user || !(await verifyPassword(body.password || "", user.passwordHash))) throw Object.assign(new Error("Invalid email or password"), { status: 401 });
-    addAudit(db, user, "Logged in", "user", user.id, "User session started");
-    await writeDb(env, db);
     const token = await signJwt({ id: user.id }, env.JWT_SECRET || "change-this-before-production", body.rememberMe ? 30 * 24 * 60 * 60 : 12 * 60 * 60);
     return json({ token, user: publicUser(user) });
   }
@@ -444,7 +456,7 @@ async function handle(request, env) {
     const pending = { id: crypto.randomUUID(), name: body.name, email: body.email, emailOtp, emailVerified: false, expiresAt: otpExpiry(), createdAt: now() };
     db.pendingSignups = db.pendingSignups.filter(item => item.email.toLowerCase() !== body.email.toLowerCase());
     db.pendingSignups.push(pending);
-    const delivered = await sendOtpEmail(env, pending.email, emailOtp, "Plasma Lab LIMS signup verification");
+    const delivered = sendOtpInBackground(ctx, env, pending.email, emailOtp, "Plasma Lab LIMS signup verification");
     addAudit(db, null, delivered ? "Sent signup email OTP" : "Generated signup OTP", "user", pending.id, `${body.name} requested email verification`);
     await writeDb(env, db);
     return json({ pendingId: pending.id, expiresAt: pending.expiresAt, deliveryConfigured: delivered });
@@ -503,7 +515,7 @@ async function handle(request, env) {
     if (!pending) throw Object.assign(new Error("Signup request not found"), { status: 404 });
     pending.expiresAt = otpExpiry();
     pending.emailOtp = otpCode();
-    const delivered = await sendOtpEmail(env, pending.email, pending.emailOtp, "Plasma Lab LIMS signup verification");
+    const delivered = sendOtpInBackground(ctx, env, pending.email, pending.emailOtp, "Plasma Lab LIMS signup verification");
     addAudit(db, null, delivered ? "Resent signup OTP" : "Regenerated signup OTP", "user", pending.id, "email code refreshed");
     await writeDb(env, db);
     return json({ pendingId: pending.id, expiresAt: pending.expiresAt, deliveryConfigured: delivered });
@@ -518,7 +530,7 @@ async function handle(request, env) {
     db.passwordResets = db.passwordResets.filter(item => item.userId !== user.id);
     const reset = { id: crypto.randomUUID(), userId: user.id, emailOtp: otpCode(), expiresAt: otpExpiry(), createdAt: now() };
     db.passwordResets.push(reset);
-    const delivered = await sendOtpEmail(env, user.email, reset.emailOtp, "Plasma Lab LIMS password reset");
+    const delivered = sendOtpInBackground(ctx, env, user.email, reset.emailOtp, "Plasma Lab LIMS password reset");
     addAudit(db, user, delivered ? "Sent password reset OTP" : "Generated password reset OTP", "user", user.id, "Password reset OTP requested");
     await writeDb(env, db);
     return json({ resetId: reset.id, expiresAt: reset.expiresAt, deliveryConfigured: delivered });
@@ -543,7 +555,15 @@ async function handle(request, env) {
 
   if (method === "GET" && path.join("/") === "api/bootstrap") {
     const visibleSamples = db.samples.filter(sample => canReadSample(user, sample));
-    return json({ user: publicUser(user), users: user.role === "admin" ? db.users.map(publicUser) : [], people: db.people, storageLocations: db.storageLocations, tests: db.tests, samples: visibleSamples, audit: user.role === "admin" ? db.audit.slice(0, 200) : [] });
+    const alerts = {
+      overdue: visibleSamples.filter(sample => sampleDueState(sample) === "overdue"),
+      dueSoon: visibleSamples.filter(sample => sampleDueState(sample) === "due-soon"),
+      waitingUpload: visibleSamples.filter(sample => !(sample.files || []).some(file => file.category?.includes("Written Record") || file.category?.includes("Book"))),
+      waitingApproval: visibleSamples.filter(sample => sample.status === "Needs Review" || sample.status === "Results Entered"),
+      disposalReady: visibleSamples.filter(sample => sample.status === "Approved" && sample.retentionStatus === "Active")
+    };
+    const health = user.role === "admin" ? { database: "OK", samples: db.samples.length, users: db.users.length, auditEntries: db.audit.length, uploadedFiles: db.samples.reduce((t, s) => t + (s.files || []).length, 0), dbSize: JSON.stringify(db).length, lastWriteAt: db.meta?.lastWriteAt || "", writeCount: db.meta?.writeCount || 0, storage: "Neon PostgreSQL document store" } : null;
+    return json({ user: publicUser(user), users: user.role === "admin" ? db.users.map(publicUser) : [], people: db.people, storageLocations: db.storageLocations, tests: db.tests, samples: visibleSamples, audit: user.role === "admin" ? db.audit.slice(0, 200) : [], alerts, files: [], health });
   }
 
   if (method === "GET" && path.join("/") === "api/alerts") {
@@ -795,11 +815,11 @@ async function handle(request, env) {
 }
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, context) {
     const cors = corsHeaders(request, env);
     if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: cors });
     try {
-      const response = await handle(request, env);
+      const response = await handle(request, env, context);
       const headers = new Headers(response.headers);
       Object.entries(cors).forEach(([key, value]) => headers.set(key, value));
       return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
