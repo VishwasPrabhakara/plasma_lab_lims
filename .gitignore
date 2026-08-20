@@ -1,0 +1,11 @@
+node_modules/
+worker/node_modules/
+.wrangler/
+worker/.wrangler/
+.dev.vars
+worker/.dev.vars
+.env
+*.log
+data/backups/
+data/exports/
+uploads/
