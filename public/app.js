@@ -63,6 +63,11 @@ function api(path, options = {}) {
     } else {
       return text;
     }
+    if (response.status === 401 && path !== "/api/login") {
+      clearSession();
+      showAuth();
+      throw new Error("Your login session expired. Please login again.");
+    }
     if (!response.ok) throw new Error(data?.error || "Request failed");
     return data;
   }).catch(error => {
@@ -71,6 +76,14 @@ function api(path, options = {}) {
     }
     throw error;
   });
+}
+
+function clearSession() {
+  localStorage.removeItem("plasma-lab-token");
+  localStorage.removeItem("aquatrace-token");
+  sessionStorage.removeItem("plasma-lab-token");
+  state.token = "";
+  state.user = null;
 }
 
 function safe(handler) {
@@ -1432,10 +1445,7 @@ $("#resetConfirmForm").onsubmit = safe(async event => {
 
 $("#logoutBtn").onclick = () => {
   stopScanner();
-  localStorage.removeItem("plasma-lab-token");
-  localStorage.removeItem("aquatrace-token");
-  sessionStorage.removeItem("plasma-lab-token");
-  state.token = "";
+  clearSession();
   showAuth();
 };
 
@@ -1552,9 +1562,7 @@ if (rememberedEmail) {
 if (state.token) {
   showApp();
   load().catch(() => {
-    localStorage.removeItem("plasma-lab-token");
-    localStorage.removeItem("aquatrace-token");
-    sessionStorage.removeItem("plasma-lab-token");
+    clearSession();
     showAuth();
   });
 }
