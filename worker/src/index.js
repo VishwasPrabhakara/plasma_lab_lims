@@ -238,7 +238,7 @@ function requireRole(user, ...roles) {
 
 function canReadSample(user, sample) {
   if (user.role === "admin") return true;
-  if (user.role === "analyst") return !sample.assignedTo || sample.assignedTo === user.name;
+  if (user.role === "analyst") return sample.active !== false;
   return false;
 }
 

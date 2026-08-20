@@ -393,7 +393,7 @@ function renderSamples() {
           </div>
         </div>
         ${sampleFiltersHtml()}
-        <div class="sample-list register-list" id="sampleList">${rows.map(sampleRow).join("") || empty("No matching samples")}</div>
+        <div class="sample-list register-list" id="sampleList">${rows.map(sampleRow).join("") || sampleEmptyMessage()}</div>
       </section>
     </div>
   `;
@@ -424,8 +424,13 @@ function filterSamples() {
   };
   const rows = filteredSamples();
   $("#sampleMatchCount").textContent = rows.length;
-  $("#sampleList").innerHTML = rows.map(sampleRow).join("") || empty("No matching samples");
+  $("#sampleList").innerHTML = rows.map(sampleRow).join("") || sampleEmptyMessage();
   bindSampleRows();
+}
+
+function sampleEmptyMessage() {
+  if (!state.samples.length) return empty("No samples are visible for this login. Ask the manager to check user role or assignment.");
+  return empty("No matching samples. Click Reset Filters to show all visible records.");
 }
 
 function sampleFiltersHtml() {
