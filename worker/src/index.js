@@ -381,6 +381,11 @@ function sampleQrPayload(sample, env, request) {
   return `${frontendOrigin(env, request)}/?sample=${encodeURIComponent(sample.sampleCode)}`;
 }
 
+async function qrSvgDataUrl(payload, options = {}) {
+  const svg = await QRCode.toString(payload, { type: "svg", margin: 0, width: 110, errorCorrectionLevel: "M", ...options });
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+}
+
 function parsePath(url) {
   return url.pathname.split("/").filter(Boolean);
 }
@@ -794,13 +799,13 @@ async function handle(request, env, ctx) {
     if (path[3] === "tube-label") {
       const sample = db.samples.find(item => item.id === path[2]);
       if (!sample || !canReadSample(user, sample)) throw Object.assign(new Error("Sample not found"), { status: 404 });
-      const qr = await QRCode.toDataURL(sampleQrPayload(sample, env, request), { margin: 0, width: 110, errorCorrectionLevel: "M" });
+      const qr = await qrSvgDataUrl(sampleQrPayload(sample, env, request), { width: 110 });
       return html(`<!doctype html><html><head><meta charset="utf-8"><title>${sample.sampleCode} label</title><style>body{font-family:Arial;margin:14px}.toolbar{margin-bottom:12px}.tube-label{width:38mm;height:18mm;border:1px solid #111;padding:1mm;display:grid;grid-template-columns:13mm 1fr;gap:1.5mm;align-items:center;overflow:hidden}.tube-label img{width:13mm;height:13mm}.tube-code{font-size:8px;font-weight:800}.tube-meta{font-size:6.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}@media print{.toolbar{display:none}body{margin:0}}</style></head><body><div class="toolbar"><button onclick="window.print()">Print QR Label</button></div><div class="tube-label"><img src="${qr}"><div><div class="tube-code">${sample.sampleCode}</div><div class="tube-meta">${sample.collectionSite || ""}</div></div></div></body></html>`);
     }
     if (path[2] === "bulk-tube-qr-labels") {
       const ids = String(url.searchParams.get("ids") || "").split(",").filter(Boolean);
       const samples = db.samples.filter(sample => ids.includes(sample.id) && canReadSample(user, sample));
-      const labels = await Promise.all(samples.map(async sample => `<div class="tube-label"><img src="${await QRCode.toDataURL(sampleQrPayload(sample, env, request), { margin: 0, width: 92, errorCorrectionLevel: "M" })}"><div class="tube-code">${sample.sampleCode}</div><div class="tube-meta">${sample.collectionSite || ""}</div></div>`));
+      const labels = await Promise.all(samples.map(async sample => `<div class="tube-label"><img src="${await qrSvgDataUrl(sampleQrPayload(sample, env, request), { width: 92 })}"><div class="tube-code">${sample.sampleCode}</div><div class="tube-meta">${sample.collectionSite || ""}</div></div>`));
       return html(`<!doctype html><html><head><meta charset="utf-8"><title>QR Labels</title><style>body{font-family:Arial;margin:10px}.toolbar{margin-bottom:12px}.sheet{display:grid;grid-template-columns:repeat(4,38mm);gap:2mm}.tube-label{break-inside:avoid;width:38mm;height:18mm;border:1px solid #111;padding:1mm;display:grid;grid-template-columns:13mm 1fr;gap:1.5mm;align-items:center;overflow:hidden}.tube-label img{width:13mm;height:13mm}.tube-code{font-size:8px;font-weight:800}.tube-meta{font-size:6.5px}@media print{.toolbar{display:none}body{margin:0}.sheet{gap:0}}</style></head><body><div class="toolbar"><button onclick="window.print()">Print QR Labels</button></div><div class="sheet">${labels.join("")}</div></body></html>`);
     }
     if (path[3] === "report" || path[3] === "report.pdf") {
