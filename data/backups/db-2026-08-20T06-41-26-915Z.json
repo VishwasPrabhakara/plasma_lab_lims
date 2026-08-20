@@ -1,0 +1,3815 @@
+{
+  "users": [
+    {
+      "id": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "name": "Lab Admin",
+      "email": "admin@lab.local",
+      "passwordHash": "$2a$10$K8VQFt8UWa9Ftxt9LkygPOZpVqfj.pCppfMHI7Xs/1fv7kjute6W2",
+      "role": "admin",
+      "active": true,
+      "createdAt": "2026-08-17T10:05:58.410Z",
+      "phone": ""
+    },
+    {
+      "id": "72a0637a-895e-4fdf-9182-4b125c8a17c7",
+      "name": "Vishwas",
+      "email": "vp14032001@gmail.com",
+      "passwordHash": "$2a$10$eVLZpP/C3ppUfC2VI/k1QuBawC9RmsDvYPQqnjBmRaN.H5cX6XWK2",
+      "role": "analyst",
+      "active": false,
+      "createdAt": "2026-08-18T06:01:00.352Z",
+      "phone": "",
+      "deletedAt": "2026-08-18T06:50:08.553Z",
+      "deletedBy": "Lab Admin",
+      "replacedAt": "2026-08-18T07:39:08.833Z",
+      "replacedByEmail": "vp14032001@gmail.com"
+    },
+    {
+      "id": "27bf0071-1dc9-4bdb-bc13-9fa40ca87e48",
+      "name": "OTP Test User",
+      "email": "otp1787033241279@lab.local",
+      "phone": "9033241279",
+      "passwordHash": "$2a$10$YxALodSDiznab70Y4ZRa/u00UIAmj6L78dEOMTn81WWH1DsPi9KEa",
+      "role": "analyst",
+      "active": false,
+      "createdAt": "2026-08-18T06:07:22.204Z",
+      "deletedAt": "2026-08-18T07:22:00.514Z",
+      "deletedBy": "Lab Admin"
+    },
+    {
+      "id": "66e63414-b584-4a1e-bff8-6db97ba0157d",
+      "name": "OTP Test User",
+      "email": "otp1787033306968@lab.local",
+      "phone": "9033306968",
+      "passwordHash": "$2a$10$9sCLGKNklO45UpB5YGj7jePo0CnycyorSxugrCu1W4dX79Os94B76",
+      "role": "analyst",
+      "active": false,
+      "createdAt": "2026-08-18T06:08:28.040Z",
+      "deletedAt": "2026-08-18T07:22:08.576Z",
+      "deletedBy": "Lab Admin"
+    },
+    {
+      "id": "7000cca0-2207-45e9-9e38-ae955151bb72",
+      "name": "Vishwas",
+      "email": "pv271296@gmail.com",
+      "phone": "8792823161",
+      "passwordHash": "$2a$10$oHInCqkM162jo8ZmxLmPtuoO5FomPu7XD6ornyJujkPHdJWOcvW1.",
+      "role": "analyst",
+      "active": false,
+      "createdAt": "2026-08-18T06:10:49.079Z"
+    },
+    {
+      "id": "56e55716-8d0e-41d9-b165-5437007ee188",
+      "name": "Email Only User",
+      "email": "emailonly1787035364254@lab.local",
+      "countryCode": "+91",
+      "phone": "7035364254",
+      "passwordHash": "$2a$10$HkhdOCBIyACSxgO7VcxV9.h9fsm1jr6cvYWNT7UcfxwLcC5Ib8qJC",
+      "role": "analyst",
+      "active": false,
+      "createdAt": "2026-08-18T06:42:45.895Z",
+      "deletedAt": "2026-08-18T07:22:11.471Z",
+      "deletedBy": "Lab Admin"
+    },
+    {
+      "id": "79fc8d74-598d-4a5f-83dc-7d1d5c1c5f72",
+      "name": "Delete Test User",
+      "email": "deleteuser1787035601986@lab.local",
+      "phone": "7035601986",
+      "passwordHash": "$2a$10$7.AhI5dzDMPuxM9HPpIQ/erHaRV92i.kluERkxkLbz5wI0gin5Ycy",
+      "role": "analyst",
+      "active": false,
+      "createdAt": "2026-08-18T06:46:42.344Z",
+      "deletedAt": "2026-08-18T06:46:42.880Z",
+      "deletedBy": "Lab Admin"
+    },
+    {
+      "id": "a8d2d2ec-36f7-4a60-8b29-fa91c8ca0fdc",
+      "name": "Compact Signup User",
+      "email": "compact1787035976507@lab.local",
+      "countryCode": "+91",
+      "phone": "7035976507",
+      "passwordHash": "$2a$10$cIM1WiV1w/67spoNJ3BjhevrFhSmcII3e45kKhcCgd964L8ji/HX2",
+      "role": "analyst",
+      "active": false,
+      "createdAt": "2026-08-18T06:52:57.784Z",
+      "deletedAt": "2026-08-18T07:22:13.766Z",
+      "deletedBy": "Lab Admin"
+    },
+    {
+      "id": "88c16600-f0cd-4639-95a7-e9e6ee9f9637",
+      "name": "Vishwas",
+      "email": "igstcbilateralworkshop2025@gmail.com",
+      "countryCode": "+91",
+      "phone": "8792823161",
+      "passwordHash": "$2a$10$cUWd6RXboXqJiQyvUJKPEOL23FPfg1.95RBUYRoHYcNGKxIkhA9/G",
+      "role": "analyst",
+      "active": false,
+      "createdAt": "2026-08-18T07:01:35.274Z",
+      "deletedAt": "2026-08-18T07:22:05.150Z",
+      "deletedBy": "Lab Admin"
+    },
+    {
+      "id": "d7dd30e9-823a-46c8-8119-df6e5c683038",
+      "name": "Reuse Test",
+      "email": "reuse1787037844694@lab.local",
+      "phone": "7037844694",
+      "passwordHash": "$2a$10$YbMHdrTzFV6zOFwyQMjGGejALAThNh8vgw0pTmYovvPmKS0qYwiC.",
+      "role": "analyst",
+      "active": false,
+      "createdAt": "2026-08-18T07:24:04.808Z",
+      "deletedAt": "2026-08-18T07:24:04.828Z",
+      "deletedBy": "Lab Admin"
+    },
+    {
+      "id": "59fb52ab-22f2-41a4-b956-6a4b5da21811",
+      "name": "Vishwas",
+      "email": "vp14032001@gmail.com",
+      "countryCode": "+91",
+      "phone": "8792823161",
+      "passwordHash": "$2a$10$OYvO1108a7jaD2rTwjDe6ugNBrCIoQWDdqnHg5GGYDsFbiXqw5yqG",
+      "role": "analyst",
+      "active": false,
+      "createdAt": "2026-08-18T07:36:09.394Z",
+      "deletedAt": "2026-08-18T07:38:09.161Z",
+      "deletedBy": "Lab Admin",
+      "replacedAt": "2026-08-18T07:39:08.833Z",
+      "replacedByEmail": "vp14032001@gmail.com"
+    },
+    {
+      "id": "d88b2dd3-ac9f-49d3-8b45-1a871643fceb",
+      "name": "Login Return User",
+      "email": "loginreturn1787038622834@lab.local",
+      "countryCode": "+91",
+      "phone": "7038622834",
+      "passwordHash": "$2a$10$Q/1Rh.VQbpGDuuQPe6YXou/tf8yYoFI.Yw1KWlE4Hkyk/t7St3lF6",
+      "role": "analyst",
+      "active": false,
+      "createdAt": "2026-08-18T07:37:07.085Z",
+      "deletedAt": "2026-08-18T07:38:06.170Z",
+      "deletedBy": "Lab Admin"
+    },
+    {
+      "id": "9954d48a-3d88-44b2-ab92-848afe2f670f",
+      "name": "Vishwas",
+      "email": "vp14032001@gmail.com",
+      "countryCode": "+91",
+      "phone": "8792823161",
+      "passwordHash": "$2a$10$GT1WlIZjcIFzLI31TNHnCuMRs8WrokOp4sCI.dAb2uAX/gFM.OSs6",
+      "role": "admin",
+      "active": true,
+      "createdAt": "2026-08-18T07:39:08.989Z"
+    },
+    {
+      "id": "1417b68e-e077-4697-b032-1a0a82b13563",
+      "name": "Reset Test User",
+      "email": "reset-test-1787047885927@lab.local",
+      "phone": "9999995927",
+      "passwordHash": "$2a$10$rVbIgzlJ8kqmbwipzoJiweOPkMkw/vkrYl7V9f0UBIpIkQkmqPQ3y",
+      "role": "analyst",
+      "active": true,
+      "createdAt": "2026-08-18T10:11:26.050Z"
+    }
+  ],
+  "people": [
+    {
+      "id": "3391f767-451d-4d5c-94e7-bdee8938c2a5",
+      "name": "Priya Nair",
+      "role": "Analyst",
+      "active": true
+    },
+    {
+      "id": "324fd575-49f9-4979-bf67-0755ef527495",
+      "name": "Rahul Menon",
+      "role": "Analyst",
+      "active": true
+    },
+    {
+      "id": "a7d33727-a6d4-419a-bc5c-1d0e720e528c",
+      "name": "Mina Paul",
+      "role": "Sample Reception",
+      "active": true
+    }
+  ],
+  "storageLocations": [
+    {
+      "id": "0e0db07e-aa44-4edd-9d2e-086e01481cb4",
+      "name": "Fridge 1 / Shelf A / Rack 01",
+      "type": "Fridge",
+      "active": true,
+      "isFull": true,
+      "capacityNote": ""
+    },
+    {
+      "id": "e92238c1-b010-4faa-a3b2-e5af1a53b57f",
+      "name": "Fridge 2 / Shelf C / Box 04",
+      "type": "Fridge",
+      "active": true,
+      "isFull": false,
+      "capacityNote": ""
+    },
+    {
+      "id": "ba48a511-d1fe-4e13-8289-c9f5605b6072",
+      "name": "Quarantine Shelf / Tray Q1",
+      "type": "Quarantine",
+      "active": true,
+      "isFull": false,
+      "capacityNote": ""
+    }
+  ],
+  "tests": [
+    {
+      "id": "4dd377f4-774d-4630-a78c-5132cf01345a",
+      "name": "pH",
+      "unit": "pH",
+      "limit": "6.5-8.5",
+      "method": "Electrometric"
+    },
+    {
+      "id": "a5e85642-2711-4016-98e3-6e1435717273",
+      "name": "TDS",
+      "unit": "mg/L",
+      "limit": "<500",
+      "method": "Conductivity calculation"
+    },
+    {
+      "id": "cd1b2c42-6d42-4eb1-a196-3301ecba06ef",
+      "name": "Turbidity",
+      "unit": "NTU",
+      "limit": "<1",
+      "method": "Nephelometric"
+    },
+    {
+      "id": "ce683869-154b-494a-8bb6-f2255035786b",
+      "name": "Nitrate",
+      "unit": "mg/L",
+      "limit": "<45",
+      "method": "UV screening"
+    },
+    {
+      "id": "19d497c6-2246-4ab6-a906-80bd9a000ace",
+      "name": "E. coli",
+      "unit": "/100 mL",
+      "limit": "Absent",
+      "method": "Membrane filtration"
+    }
+  ],
+  "samples": [
+    {
+      "id": "8f97cd32-d80f-4cd0-9de5-9d3e27b97479",
+      "sampleCode": "PL-2026-000043",
+      "status": "Disposed",
+      "clientName": "IISc Plasma Lab Trial",
+      "sourceType": "Wastewater",
+      "collectionSite": "Treatment Tank J10",
+      "collector": "Anjali Rao",
+      "receivedBy": "Lab Admin",
+      "receivedAt": "2026-08-19T10:49:58.751Z",
+      "storageLocationId": "ba48a511-d1fe-4e13-8289-c9f5605b6072",
+      "assignedTo": "Rahul Menon",
+      "requestedTests": [
+        "pH",
+        "TDS",
+        "Turbidity",
+        "Nitrate"
+      ],
+      "notes": "Demo sample 10",
+      "results": [],
+      "files": [],
+      "chainOfCustody": [
+        {
+          "at": "2026-08-20T06:29:25.551Z",
+          "by": "Vishwas",
+          "action": "Assigned to Rahul Menon",
+          "locationId": "ba48a511-d1fe-4e13-8289-c9f5605b6072"
+        },
+        {
+          "at": "2026-08-19T10:49:58.751Z",
+          "by": "Lab Admin",
+          "action": "Received",
+          "locationId": "ba48a511-d1fe-4e13-8289-c9f5605b6072"
+        }
+      ],
+      "dueAt": "2026-08-23T05:30:00.000Z",
+      "retentionStatus": "Active",
+      "disposal": null,
+      "active": true,
+      "createdAt": "2026-08-19T10:49:58.751Z",
+      "updatedAt": "2026-08-20T06:29:25.552Z",
+      "workflowStage": "Disposed"
+    },
+    {
+      "id": "09a300fb-f836-46a1-8d2c-d5115070f559",
+      "sampleCode": "PL-2026-000042",
+      "status": "Stored",
+      "clientName": "IISc Plasma Lab Trial",
+      "sourceType": "Drinking Water",
+      "collectionSite": "Hostel Tap I9",
+      "collector": "Ramesh Kumar",
+      "receivedBy": "Lab Admin",
+      "receivedAt": "2026-08-19T10:49:58.751Z",
+      "storageLocationId": "e92238c1-b010-4faa-a3b2-e5af1a53b57f",
+      "assignedTo": "Priya Nair",
+      "requestedTests": [
+        "pH",
+        "TDS",
+        "E. coli"
+      ],
+      "notes": "Demo sample 9",
+      "results": [],
+      "files": [],
+      "chainOfCustody": [
+        {
+          "at": "2026-08-20T06:22:26.998Z",
+          "by": "Vishwas",
+          "action": "Assigned to Priya Nair",
+          "locationId": "e92238c1-b010-4faa-a3b2-e5af1a53b57f"
+        },
+        {
+          "at": "2026-08-20T06:22:26.998Z",
+          "by": "Vishwas",
+          "action": "Storage moved",
+          "fromLocationId": "0e0db07e-aa44-4edd-9d2e-086e01481cb4",
+          "toLocationId": "e92238c1-b010-4faa-a3b2-e5af1a53b57f",
+          "locationId": "e92238c1-b010-4faa-a3b2-e5af1a53b57f",
+          "note": "Demo sample 9"
+        },
+        {
+          "at": "2026-08-19T10:49:58.751Z",
+          "by": "Lab Admin",
+          "action": "Received",
+          "locationId": "0e0db07e-aa44-4edd-9d2e-086e01481cb4"
+        }
+      ],
+      "dueAt": "2026-08-23T05:30:00.000Z",
+      "retentionStatus": "Active",
+      "disposal": null,
+      "active": true,
+      "createdAt": "2026-08-19T10:49:58.751Z",
+      "updatedAt": "2026-08-20T06:22:26.998Z",
+      "workflowStage": "Stored"
+    },
+    {
+      "id": "58c7a76f-9a09-42bf-8760-69e395197889",
+      "sampleCode": "PL-2026-000041",
+      "status": "Disposed",
+      "clientName": "IISc Plasma Lab Trial",
+      "sourceType": "Surface Water",
+      "collectionSite": "Lake Edge H8",
+      "collector": "Anjali Rao",
+      "receivedBy": "Lab Admin",
+      "receivedAt": "2026-08-19T10:49:58.751Z",
+      "storageLocationId": "ba48a511-d1fe-4e13-8289-c9f5605b6072",
+      "assignedTo": "Mina Paul",
+      "requestedTests": [
+        "pH",
+        "Turbidity",
+        "E. coli"
+      ],
+      "notes": "Demo sample 8",
+      "results": [],
+      "files": [],
+      "chainOfCustody": [
+        {
+          "at": "2026-08-20T06:24:56.766Z",
+          "by": "Vishwas",
+          "action": "Assigned to Mina Paul",
+          "locationId": "ba48a511-d1fe-4e13-8289-c9f5605b6072"
+        },
+        {
+          "at": "2026-08-20T06:23:43.611Z",
+          "by": "Vishwas",
+          "action": "Assigned to Mina Paul",
+          "locationId": "ba48a511-d1fe-4e13-8289-c9f5605b6072"
+        },
+        {
+          "at": "2026-08-20T06:23:43.611Z",
+          "by": "Vishwas",
+          "action": "Storage moved",
+          "fromLocationId": "e92238c1-b010-4faa-a3b2-e5af1a53b57f",
+          "toLocationId": "ba48a511-d1fe-4e13-8289-c9f5605b6072",
+          "locationId": "ba48a511-d1fe-4e13-8289-c9f5605b6072",
+          "note": "Demo sample 8"
+        },
+        {
+          "at": "2026-08-19T10:49:58.751Z",
+          "by": "Lab Admin",
+          "action": "Received",
+          "locationId": "e92238c1-b010-4faa-a3b2-e5af1a53b57f"
+        }
+      ],
+      "dueAt": "2026-08-22T09:30:00.000Z",
+      "retentionStatus": "Active",
+      "disposal": null,
+      "active": true,
+      "createdAt": "2026-08-19T10:49:58.751Z",
+      "updatedAt": "2026-08-20T06:24:56.766Z",
+      "workflowStage": "Disposed"
+    },
+    {
+      "id": "a6c64c86-c319-4529-b399-f660993b33d4",
+      "sampleCode": "PL-2026-000040",
+      "status": "Stored",
+      "clientName": "IISc Plasma Lab Trial",
+      "sourceType": "Ground Water",
+      "collectionSite": "Open Well G7",
+      "collector": "Ramesh Kumar",
+      "receivedBy": "Lab Admin",
+      "receivedAt": "2026-08-19T10:49:58.751Z",
+      "storageLocationId": "e92238c1-b010-4faa-a3b2-e5af1a53b57f",
+      "assignedTo": "Priya Nair",
+      "requestedTests": [
+        "pH",
+        "Nitrate"
+      ],
+      "notes": "Demo sample 7",
+      "results": [],
+      "files": [],
+      "chainOfCustody": [
+        {
+          "at": "2026-08-19T10:49:58.751Z",
+          "by": "Lab Admin",
+          "action": "Received",
+          "locationId": "e92238c1-b010-4faa-a3b2-e5af1a53b57f"
+        }
+      ],
+      "dueAt": "2026-08-22T04:30:00.000Z",
+      "retentionStatus": "Active",
+      "disposal": null,
+      "active": true,
+      "createdAt": "2026-08-19T10:49:58.751Z",
+      "updatedAt": "2026-08-19T10:49:58.751Z",
+      "workflowStage": "Received"
+    },
+    {
+      "id": "fd07aca4-c5b4-4738-ae3a-de2fdd82ca2f",
+      "sampleCode": "PL-2026-000039",
+      "status": "Stored",
+      "clientName": "IISc Plasma Lab Trial",
+      "sourceType": "Drinking Water",
+      "collectionSite": "RO Outlet F6",
+      "collector": "Anjali Rao",
+      "receivedBy": "Lab Admin",
+      "receivedAt": "2026-08-19T10:49:58.750Z",
+      "storageLocationId": "0e0db07e-aa44-4edd-9d2e-086e01481cb4",
+      "assignedTo": "Rahul Menon",
+      "requestedTests": [
+        "pH",
+        "TDS"
+      ],
+      "notes": "Demo sample 6",
+      "results": [],
+      "files": [],
+      "chainOfCustody": [
+        {
+          "at": "2026-08-19T10:49:58.750Z",
+          "by": "Lab Admin",
+          "action": "Received",
+          "locationId": "0e0db07e-aa44-4edd-9d2e-086e01481cb4"
+        }
+      ],
+      "dueAt": "2026-08-22T04:30:00.000Z",
+      "retentionStatus": "Active",
+      "disposal": null,
+      "active": true,
+      "createdAt": "2026-08-19T10:49:58.750Z",
+      "updatedAt": "2026-08-19T10:49:58.750Z",
+      "workflowStage": "Received"
+    },
+    {
+      "id": "aa949eb5-8469-4345-aff9-4dec0cfbfcef",
+      "sampleCode": "PL-2026-000038",
+      "status": "Stored",
+      "clientName": "IISc Plasma Lab Trial",
+      "sourceType": "Industrial Effluent",
+      "collectionSite": "Process Line E5",
+      "collector": "Ramesh Kumar",
+      "receivedBy": "Lab Admin",
+      "receivedAt": "2026-08-19T10:49:58.750Z",
+      "storageLocationId": "ba48a511-d1fe-4e13-8289-c9f5605b6072",
+      "assignedTo": "Priya Nair",
+      "requestedTests": [
+        "pH",
+        "TDS",
+        "Nitrate",
+        "Turbidity"
+      ],
+      "notes": "Demo sample 5",
+      "results": [],
+      "files": [],
+      "chainOfCustody": [
+        {
+          "at": "2026-08-19T10:49:58.750Z",
+          "by": "Lab Admin",
+          "action": "Received",
+          "locationId": "ba48a511-d1fe-4e13-8289-c9f5605b6072"
+        }
+      ],
+      "dueAt": "2026-08-21T11:30:00.000Z",
+      "retentionStatus": "Active",
+      "disposal": null,
+      "active": true,
+      "createdAt": "2026-08-19T10:49:58.750Z",
+      "updatedAt": "2026-08-19T10:49:58.750Z",
+      "workflowStage": "Received"
+    },
+    {
+      "id": "a7ba0266-aa50-4e8e-a392-92cf90c21ae2",
+      "sampleCode": "PL-2026-000037",
+      "status": "Stored",
+      "clientName": "IISc Plasma Lab Trial",
+      "sourceType": "Wastewater",
+      "collectionSite": "Outlet Drain D4",
+      "collector": "Anjali Rao",
+      "receivedBy": "Lab Admin",
+      "receivedAt": "2026-08-19T10:49:58.750Z",
+      "storageLocationId": "ba48a511-d1fe-4e13-8289-c9f5605b6072",
+      "assignedTo": "Rahul Menon",
+      "requestedTests": [
+        "pH",
+        "TDS",
+        "Turbidity"
+      ],
+      "notes": "Demo sample 4",
+      "results": [],
+      "files": [],
+      "chainOfCustody": [
+        {
+          "at": "2026-08-19T10:49:58.750Z",
+          "by": "Lab Admin",
+          "action": "Received",
+          "locationId": "ba48a511-d1fe-4e13-8289-c9f5605b6072"
+        }
+      ],
+      "dueAt": "2026-08-21T06:30:00.000Z",
+      "retentionStatus": "Active",
+      "disposal": null,
+      "active": true,
+      "createdAt": "2026-08-19T10:49:58.750Z",
+      "updatedAt": "2026-08-19T10:49:58.750Z",
+      "workflowStage": "Received"
+    },
+    {
+      "id": "318a2996-76a9-437d-b4a6-a98cce34dd08",
+      "sampleCode": "PL-2026-000036",
+      "status": "Stored",
+      "clientName": "IISc Plasma Lab Trial",
+      "sourceType": "Surface Water",
+      "collectionSite": "Pond Inlet C3",
+      "collector": "Ramesh Kumar",
+      "receivedBy": "Lab Admin",
+      "receivedAt": "2026-08-19T10:49:58.750Z",
+      "storageLocationId": "e92238c1-b010-4faa-a3b2-e5af1a53b57f",
+      "assignedTo": "Priya Nair",
+      "requestedTests": [
+        "pH",
+        "Turbidity",
+        "E. coli"
+      ],
+      "notes": "Demo sample 3",
+      "results": [],
+      "files": [],
+      "chainOfCustody": [
+        {
+          "at": "2026-08-19T10:49:58.750Z",
+          "by": "Lab Admin",
+          "action": "Received",
+          "locationId": "e92238c1-b010-4faa-a3b2-e5af1a53b57f"
+        }
+      ],
+      "dueAt": "2026-08-21T06:30:00.000Z",
+      "retentionStatus": "Active",
+      "disposal": null,
+      "active": true,
+      "createdAt": "2026-08-19T10:49:58.750Z",
+      "updatedAt": "2026-08-19T10:49:58.750Z",
+      "workflowStage": "Received"
+    },
+    {
+      "id": "61dc9c52-5f3b-4f60-87ea-5e04b49f56a4",
+      "sampleCode": "PL-2026-000035",
+      "status": "Stored",
+      "clientName": "IISc Plasma Lab Trial",
+      "sourceType": "Ground Water",
+      "collectionSite": "Borewell B2",
+      "collector": "Anjali Rao",
+      "receivedBy": "Lab Admin",
+      "receivedAt": "2026-08-19T10:49:58.750Z",
+      "storageLocationId": "0e0db07e-aa44-4edd-9d2e-086e01481cb4",
+      "assignedTo": "Rahul Menon",
+      "requestedTests": [
+        "pH",
+        "TDS",
+        "Nitrate"
+      ],
+      "notes": "Demo sample 2",
+      "results": [],
+      "files": [],
+      "chainOfCustody": [
+        {
+          "at": "2026-08-19T10:49:58.750Z",
+          "by": "Lab Admin",
+          "action": "Received",
+          "locationId": "0e0db07e-aa44-4edd-9d2e-086e01481cb4"
+        }
+      ],
+      "dueAt": "2026-08-20T11:30:00.000Z",
+      "retentionStatus": "Active",
+      "disposal": null,
+      "active": true,
+      "createdAt": "2026-08-19T10:49:58.750Z",
+      "updatedAt": "2026-08-19T10:49:58.750Z",
+      "workflowStage": "Received"
+    },
+    {
+      "id": "6194b436-13e0-4075-b1ec-2f24472ef412",
+      "sampleCode": "PL-2026-000034",
+      "status": "Stored",
+      "clientName": "IISc Plasma Lab Trial",
+      "sourceType": "Drinking Water",
+      "collectionSite": "Lab Tap A1",
+      "collector": "Ramesh Kumar",
+      "receivedBy": "Lab Admin",
+      "receivedAt": "2026-08-19T10:49:58.750Z",
+      "storageLocationId": "0e0db07e-aa44-4edd-9d2e-086e01481cb4",
+      "assignedTo": "Priya Nair",
+      "requestedTests": [
+        "pH",
+        "TDS",
+        "Turbidity"
+      ],
+      "notes": "Demo sample 1",
+      "results": [],
+      "files": [],
+      "chainOfCustody": [
+        {
+          "at": "2026-08-19T10:49:58.750Z",
+          "by": "Lab Admin",
+          "action": "Received",
+          "locationId": "0e0db07e-aa44-4edd-9d2e-086e01481cb4"
+        }
+      ],
+      "dueAt": "2026-08-20T11:30:00.000Z",
+      "retentionStatus": "Active",
+      "disposal": null,
+      "active": true,
+      "createdAt": "2026-08-19T10:49:58.750Z",
+      "updatedAt": "2026-08-19T10:49:58.750Z",
+      "workflowStage": "Received"
+    },
+    {
+      "id": "c85c5340-0f8a-4ba1-865b-39474cb569f1",
+      "sampleCode": "PL-2026-000033",
+      "status": "Stored",
+      "clientName": "IISc Plasma Lab Trial",
+      "sourceType": "Wastewater",
+      "collectionSite": "Treatment Tank J10",
+      "collector": "Anjali Rao",
+      "receivedBy": "Lab Admin",
+      "receivedAt": "2026-08-19T06:57:37.282Z",
+      "storageLocationId": "ba48a511-d1fe-4e13-8289-c9f5605b6072",
+      "assignedTo": "Rahul Menon",
+      "requestedTests": [
+        "pH",
+        "TDS",
+        "Turbidity",
+        "Nitrate"
+      ],
+      "notes": "Demo sample 10",
+      "results": [],
+      "files": [],
+      "chainOfCustody": [
+        {
+          "at": "2026-08-19T06:57:37.282Z",
+          "by": "Lab Admin",
+          "action": "Received",
+          "locationId": "ba48a511-d1fe-4e13-8289-c9f5605b6072"
+        }
+      ],
+      "dueAt": "2026-08-23T05:30:00.000Z",
+      "retentionStatus": "Active",
+      "disposal": null,
+      "active": true,
+      "createdAt": "2026-08-19T06:57:37.282Z",
+      "updatedAt": "2026-08-19T06:57:37.282Z",
+      "workflowStage": "Received"
+    },
+    {
+      "id": "1cd6b145-cb96-41af-a248-514fac6a9fbd",
+      "sampleCode": "PL-2026-000032",
+      "status": "Stored",
+      "clientName": "IISc Plasma Lab Trial",
+      "sourceType": "Drinking Water",
+      "collectionSite": "Hostel Tap I9",
+      "collector": "Ramesh Kumar",
+      "receivedBy": "Lab Admin",
+      "receivedAt": "2026-08-19T06:57:37.282Z",
+      "storageLocationId": "0e0db07e-aa44-4edd-9d2e-086e01481cb4",
+      "assignedTo": "Priya Nair",
+      "requestedTests": [
+        "pH",
+        "TDS",
+        "E. coli"
+      ],
+      "notes": "Demo sample 9",
+      "results": [],
+      "files": [],
+      "chainOfCustody": [
+        {
+          "at": "2026-08-19T06:57:37.282Z",
+          "by": "Lab Admin",
+          "action": "Received",
+          "locationId": "0e0db07e-aa44-4edd-9d2e-086e01481cb4"
+        }
+      ],
+      "dueAt": "2026-08-23T05:30:00.000Z",
+      "retentionStatus": "Active",
+      "disposal": null,
+      "active": true,
+      "createdAt": "2026-08-19T06:57:37.282Z",
+      "updatedAt": "2026-08-19T06:57:37.282Z",
+      "workflowStage": "Received"
+    },
+    {
+      "id": "ae2e1566-22f5-41cf-b8d9-e1e96bb68fe8",
+      "sampleCode": "PL-2026-000031",
+      "status": "Stored",
+      "clientName": "IISc Plasma Lab Trial",
+      "sourceType": "Surface Water",
+      "collectionSite": "Lake Edge H8",
+      "collector": "Anjali Rao",
+      "receivedBy": "Lab Admin",
+      "receivedAt": "2026-08-19T06:57:37.282Z",
+      "storageLocationId": "e92238c1-b010-4faa-a3b2-e5af1a53b57f",
+      "assignedTo": "Rahul Menon",
+      "requestedTests": [
+        "pH",
+        "Turbidity",
+        "E. coli"
+      ],
+      "notes": "Demo sample 8",
+      "results": [],
+      "files": [],
+      "chainOfCustody": [
+        {
+          "at": "2026-08-19T06:57:37.282Z",
+          "by": "Lab Admin",
+          "action": "Received",
+          "locationId": "e92238c1-b010-4faa-a3b2-e5af1a53b57f"
+        }
+      ],
+      "dueAt": "2026-08-22T09:30:00.000Z",
+      "retentionStatus": "Active",
+      "disposal": null,
+      "active": true,
+      "createdAt": "2026-08-19T06:57:37.282Z",
+      "updatedAt": "2026-08-19T06:57:37.282Z",
+      "workflowStage": "Received"
+    },
+    {
+      "id": "f1e0243f-0d83-498d-b45c-af9f1adc7528",
+      "sampleCode": "PL-2026-000030",
+      "status": "Stored",
+      "clientName": "IISc Plasma Lab Trial",
+      "sourceType": "Ground Water",
+      "collectionSite": "Open Well G7",
+      "collector": "Ramesh Kumar",
+      "receivedBy": "Lab Admin",
+      "receivedAt": "2026-08-19T06:57:37.282Z",
+      "storageLocationId": "e92238c1-b010-4faa-a3b2-e5af1a53b57f",
+      "assignedTo": "Priya Nair",
+      "requestedTests": [
+        "pH",
+        "Nitrate"
+      ],
+      "notes": "Demo sample 7",
+      "results": [],
+      "files": [],
+      "chainOfCustody": [
+        {
+          "at": "2026-08-19T06:57:37.282Z",
+          "by": "Lab Admin",
+          "action": "Received",
+          "locationId": "e92238c1-b010-4faa-a3b2-e5af1a53b57f"
+        }
+      ],
+      "dueAt": "2026-08-22T04:30:00.000Z",
+      "retentionStatus": "Active",
+      "disposal": null,
+      "active": true,
+      "createdAt": "2026-08-19T06:57:37.282Z",
+      "updatedAt": "2026-08-19T06:57:37.282Z",
+      "workflowStage": "Received"
+    },
+    {
+      "id": "a88c2794-a516-472d-8661-63e46b82fc3f",
+      "sampleCode": "PL-2026-000029",
+      "status": "Stored",
+      "clientName": "IISc Plasma Lab Trial",
+      "sourceType": "Drinking Water",
+      "collectionSite": "RO Outlet F6",
+      "collector": "Anjali Rao",
+      "receivedBy": "Lab Admin",
+      "receivedAt": "2026-08-19T06:57:37.281Z",
+      "storageLocationId": "0e0db07e-aa44-4edd-9d2e-086e01481cb4",
+      "assignedTo": "Rahul Menon",
+      "requestedTests": [
+        "pH",
+        "TDS"
+      ],
+      "notes": "Demo sample 6",
+      "results": [],
+      "files": [],
+      "chainOfCustody": [
+        {
+          "at": "2026-08-19T06:57:37.281Z",
+          "by": "Lab Admin",
+          "action": "Received",
+          "locationId": "0e0db07e-aa44-4edd-9d2e-086e01481cb4"
+        }
+      ],
+      "dueAt": "2026-08-22T04:30:00.000Z",
+      "retentionStatus": "Active",
+      "disposal": null,
+      "active": true,
+      "createdAt": "2026-08-19T06:57:37.281Z",
+      "updatedAt": "2026-08-19T06:57:37.281Z",
+      "workflowStage": "Received"
+    },
+    {
+      "id": "5df30452-ff9d-4168-a4c8-be08a227f59d",
+      "sampleCode": "PL-2026-000028",
+      "status": "Stored",
+      "clientName": "IISc Plasma Lab Trial",
+      "sourceType": "Industrial Effluent",
+      "collectionSite": "Process Line E5",
+      "collector": "Ramesh Kumar",
+      "receivedBy": "Lab Admin",
+      "receivedAt": "2026-08-19T06:57:37.281Z",
+      "storageLocationId": "ba48a511-d1fe-4e13-8289-c9f5605b6072",
+      "assignedTo": "Priya Nair",
+      "requestedTests": [
+        "pH",
+        "TDS",
+        "Nitrate",
+        "Turbidity"
+      ],
+      "notes": "Demo sample 5",
+      "results": [],
+      "files": [],
+      "chainOfCustody": [
+        {
+          "at": "2026-08-19T06:57:37.281Z",
+          "by": "Lab Admin",
+          "action": "Received",
+          "locationId": "ba48a511-d1fe-4e13-8289-c9f5605b6072"
+        }
+      ],
+      "dueAt": "2026-08-21T11:30:00.000Z",
+      "retentionStatus": "Active",
+      "disposal": null,
+      "active": true,
+      "createdAt": "2026-08-19T06:57:37.281Z",
+      "updatedAt": "2026-08-19T06:57:37.281Z",
+      "workflowStage": "Received"
+    },
+    {
+      "id": "f92840c7-cb8b-4e80-8531-cf528398bff4",
+      "sampleCode": "PL-2026-000027",
+      "status": "Stored",
+      "clientName": "IISc Plasma Lab Trial",
+      "sourceType": "Wastewater",
+      "collectionSite": "Outlet Drain D4",
+      "collector": "Anjali Rao",
+      "receivedBy": "Lab Admin",
+      "receivedAt": "2026-08-19T06:57:37.281Z",
+      "storageLocationId": "ba48a511-d1fe-4e13-8289-c9f5605b6072",
+      "assignedTo": "Rahul Menon",
+      "requestedTests": [
+        "pH",
+        "TDS",
+        "Turbidity"
+      ],
+      "notes": "Demo sample 4",
+      "results": [],
+      "files": [],
+      "chainOfCustody": [
+        {
+          "at": "2026-08-19T06:57:37.281Z",
+          "by": "Lab Admin",
+          "action": "Received",
+          "locationId": "ba48a511-d1fe-4e13-8289-c9f5605b6072"
+        }
+      ],
+      "dueAt": "2026-08-21T06:30:00.000Z",
+      "retentionStatus": "Active",
+      "disposal": null,
+      "active": true,
+      "createdAt": "2026-08-19T06:57:37.281Z",
+      "updatedAt": "2026-08-19T06:57:37.281Z",
+      "workflowStage": "Received"
+    },
+    {
+      "id": "a8816a07-60e5-45b1-a529-efe9ee528998",
+      "sampleCode": "PL-2026-000026",
+      "status": "Stored",
+      "clientName": "IISc Plasma Lab Trial",
+      "sourceType": "Surface Water",
+      "collectionSite": "Pond Inlet C3",
+      "collector": "Ramesh Kumar",
+      "receivedBy": "Lab Admin",
+      "receivedAt": "2026-08-19T06:57:37.281Z",
+      "storageLocationId": "e92238c1-b010-4faa-a3b2-e5af1a53b57f",
+      "assignedTo": "Priya Nair",
+      "requestedTests": [
+        "pH",
+        "Turbidity",
+        "E. coli"
+      ],
+      "notes": "Demo sample 3",
+      "results": [],
+      "files": [],
+      "chainOfCustody": [
+        {
+          "at": "2026-08-19T06:57:37.281Z",
+          "by": "Lab Admin",
+          "action": "Received",
+          "locationId": "e92238c1-b010-4faa-a3b2-e5af1a53b57f"
+        }
+      ],
+      "dueAt": "2026-08-21T06:30:00.000Z",
+      "retentionStatus": "Active",
+      "disposal": null,
+      "active": true,
+      "createdAt": "2026-08-19T06:57:37.281Z",
+      "updatedAt": "2026-08-19T06:57:37.281Z",
+      "workflowStage": "Received"
+    },
+    {
+      "id": "4b3f1519-c3bb-4a0f-bed1-78d8a91da773",
+      "sampleCode": "PL-2026-000025",
+      "status": "Stored",
+      "clientName": "IISc Plasma Lab Trial",
+      "sourceType": "Ground Water",
+      "collectionSite": "Borewell B2",
+      "collector": "Anjali Rao",
+      "receivedBy": "Lab Admin",
+      "receivedAt": "2026-08-19T06:57:37.281Z",
+      "storageLocationId": "0e0db07e-aa44-4edd-9d2e-086e01481cb4",
+      "assignedTo": "Rahul Menon",
+      "requestedTests": [
+        "pH",
+        "TDS",
+        "Nitrate"
+      ],
+      "notes": "Demo sample 2",
+      "results": [],
+      "files": [],
+      "chainOfCustody": [
+        {
+          "at": "2026-08-19T06:57:37.281Z",
+          "by": "Lab Admin",
+          "action": "Received",
+          "locationId": "0e0db07e-aa44-4edd-9d2e-086e01481cb4"
+        }
+      ],
+      "dueAt": "2026-08-20T11:30:00.000Z",
+      "retentionStatus": "Active",
+      "disposal": null,
+      "active": true,
+      "createdAt": "2026-08-19T06:57:37.281Z",
+      "updatedAt": "2026-08-19T06:57:37.281Z",
+      "workflowStage": "Received"
+    },
+    {
+      "id": "38b9d2a0-10ae-4aa8-b653-efed32f5af03",
+      "sampleCode": "PL-2026-000024",
+      "status": "Stored",
+      "clientName": "IISc Plasma Lab Trial",
+      "sourceType": "Drinking Water",
+      "collectionSite": "Lab Tap A1",
+      "collector": "Ramesh Kumar",
+      "receivedBy": "Lab Admin",
+      "receivedAt": "2026-08-19T06:57:37.281Z",
+      "storageLocationId": "0e0db07e-aa44-4edd-9d2e-086e01481cb4",
+      "assignedTo": "Priya Nair",
+      "requestedTests": [
+        "pH",
+        "TDS",
+        "Turbidity"
+      ],
+      "notes": "Demo sample 1",
+      "results": [],
+      "files": [],
+      "chainOfCustody": [
+        {
+          "at": "2026-08-19T06:57:37.281Z",
+          "by": "Lab Admin",
+          "action": "Received",
+          "locationId": "0e0db07e-aa44-4edd-9d2e-086e01481cb4"
+        }
+      ],
+      "dueAt": "2026-08-20T11:30:00.000Z",
+      "retentionStatus": "Active",
+      "disposal": null,
+      "active": true,
+      "createdAt": "2026-08-19T06:57:37.281Z",
+      "updatedAt": "2026-08-19T06:57:37.281Z",
+      "workflowStage": "Received"
+    },
+    {
+      "id": "7da258f9-a72c-4cfa-b33c-cf84ec73e0a9",
+      "sampleCode": "PL-2026-000023",
+      "status": "Stored",
+      "clientName": "IISc Plasma Lab Trial",
+      "sourceType": "Wastewater",
+      "collectionSite": "Treatment Tank J10",
+      "collector": "Anjali Rao",
+      "receivedBy": "Lab Admin",
+      "receivedAt": "2026-08-19T06:48:24.735Z",
+      "storageLocationId": "ba48a511-d1fe-4e13-8289-c9f5605b6072",
+      "assignedTo": "Rahul Menon",
+      "requestedTests": [
+        "pH",
+        "TDS",
+        "Turbidity",
+        "Nitrate"
+      ],
+      "notes": "Demo sample 10",
+      "results": [],
+      "files": [],
+      "chainOfCustody": [
+        {
+          "at": "2026-08-19T06:48:24.735Z",
+          "by": "Lab Admin",
+          "action": "Received",
+          "locationId": "ba48a511-d1fe-4e13-8289-c9f5605b6072"
+        }
+      ],
+      "dueAt": "2026-08-23T05:30:00.000Z",
+      "retentionStatus": "Active",
+      "disposal": null,
+      "active": true,
+      "createdAt": "2026-08-19T06:48:24.735Z",
+      "updatedAt": "2026-08-19T06:48:24.735Z",
+      "workflowStage": "Received"
+    },
+    {
+      "id": "fe35478c-3e6d-4a06-bcd2-2dabe91c4f0a",
+      "sampleCode": "PL-2026-000022",
+      "status": "Stored",
+      "clientName": "IISc Plasma Lab Trial",
+      "sourceType": "Drinking Water",
+      "collectionSite": "Hostel Tap I9",
+      "collector": "Ramesh Kumar",
+      "receivedBy": "Lab Admin",
+      "receivedAt": "2026-08-19T06:48:24.735Z",
+      "storageLocationId": "0e0db07e-aa44-4edd-9d2e-086e01481cb4",
+      "assignedTo": "Priya Nair",
+      "requestedTests": [
+        "pH",
+        "TDS",
+        "E. coli"
+      ],
+      "notes": "Demo sample 9",
+      "results": [],
+      "files": [],
+      "chainOfCustody": [
+        {
+          "at": "2026-08-19T06:48:24.735Z",
+          "by": "Lab Admin",
+          "action": "Received",
+          "locationId": "0e0db07e-aa44-4edd-9d2e-086e01481cb4"
+        }
+      ],
+      "dueAt": "2026-08-23T05:30:00.000Z",
+      "retentionStatus": "Active",
+      "disposal": null,
+      "active": true,
+      "createdAt": "2026-08-19T06:48:24.735Z",
+      "updatedAt": "2026-08-19T06:48:24.735Z",
+      "workflowStage": "Received"
+    },
+    {
+      "id": "ae738d9a-3af8-4495-9f57-b3a4c5bc20f0",
+      "sampleCode": "PL-2026-000021",
+      "status": "Stored",
+      "clientName": "IISc Plasma Lab Trial",
+      "sourceType": "Surface Water",
+      "collectionSite": "Lake Edge H8",
+      "collector": "Anjali Rao",
+      "receivedBy": "Lab Admin",
+      "receivedAt": "2026-08-19T06:48:24.735Z",
+      "storageLocationId": "e92238c1-b010-4faa-a3b2-e5af1a53b57f",
+      "assignedTo": "Rahul Menon",
+      "requestedTests": [
+        "pH",
+        "Turbidity",
+        "E. coli"
+      ],
+      "notes": "Demo sample 8",
+      "results": [],
+      "files": [],
+      "chainOfCustody": [
+        {
+          "at": "2026-08-19T06:48:24.735Z",
+          "by": "Lab Admin",
+          "action": "Received",
+          "locationId": "e92238c1-b010-4faa-a3b2-e5af1a53b57f"
+        }
+      ],
+      "dueAt": "2026-08-22T09:30:00.000Z",
+      "retentionStatus": "Active",
+      "disposal": null,
+      "active": true,
+      "createdAt": "2026-08-19T06:48:24.735Z",
+      "updatedAt": "2026-08-19T06:48:24.735Z",
+      "workflowStage": "Received"
+    },
+    {
+      "id": "c9d8a8ea-cd85-45db-a5f0-cb8ba7e115eb",
+      "sampleCode": "PL-2026-000020",
+      "status": "Stored",
+      "clientName": "IISc Plasma Lab Trial",
+      "sourceType": "Ground Water",
+      "collectionSite": "Open Well G7",
+      "collector": "Ramesh Kumar",
+      "receivedBy": "Lab Admin",
+      "receivedAt": "2026-08-19T06:48:24.734Z",
+      "storageLocationId": "e92238c1-b010-4faa-a3b2-e5af1a53b57f",
+      "assignedTo": "Priya Nair",
+      "requestedTests": [
+        "pH",
+        "Nitrate"
+      ],
+      "notes": "Demo sample 7",
+      "results": [],
+      "files": [],
+      "chainOfCustody": [
+        {
+          "at": "2026-08-19T06:48:24.734Z",
+          "by": "Lab Admin",
+          "action": "Received",
+          "locationId": "e92238c1-b010-4faa-a3b2-e5af1a53b57f"
+        }
+      ],
+      "dueAt": "2026-08-22T04:30:00.000Z",
+      "retentionStatus": "Active",
+      "disposal": null,
+      "active": true,
+      "createdAt": "2026-08-19T06:48:24.734Z",
+      "updatedAt": "2026-08-19T06:48:24.734Z",
+      "workflowStage": "Received"
+    },
+    {
+      "id": "2350be69-bbb1-42b6-a8c5-c918eb7b9637",
+      "sampleCode": "PL-2026-000019",
+      "status": "Stored",
+      "clientName": "IISc Plasma Lab Trial",
+      "sourceType": "Drinking Water",
+      "collectionSite": "RO Outlet F6",
+      "collector": "Anjali Rao",
+      "receivedBy": "Lab Admin",
+      "receivedAt": "2026-08-19T06:48:24.734Z",
+      "storageLocationId": "0e0db07e-aa44-4edd-9d2e-086e01481cb4",
+      "assignedTo": "Rahul Menon",
+      "requestedTests": [
+        "pH",
+        "TDS"
+      ],
+      "notes": "Demo sample 6",
+      "results": [],
+      "files": [],
+      "chainOfCustody": [
+        {
+          "at": "2026-08-19T06:48:24.734Z",
+          "by": "Lab Admin",
+          "action": "Received",
+          "locationId": "0e0db07e-aa44-4edd-9d2e-086e01481cb4"
+        }
+      ],
+      "dueAt": "2026-08-22T04:30:00.000Z",
+      "retentionStatus": "Active",
+      "disposal": null,
+      "active": true,
+      "createdAt": "2026-08-19T06:48:24.734Z",
+      "updatedAt": "2026-08-19T06:48:24.734Z",
+      "workflowStage": "Received"
+    },
+    {
+      "id": "129cb111-d1c5-441b-bcb6-c9e167ea7933",
+      "sampleCode": "PL-2026-000018",
+      "status": "Stored",
+      "clientName": "IISc Plasma Lab Trial",
+      "sourceType": "Industrial Effluent",
+      "collectionSite": "Process Line E5",
+      "collector": "Ramesh Kumar",
+      "receivedBy": "Lab Admin",
+      "receivedAt": "2026-08-19T06:48:24.734Z",
+      "storageLocationId": "ba48a511-d1fe-4e13-8289-c9f5605b6072",
+      "assignedTo": "Priya Nair",
+      "requestedTests": [
+        "pH",
+        "TDS",
+        "Nitrate",
+        "Turbidity"
+      ],
+      "notes": "Demo sample 5",
+      "results": [],
+      "files": [],
+      "chainOfCustody": [
+        {
+          "at": "2026-08-19T06:48:24.734Z",
+          "by": "Lab Admin",
+          "action": "Received",
+          "locationId": "ba48a511-d1fe-4e13-8289-c9f5605b6072"
+        }
+      ],
+      "dueAt": "2026-08-21T11:30:00.000Z",
+      "retentionStatus": "Active",
+      "disposal": null,
+      "active": true,
+      "createdAt": "2026-08-19T06:48:24.734Z",
+      "updatedAt": "2026-08-19T06:48:24.734Z",
+      "workflowStage": "Received"
+    },
+    {
+      "id": "9a011efc-056e-46e7-aee3-51157fc9d6f1",
+      "sampleCode": "PL-2026-000017",
+      "status": "Stored",
+      "clientName": "IISc Plasma Lab Trial",
+      "sourceType": "Wastewater",
+      "collectionSite": "Outlet Drain D4",
+      "collector": "Anjali Rao",
+      "receivedBy": "Lab Admin",
+      "receivedAt": "2026-08-19T06:48:24.734Z",
+      "storageLocationId": "ba48a511-d1fe-4e13-8289-c9f5605b6072",
+      "assignedTo": "Rahul Menon",
+      "requestedTests": [
+        "pH",
+        "TDS",
+        "Turbidity"
+      ],
+      "notes": "Demo sample 4",
+      "results": [],
+      "files": [],
+      "chainOfCustody": [
+        {
+          "at": "2026-08-19T06:48:24.734Z",
+          "by": "Lab Admin",
+          "action": "Received",
+          "locationId": "ba48a511-d1fe-4e13-8289-c9f5605b6072"
+        }
+      ],
+      "dueAt": "2026-08-21T06:30:00.000Z",
+      "retentionStatus": "Active",
+      "disposal": null,
+      "active": true,
+      "createdAt": "2026-08-19T06:48:24.734Z",
+      "updatedAt": "2026-08-19T06:48:24.734Z",
+      "workflowStage": "Received"
+    },
+    {
+      "id": "87cfbbc2-1854-4604-9a2a-388319326ee7",
+      "sampleCode": "PL-2026-000016",
+      "status": "Stored",
+      "clientName": "IISc Plasma Lab Trial",
+      "sourceType": "Surface Water",
+      "collectionSite": "Pond Inlet C3",
+      "collector": "Ramesh Kumar",
+      "receivedBy": "Lab Admin",
+      "receivedAt": "2026-08-19T06:48:24.734Z",
+      "storageLocationId": "e92238c1-b010-4faa-a3b2-e5af1a53b57f",
+      "assignedTo": "Priya Nair",
+      "requestedTests": [
+        "pH",
+        "Turbidity",
+        "E. coli"
+      ],
+      "notes": "Demo sample 3",
+      "results": [],
+      "files": [],
+      "chainOfCustody": [
+        {
+          "at": "2026-08-19T06:48:24.734Z",
+          "by": "Lab Admin",
+          "action": "Received",
+          "locationId": "e92238c1-b010-4faa-a3b2-e5af1a53b57f"
+        }
+      ],
+      "dueAt": "2026-08-21T06:30:00.000Z",
+      "retentionStatus": "Active",
+      "disposal": null,
+      "active": true,
+      "createdAt": "2026-08-19T06:48:24.734Z",
+      "updatedAt": "2026-08-19T06:48:24.734Z",
+      "workflowStage": "Received"
+    },
+    {
+      "id": "1af3fd7d-c217-4b39-bb46-64ac137065d8",
+      "sampleCode": "PL-2026-000015",
+      "status": "Stored",
+      "clientName": "IISc Plasma Lab Trial",
+      "sourceType": "Ground Water",
+      "collectionSite": "Borewell B2",
+      "collector": "Anjali Rao",
+      "receivedBy": "Lab Admin",
+      "receivedAt": "2026-08-19T06:48:24.734Z",
+      "storageLocationId": "0e0db07e-aa44-4edd-9d2e-086e01481cb4",
+      "assignedTo": "Rahul Menon",
+      "requestedTests": [
+        "pH",
+        "TDS",
+        "Nitrate"
+      ],
+      "notes": "Demo sample 2",
+      "results": [],
+      "files": [],
+      "chainOfCustody": [
+        {
+          "at": "2026-08-19T06:48:24.734Z",
+          "by": "Lab Admin",
+          "action": "Received",
+          "locationId": "0e0db07e-aa44-4edd-9d2e-086e01481cb4"
+        }
+      ],
+      "dueAt": "2026-08-20T11:30:00.000Z",
+      "retentionStatus": "Active",
+      "disposal": null,
+      "active": true,
+      "createdAt": "2026-08-19T06:48:24.734Z",
+      "updatedAt": "2026-08-19T06:48:24.734Z",
+      "workflowStage": "Received"
+    },
+    {
+      "id": "07f8403c-a25e-45de-b8e4-7860f6624398",
+      "sampleCode": "PL-2026-000014",
+      "status": "Stored",
+      "clientName": "IISc Plasma Lab Trial",
+      "sourceType": "Drinking Water",
+      "collectionSite": "Lab Tap A1",
+      "collector": "Ramesh Kumar",
+      "receivedBy": "Lab Admin",
+      "receivedAt": "2026-08-19T06:48:24.734Z",
+      "storageLocationId": "0e0db07e-aa44-4edd-9d2e-086e01481cb4",
+      "assignedTo": "Priya Nair",
+      "requestedTests": [
+        "pH",
+        "TDS",
+        "Turbidity"
+      ],
+      "notes": "Demo sample 1",
+      "results": [],
+      "files": [],
+      "chainOfCustody": [
+        {
+          "at": "2026-08-19T06:48:24.734Z",
+          "by": "Lab Admin",
+          "action": "Received",
+          "locationId": "0e0db07e-aa44-4edd-9d2e-086e01481cb4"
+        }
+      ],
+      "dueAt": "2026-08-20T11:30:00.000Z",
+      "retentionStatus": "Active",
+      "disposal": null,
+      "active": true,
+      "createdAt": "2026-08-19T06:48:24.734Z",
+      "updatedAt": "2026-08-19T06:48:24.734Z",
+      "workflowStage": "Received"
+    },
+    {
+      "id": "e4f22b7a-10ef-4ecd-9959-35c2f0b5ffcc",
+      "sampleCode": "PL-2026-000013",
+      "status": "Stored",
+      "clientName": "IISc Plasma Lab Trial",
+      "sourceType": "Wastewater",
+      "collectionSite": "Treatment Tank J10",
+      "collector": "Anjali Rao",
+      "receivedBy": "Vishwas",
+      "receivedAt": "2026-08-18T10:24:39.402Z",
+      "storageLocationId": "ba48a511-d1fe-4e13-8289-c9f5605b6072",
+      "assignedTo": "Rahul Menon",
+      "requestedTests": [
+        "pH",
+        "TDS",
+        "Turbidity",
+        "Nitrate"
+      ],
+      "notes": "Demo sample 10",
+      "results": [],
+      "files": [],
+      "chainOfCustody": [
+        {
+          "at": "2026-08-18T10:24:39.402Z",
+          "by": "Vishwas",
+          "action": "Received",
+          "locationId": "ba48a511-d1fe-4e13-8289-c9f5605b6072"
+        }
+      ],
+      "dueAt": "2026-08-23T05:30:00.000Z",
+      "retentionStatus": "Active",
+      "disposal": null,
+      "active": true,
+      "createdAt": "2026-08-18T10:24:39.402Z",
+      "updatedAt": "2026-08-18T10:24:39.402Z",
+      "workflowStage": "Received"
+    },
+    {
+      "id": "fa82af51-465e-44cd-a9fc-f7488107cd43",
+      "sampleCode": "PL-2026-000012",
+      "status": "Stored",
+      "clientName": "IISc Plasma Lab Trial",
+      "sourceType": "Drinking Water",
+      "collectionSite": "Hostel Tap I9",
+      "collector": "Ramesh Kumar",
+      "receivedBy": "Vishwas",
+      "receivedAt": "2026-08-18T10:24:39.401Z",
+      "storageLocationId": "0e0db07e-aa44-4edd-9d2e-086e01481cb4",
+      "assignedTo": "Priya Nair",
+      "requestedTests": [
+        "pH",
+        "TDS",
+        "E. coli"
+      ],
+      "notes": "Demo sample 9",
+      "results": [],
+      "files": [],
+      "chainOfCustody": [
+        {
+          "at": "2026-08-18T10:24:39.401Z",
+          "by": "Vishwas",
+          "action": "Received",
+          "locationId": "0e0db07e-aa44-4edd-9d2e-086e01481cb4"
+        }
+      ],
+      "dueAt": "2026-08-23T05:30:00.000Z",
+      "retentionStatus": "Active",
+      "disposal": null,
+      "active": true,
+      "createdAt": "2026-08-18T10:24:39.401Z",
+      "updatedAt": "2026-08-18T10:24:39.401Z",
+      "workflowStage": "Received"
+    },
+    {
+      "id": "81bec49c-1af6-4a72-a3ce-a560ffc74b92",
+      "sampleCode": "PL-2026-000011",
+      "status": "Stored",
+      "clientName": "IISc Plasma Lab Trial",
+      "sourceType": "Surface Water",
+      "collectionSite": "Lake Edge H8",
+      "collector": "Anjali Rao",
+      "receivedBy": "Vishwas",
+      "receivedAt": "2026-08-18T10:24:39.401Z",
+      "storageLocationId": "e92238c1-b010-4faa-a3b2-e5af1a53b57f",
+      "assignedTo": "Rahul Menon",
+      "requestedTests": [
+        "pH",
+        "Turbidity",
+        "E. coli"
+      ],
+      "notes": "Demo sample 8",
+      "results": [],
+      "files": [],
+      "chainOfCustody": [
+        {
+          "at": "2026-08-18T10:24:39.401Z",
+          "by": "Vishwas",
+          "action": "Received",
+          "locationId": "e92238c1-b010-4faa-a3b2-e5af1a53b57f"
+        }
+      ],
+      "dueAt": "2026-08-22T09:30:00.000Z",
+      "retentionStatus": "Active",
+      "disposal": null,
+      "active": true,
+      "createdAt": "2026-08-18T10:24:39.401Z",
+      "updatedAt": "2026-08-18T10:24:39.401Z",
+      "workflowStage": "Received"
+    },
+    {
+      "id": "d59005e3-4c44-4473-97eb-489915d41113",
+      "sampleCode": "PL-2026-000010",
+      "status": "Stored",
+      "clientName": "IISc Plasma Lab Trial",
+      "sourceType": "Ground Water",
+      "collectionSite": "Open Well G7",
+      "collector": "Ramesh Kumar",
+      "receivedBy": "Vishwas",
+      "receivedAt": "2026-08-18T10:24:39.401Z",
+      "storageLocationId": "e92238c1-b010-4faa-a3b2-e5af1a53b57f",
+      "assignedTo": "Priya Nair",
+      "requestedTests": [
+        "pH",
+        "Nitrate"
+      ],
+      "notes": "Demo sample 7",
+      "results": [],
+      "files": [],
+      "chainOfCustody": [
+        {
+          "at": "2026-08-18T10:24:39.401Z",
+          "by": "Vishwas",
+          "action": "Received",
+          "locationId": "e92238c1-b010-4faa-a3b2-e5af1a53b57f"
+        }
+      ],
+      "dueAt": "2026-08-22T04:30:00.000Z",
+      "retentionStatus": "Active",
+      "disposal": null,
+      "active": true,
+      "createdAt": "2026-08-18T10:24:39.401Z",
+      "updatedAt": "2026-08-18T10:24:39.401Z",
+      "workflowStage": "Received"
+    },
+    {
+      "id": "2b70e49d-fa9f-4870-a084-6daa3beaf688",
+      "sampleCode": "PL-2026-000009",
+      "status": "Stored",
+      "clientName": "IISc Plasma Lab Trial",
+      "sourceType": "Drinking Water",
+      "collectionSite": "RO Outlet F6",
+      "collector": "Anjali Rao",
+      "receivedBy": "Vishwas",
+      "receivedAt": "2026-08-18T10:24:39.401Z",
+      "storageLocationId": "0e0db07e-aa44-4edd-9d2e-086e01481cb4",
+      "assignedTo": "Rahul Menon",
+      "requestedTests": [
+        "pH",
+        "TDS"
+      ],
+      "notes": "Demo sample 6",
+      "results": [],
+      "files": [],
+      "chainOfCustody": [
+        {
+          "at": "2026-08-18T10:24:39.401Z",
+          "by": "Vishwas",
+          "action": "Received",
+          "locationId": "0e0db07e-aa44-4edd-9d2e-086e01481cb4"
+        }
+      ],
+      "dueAt": "2026-08-22T04:30:00.000Z",
+      "retentionStatus": "Active",
+      "disposal": null,
+      "active": true,
+      "createdAt": "2026-08-18T10:24:39.401Z",
+      "updatedAt": "2026-08-18T10:24:39.401Z",
+      "workflowStage": "Received"
+    },
+    {
+      "id": "3c588eeb-50ec-4a78-bab5-47d208a1e8eb",
+      "sampleCode": "PL-2026-000008",
+      "status": "Stored",
+      "clientName": "IISc Plasma Lab Trial",
+      "sourceType": "Industrial Effluent",
+      "collectionSite": "Process Line E5",
+      "collector": "Ramesh Kumar",
+      "receivedBy": "Vishwas",
+      "receivedAt": "2026-08-18T10:24:39.401Z",
+      "storageLocationId": "ba48a511-d1fe-4e13-8289-c9f5605b6072",
+      "assignedTo": "Priya Nair",
+      "requestedTests": [
+        "pH",
+        "TDS",
+        "Nitrate",
+        "Turbidity"
+      ],
+      "notes": "Demo sample 5",
+      "results": [],
+      "files": [],
+      "chainOfCustody": [
+        {
+          "at": "2026-08-18T10:24:39.401Z",
+          "by": "Vishwas",
+          "action": "Received",
+          "locationId": "ba48a511-d1fe-4e13-8289-c9f5605b6072"
+        }
+      ],
+      "dueAt": "2026-08-21T11:30:00.000Z",
+      "retentionStatus": "Active",
+      "disposal": null,
+      "active": true,
+      "createdAt": "2026-08-18T10:24:39.401Z",
+      "updatedAt": "2026-08-18T10:24:39.401Z",
+      "workflowStage": "Received"
+    },
+    {
+      "id": "bbd524e3-e975-4cfd-a6a7-8a6873c56315",
+      "sampleCode": "PL-2026-000007",
+      "status": "Stored",
+      "clientName": "IISc Plasma Lab Trial",
+      "sourceType": "Wastewater",
+      "collectionSite": "Outlet Drain D4",
+      "collector": "Anjali Rao",
+      "receivedBy": "Vishwas",
+      "receivedAt": "2026-08-18T10:24:39.400Z",
+      "storageLocationId": "ba48a511-d1fe-4e13-8289-c9f5605b6072",
+      "assignedTo": "Rahul Menon",
+      "requestedTests": [
+        "pH",
+        "TDS",
+        "Turbidity"
+      ],
+      "notes": "Demo sample 4",
+      "results": [],
+      "files": [],
+      "chainOfCustody": [
+        {
+          "at": "2026-08-18T10:24:39.401Z",
+          "by": "Vishwas",
+          "action": "Received",
+          "locationId": "ba48a511-d1fe-4e13-8289-c9f5605b6072"
+        }
+      ],
+      "dueAt": "2026-08-21T06:30:00.000Z",
+      "retentionStatus": "Active",
+      "disposal": null,
+      "active": true,
+      "createdAt": "2026-08-18T10:24:39.401Z",
+      "updatedAt": "2026-08-18T10:24:39.401Z",
+      "workflowStage": "Received"
+    },
+    {
+      "id": "3f717455-e3cb-4cdb-bdfb-bb62de9312d3",
+      "sampleCode": "PL-2026-000006",
+      "status": "Stored",
+      "clientName": "IISc Plasma Lab Trial",
+      "sourceType": "Surface Water",
+      "collectionSite": "Pond Inlet C3",
+      "collector": "Ramesh Kumar",
+      "receivedBy": "Vishwas",
+      "receivedAt": "2026-08-18T10:24:39.400Z",
+      "storageLocationId": "e92238c1-b010-4faa-a3b2-e5af1a53b57f",
+      "assignedTo": "Priya Nair",
+      "requestedTests": [
+        "pH",
+        "Turbidity",
+        "E. coli"
+      ],
+      "notes": "Demo sample 3",
+      "results": [],
+      "files": [],
+      "chainOfCustody": [
+        {
+          "at": "2026-08-18T10:24:39.400Z",
+          "by": "Vishwas",
+          "action": "Received",
+          "locationId": "e92238c1-b010-4faa-a3b2-e5af1a53b57f"
+        }
+      ],
+      "dueAt": "2026-08-21T06:30:00.000Z",
+      "retentionStatus": "Active",
+      "disposal": null,
+      "active": true,
+      "createdAt": "2026-08-18T10:24:39.400Z",
+      "updatedAt": "2026-08-18T10:24:39.400Z",
+      "workflowStage": "Received"
+    },
+    {
+      "id": "4609c065-50cd-4d52-9240-20dbb28dd733",
+      "sampleCode": "PL-2026-000005",
+      "status": "Stored",
+      "clientName": "IISc Plasma Lab Trial",
+      "sourceType": "Ground Water",
+      "collectionSite": "Borewell B2",
+      "collector": "Anjali Rao",
+      "receivedBy": "Vishwas",
+      "receivedAt": "2026-08-18T10:24:39.400Z",
+      "storageLocationId": "0e0db07e-aa44-4edd-9d2e-086e01481cb4",
+      "assignedTo": "Rahul Menon",
+      "requestedTests": [
+        "pH",
+        "TDS",
+        "Nitrate"
+      ],
+      "notes": "Demo sample 2",
+      "results": [],
+      "files": [],
+      "chainOfCustody": [
+        {
+          "at": "2026-08-18T10:24:39.400Z",
+          "by": "Vishwas",
+          "action": "Received",
+          "locationId": "0e0db07e-aa44-4edd-9d2e-086e01481cb4"
+        }
+      ],
+      "dueAt": "2026-08-20T11:30:00.000Z",
+      "retentionStatus": "Active",
+      "disposal": null,
+      "active": true,
+      "createdAt": "2026-08-18T10:24:39.400Z",
+      "updatedAt": "2026-08-18T10:24:39.400Z",
+      "workflowStage": "Received"
+    },
+    {
+      "id": "e65c25ae-266a-47fd-a6a3-a91aebacfd94",
+      "sampleCode": "PL-2026-000004",
+      "status": "Stored",
+      "clientName": "IISc Plasma Lab Trial",
+      "sourceType": "Drinking Water",
+      "collectionSite": "Lab Tap A1",
+      "collector": "Ramesh Kumar",
+      "receivedBy": "Vishwas",
+      "receivedAt": "2026-08-18T10:24:39.399Z",
+      "storageLocationId": "0e0db07e-aa44-4edd-9d2e-086e01481cb4",
+      "assignedTo": "Priya Nair",
+      "requestedTests": [
+        "pH",
+        "TDS",
+        "Turbidity"
+      ],
+      "notes": "Demo sample 1",
+      "results": [],
+      "files": [],
+      "chainOfCustody": [
+        {
+          "at": "2026-08-18T10:24:39.400Z",
+          "by": "Vishwas",
+          "action": "Received",
+          "locationId": "0e0db07e-aa44-4edd-9d2e-086e01481cb4"
+        }
+      ],
+      "dueAt": "2026-08-20T11:30:00.000Z",
+      "retentionStatus": "Active",
+      "disposal": null,
+      "active": true,
+      "createdAt": "2026-08-18T10:24:39.400Z",
+      "updatedAt": "2026-08-18T10:24:39.400Z",
+      "workflowStage": "Received"
+    },
+    {
+      "id": "06899103-f845-4841-9fc9-b7244c5f4e14",
+      "sampleCode": "PL-2026-000003",
+      "status": "Needs Review",
+      "clientName": "Demo Plasma Batch",
+      "sourceType": "Process Water",
+      "collectionSite": "Tube Rack A2",
+      "collector": "Demo Collector",
+      "receivedBy": "Lab Admin",
+      "receivedAt": "2026-08-18T10:00:38.389Z",
+      "storageLocationId": "0e0db07e-aa44-4edd-9d2e-086e01481cb4",
+      "assignedTo": "Priya Nair",
+      "requestedTests": [
+        "pH",
+        "TDS"
+      ],
+      "notes": "QR tube demo",
+      "results": [
+        {
+          "id": "aac4b9b9-9386-446e-af06-682ea813f5fa",
+          "parameter": "pH",
+          "value": "7.3",
+          "unit": "pH",
+          "limit": "6.5-8.5",
+          "method": "Electrometric",
+          "analyst": "Lab Admin",
+          "flag": "OK",
+          "bookPage": "",
+          "enteredAt": "2026-08-18T10:00:38.473Z"
+        },
+        {
+          "id": "5ebaba70-d9a2-4299-b5d8-bef6dd562ec6",
+          "parameter": "TDS",
+          "value": "255",
+          "unit": "mg/L",
+          "limit": "<500",
+          "method": "Conductivity calculation",
+          "analyst": "Lab Admin",
+          "flag": "OK",
+          "bookPage": "",
+          "enteredAt": "2026-08-18T10:00:38.473Z"
+        }
+      ],
+      "files": [
+        {
+          "id": "94f5f326-0338-4838-a675-353f4cdf0e2e",
+          "originalName": "test-results.xlsx",
+          "storedName": "1787047238444-test-results.xlsx",
+          "url": "/uploads/1787047238444-test-results.xlsx",
+          "category": "Excel Result Import",
+          "uploadedBy": "Lab Admin",
+          "uploadedAt": "2026-08-18T10:00:38.473Z"
+        }
+      ],
+      "chainOfCustody": [
+        {
+          "at": "2026-08-18T10:00:38.389Z",
+          "by": "Lab Admin",
+          "action": "Received",
+          "locationId": "0e0db07e-aa44-4edd-9d2e-086e01481cb4"
+        }
+      ],
+      "dueAt": "2026-08-21T10:00:38.389Z",
+      "retentionStatus": "Active",
+      "disposal": null,
+      "active": true,
+      "createdAt": "2026-08-18T10:00:38.389Z",
+      "updatedAt": "2026-08-18T10:00:38.473Z",
+      "workflowStage": "Needs Review"
+    },
+    {
+      "id": "deae7e28-fc7e-4fcc-85cb-7737f41225b2",
+      "sampleCode": "PL-2026-000002",
+      "status": "Stored",
+      "clientName": "Demo Plasma Batch",
+      "sourceType": "Process Water",
+      "collectionSite": "Tube Rack A1",
+      "collector": "Demo Collector",
+      "receivedBy": "Lab Admin",
+      "receivedAt": "2026-08-18T09:59:02.341Z",
+      "storageLocationId": "0e0db07e-aa44-4edd-9d2e-086e01481cb4",
+      "assignedTo": "Priya Nair",
+      "requestedTests": [
+        "pH",
+        "TDS"
+      ],
+      "notes": "QR tube demo",
+      "results": [],
+      "files": [],
+      "chainOfCustody": [
+        {
+          "at": "2026-08-18T09:59:02.341Z",
+          "by": "Lab Admin",
+          "action": "Received",
+          "locationId": "0e0db07e-aa44-4edd-9d2e-086e01481cb4"
+        }
+      ],
+      "dueAt": "2026-08-21T09:59:02.341Z",
+      "retentionStatus": "Active",
+      "disposal": null,
+      "active": true,
+      "createdAt": "2026-08-18T09:59:02.341Z",
+      "updatedAt": "2026-08-18T09:59:02.341Z",
+      "workflowStage": "Received"
+    },
+    {
+      "id": "71e34eaa-fd04-48c5-bbd5-2d64383a97fb",
+      "sampleCode": "PL-2026-000001",
+      "status": "Stored",
+      "clientName": "Demo Plasma Batch",
+      "sourceType": "Process Water",
+      "collectionSite": "Tube Rack A1",
+      "collector": "Demo Collector",
+      "receivedBy": "Lab Admin",
+      "receivedAt": "2026-08-18T09:58:40.381Z",
+      "storageLocationId": "0e0db07e-aa44-4edd-9d2e-086e01481cb4",
+      "assignedTo": "Priya Nair",
+      "requestedTests": [
+        "pH",
+        "TDS"
+      ],
+      "notes": "QR tube demo",
+      "results": [],
+      "files": [],
+      "chainOfCustody": [
+        {
+          "at": "2026-08-18T09:58:40.381Z",
+          "by": "Lab Admin",
+          "action": "Received",
+          "locationId": "0e0db07e-aa44-4edd-9d2e-086e01481cb4"
+        }
+      ],
+      "dueAt": "2026-08-21T09:58:40.381Z",
+      "retentionStatus": "Active",
+      "disposal": null,
+      "active": true,
+      "createdAt": "2026-08-18T09:58:40.381Z",
+      "updatedAt": "2026-08-18T09:58:40.381Z",
+      "workflowStage": "Received"
+    },
+    {
+      "id": "5b19bf9f-2f82-4be4-83fd-a5bb48c15268",
+      "sampleCode": "WTR-2026-000004",
+      "status": "Needs Review",
+      "clientName": "Photo Sheet Client",
+      "sourceType": "Surface Water",
+      "collectionSite": "Lake Intake Photo Point",
+      "collector": "Field Camera User",
+      "receivedBy": "Lab Admin",
+      "receivedAt": "2026-08-18T05:52:59.951Z",
+      "storageLocationId": "0e0db07e-aa44-4edd-9d2e-086e01481cb4",
+      "assignedTo": "Rahul Menon",
+      "requestedTests": [
+        "pH",
+        "TDS"
+      ],
+      "notes": "",
+      "results": [
+        {
+          "id": "793ff206-9b70-4dae-9e17-845e0da4ba57",
+          "parameter": "Turbidity",
+          "value": "7.4",
+          "unit": "NTU",
+          "limit": "<1",
+          "method": "Nephelometric",
+          "analyst": "Lab Admin",
+          "flag": "OK",
+          "bookPage": "",
+          "enteredAt": "2026-08-18T05:55:27.535Z"
+        },
+        {
+          "id": "7985cfcd-a5d9-4685-8fc1-2f43d865d5c8",
+          "parameter": "pH",
+          "value": "7.6",
+          "unit": "pH",
+          "limit": "6.5-8.5",
+          "method": "Electrometric",
+          "analyst": "Lab Admin",
+          "flag": "OK",
+          "bookPage": "",
+          "enteredAt": "2026-08-18T05:53:00.868Z"
+        },
+        {
+          "id": "43e2671d-a29e-4d32-9889-fb3f6b742824",
+          "parameter": "TDS",
+          "value": "301",
+          "unit": "mg/L",
+          "limit": "<500",
+          "method": "Conductivity calculation",
+          "analyst": "Lab Admin",
+          "flag": "OK",
+          "bookPage": "",
+          "enteredAt": "2026-08-18T05:53:00.868Z"
+        }
+      ],
+      "files": [
+        {
+          "id": "7a97b8c5-ee65-4265-88c3-870e5b6fa10f",
+          "originalName": "robust-lims-ui.png",
+          "storedName": "1787032379999-robust-lims-ui.png",
+          "url": "/uploads/1787032379999-robust-lims-ui.png",
+          "category": "Sample Photo",
+          "uploadedBy": "Lab Admin",
+          "uploadedAt": "2026-08-18T05:53:00.008Z"
+        }
+      ],
+      "chainOfCustody": [
+        {
+          "at": "2026-08-18T05:56:02.217Z",
+          "by": "Lab Admin",
+          "action": "Moved",
+          "locationId": "0e0db07e-aa44-4edd-9d2e-086e01481cb4"
+        },
+        {
+          "at": "2026-08-18T05:52:59.951Z",
+          "by": "Lab Admin",
+          "action": "Received",
+          "locationId": "0e0db07e-aa44-4edd-9d2e-086e01481cb4"
+        }
+      ],
+      "active": true,
+      "createdAt": "2026-08-18T05:52:59.951Z",
+      "updatedAt": "2026-08-18T05:56:02.217Z",
+      "dueAt": "2026-08-21T05:52:59.951Z",
+      "retentionStatus": "Active",
+      "disposal": null,
+      "workflowStage": "Needs Review"
+    },
+    {
+      "id": "9971a258-7633-44b9-8c80-25c89d1e4bbf",
+      "sampleCode": "WTR-2026-000003",
+      "status": "Needs Review",
+      "clientName": "Robust UX Client",
+      "sourceType": "Drinking Water",
+      "collectionSite": "Main Treated Water Outlet",
+      "collector": "Field Officer",
+      "receivedBy": "Lab Admin",
+      "receivedAt": "2026-08-18T05:46:54.409Z",
+      "receiptTemperature": "4.1 C",
+      "preservative": "Ice pack",
+      "storageLocationId": "0e0db07e-aa44-4edd-9d2e-086e01481cb4",
+      "assignedTo": "",
+      "requestedTests": [
+        "pH",
+        "TDS"
+      ],
+      "bookReference": "Book 31, page 12",
+      "notes": "",
+      "results": [
+        {
+          "id": "07c71009-c319-4fc0-a963-6e94890dab1d",
+          "parameter": "pH",
+          "value": "7.1",
+          "unit": "pH",
+          "limit": "6.5-8.5",
+          "method": "Electrometric",
+          "analyst": "Lab Admin",
+          "flag": "OK",
+          "bookPage": "Book 31, page 12",
+          "enteredAt": "2026-08-18T05:46:56.123Z"
+        },
+        {
+          "id": "1585ae1b-de1f-4134-a691-0ab32ad18077",
+          "parameter": "TDS",
+          "value": "254",
+          "unit": "mg/L",
+          "limit": "<500",
+          "method": "Conductivity calculation",
+          "analyst": "Lab Admin",
+          "flag": "OK",
+          "bookPage": "Book 31, page 12",
+          "enteredAt": "2026-08-18T05:46:56.123Z"
+        }
+      ],
+      "files": [
+        {
+          "id": "0c2dab72-5044-40d5-a401-da42cc08366c",
+          "originalName": "README.md",
+          "storedName": "1787032015235-README.md",
+          "url": "/uploads/1787032015235-README.md",
+          "category": "Book Scan / Written Record",
+          "uploadedBy": "Lab Admin",
+          "uploadedAt": "2026-08-18T05:46:55.243Z"
+        }
+      ],
+      "chainOfCustody": [
+        {
+          "at": "2026-08-18T05:46:54.409Z",
+          "by": "Lab Admin",
+          "action": "Received",
+          "locationId": "0e0db07e-aa44-4edd-9d2e-086e01481cb4"
+        }
+      ],
+      "active": true,
+      "createdAt": "2026-08-18T05:46:54.409Z",
+      "updatedAt": "2026-08-18T05:46:56.123Z",
+      "dueAt": "2026-08-21T05:46:54.409Z",
+      "retentionStatus": "Active",
+      "disposal": null,
+      "workflowStage": "Needs Review"
+    },
+    {
+      "id": "9509c841-4303-41ca-9439-039d80c8c9e0",
+      "sampleCode": "WTR-2026-000002",
+      "status": "Needs Review",
+      "clientName": "Two Path Test Client",
+      "sourceType": "Ground Water",
+      "collectionSite": "Sheet Entry Borewell",
+      "collector": "Field Tester",
+      "receivedBy": "Lab Admin",
+      "receivedAt": "2026-08-17T10:50:23.830Z",
+      "receiptTemperature": "5 C",
+      "preservative": "Ice",
+      "storageLocationId": "0e0db07e-aa44-4edd-9d2e-086e01481cb4",
+      "assignedTo": "",
+      "requestedTests": [
+        "pH",
+        "TDS"
+      ],
+      "bookReference": "Book 20, page 9",
+      "notes": "",
+      "results": [
+        {
+          "id": "08c47d08-3fae-4b7e-89e9-a8d5e98bfc63",
+          "parameter": "pH",
+          "value": "7.5",
+          "unit": "pH",
+          "limit": "6.5-8.5",
+          "method": "Electrometric",
+          "analyst": "Lab Admin",
+          "flag": "OK",
+          "bookPage": "Book 20, page 9",
+          "enteredAt": "2026-08-17T10:50:24.993Z"
+        },
+        {
+          "id": "20c84fb7-8a69-485b-9fb5-c18afe775286",
+          "parameter": "TDS",
+          "value": "288",
+          "unit": "mg/L",
+          "limit": "<500",
+          "method": "Conductivity calculation",
+          "analyst": "Lab Admin",
+          "flag": "OK",
+          "bookPage": "Book 20, page 9",
+          "enteredAt": "2026-08-17T10:50:24.993Z"
+        }
+      ],
+      "files": [
+        {
+          "id": "c97641cb-5ba3-4496-a53f-839b98ae26dc",
+          "originalName": "README.md",
+          "storedName": "1786963824100-README.md",
+          "url": "/uploads/1786963824100-README.md",
+          "category": "Book Scan / Written Record",
+          "uploadedBy": "Lab Admin",
+          "uploadedAt": "2026-08-17T10:50:24.102Z"
+        }
+      ],
+      "chainOfCustody": [
+        {
+          "at": "2026-08-17T10:50:23.830Z",
+          "by": "Lab Admin",
+          "action": "Received",
+          "locationId": "0e0db07e-aa44-4edd-9d2e-086e01481cb4"
+        }
+      ],
+      "active": true,
+      "createdAt": "2026-08-17T10:50:23.830Z",
+      "updatedAt": "2026-08-17T10:50:24.994Z",
+      "dueAt": "2026-08-20T10:50:23.830Z",
+      "retentionStatus": "Active",
+      "disposal": null,
+      "workflowStage": "Needs Review"
+    },
+    {
+      "id": "14ee2a42-6074-4c41-91b0-f054284d840b",
+      "sampleCode": "WTR-2026-000001",
+      "status": "Needs Review",
+      "clientName": "Demo Compliance Client",
+      "sourceType": "Drinking Water",
+      "collectionSite": "Demo Borewell 3",
+      "collector": "Field Person A",
+      "receivedBy": "Lab Admin",
+      "receivedAt": "2026-08-17T10:05:58.919Z",
+      "receiptTemperature": "4.8 C",
+      "preservative": "Ice pack",
+      "storageLocationId": "0e0db07e-aa44-4edd-9d2e-086e01481cb4",
+      "assignedTo": "",
+      "requestedTests": [
+        "pH",
+        "TDS"
+      ],
+      "bookReference": "Book Demo, page 1",
+      "notes": "",
+      "results": [
+        {
+          "id": "5cb88ce7-45f1-49fb-8da6-2be371b9d280",
+          "parameter": "pH",
+          "value": "7.2",
+          "unit": "pH",
+          "limit": "6.5-8.5",
+          "method": "Electrometric",
+          "analyst": "Lab Admin",
+          "flag": "OK",
+          "bookPage": "Book Demo, page 1, pH row",
+          "enteredAt": "2026-08-17T10:05:59.196Z"
+        }
+      ],
+      "files": [
+        {
+          "id": "9996ef5f-77b0-4c65-8533-60bb1b1a38ca",
+          "originalName": "package.json",
+          "storedName": "1786961159782-package.json",
+          "url": "/uploads/1786961159782-package.json",
+          "category": "Lab Book Photo",
+          "uploadedBy": "Lab Admin",
+          "uploadedAt": "2026-08-17T10:05:59.784Z"
+        }
+      ],
+      "chainOfCustody": [
+        {
+          "at": "2026-08-17T10:05:58.919Z",
+          "by": "Lab Admin",
+          "action": "Received",
+          "locationId": "0e0db07e-aa44-4edd-9d2e-086e01481cb4"
+        }
+      ],
+      "active": true,
+      "createdAt": "2026-08-17T10:05:58.919Z",
+      "updatedAt": "2026-08-17T10:05:59.784Z",
+      "dueAt": "2026-08-20T10:05:58.919Z",
+      "retentionStatus": "Active",
+      "disposal": null,
+      "workflowStage": "Needs Review"
+    }
+  ],
+  "audit": [
+    {
+      "id": "0d584ed7-3bd7-4564-b7f4-07e9d992a266",
+      "at": "2026-08-20T06:29:25.552Z",
+      "userId": "9954d48a-3d88-44b2-ab92-848afe2f670f",
+      "userName": "Vishwas",
+      "action": "Modified sample",
+      "entity": "sample",
+      "entityId": "8f97cd32-d80f-4cd0-9de5-9d3e27b97479",
+      "detail": "PL-2026-000043: status, assignedTo, storageLocationId, notes, dueAt"
+    },
+    {
+      "id": "b8fd1219-0c90-45ca-b4fd-bb812b4f8a78",
+      "at": "2026-08-20T06:26:57.056Z",
+      "userId": "9954d48a-3d88-44b2-ab92-848afe2f670f",
+      "userName": "Vishwas",
+      "action": "Modified storage",
+      "entity": "storage",
+      "entityId": "0e0db07e-aa44-4edd-9d2e-086e01481cb4",
+      "detail": "Fridge 1 / Shelf A / Rack 01 (Fridge) active=true full=true"
+    },
+    {
+      "id": "3273fdac-134e-4f4e-b75e-e726b8b6c25b",
+      "at": "2026-08-20T06:26:40.859Z",
+      "userId": "9954d48a-3d88-44b2-ab92-848afe2f670f",
+      "userName": "Vishwas",
+      "action": "Modified storage",
+      "entity": "storage",
+      "entityId": "0e0db07e-aa44-4edd-9d2e-086e01481cb4",
+      "detail": "Fridge 1 / Shelf A / Rack 01 (Fridge) active=true full=false"
+    },
+    {
+      "id": "626e9a48-2338-4643-a147-543b64c0fa06",
+      "at": "2026-08-20T06:24:56.766Z",
+      "userId": "9954d48a-3d88-44b2-ab92-848afe2f670f",
+      "userName": "Vishwas",
+      "action": "Modified sample",
+      "entity": "sample",
+      "entityId": "58c7a76f-9a09-42bf-8760-69e395197889",
+      "detail": "PL-2026-000041: status, assignedTo, storageLocationId, notes, dueAt"
+    },
+    {
+      "id": "8f129f5f-5571-482c-a3a8-8d26a0648b3f",
+      "at": "2026-08-20T06:23:43.612Z",
+      "userId": "9954d48a-3d88-44b2-ab92-848afe2f670f",
+      "userName": "Vishwas",
+      "action": "Modified sample",
+      "entity": "sample",
+      "entityId": "58c7a76f-9a09-42bf-8760-69e395197889",
+      "detail": "PL-2026-000041: status, assignedTo, storageLocationId, notes, dueAt"
+    },
+    {
+      "id": "e77a641d-01bd-4229-ae54-77a34ae0de50",
+      "at": "2026-08-20T06:22:26.998Z",
+      "userId": "9954d48a-3d88-44b2-ab92-848afe2f670f",
+      "userName": "Vishwas",
+      "action": "Modified sample",
+      "entity": "sample",
+      "entityId": "09a300fb-f836-46a1-8d2c-d5115070f559",
+      "detail": "PL-2026-000042: status, assignedTo, storageLocationId, notes, dueAt"
+    },
+    {
+      "id": "41d5e37f-0469-4f71-9a64-7a4651165eb8",
+      "at": "2026-08-20T06:20:53.772Z",
+      "userId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "userName": "Lab Admin",
+      "action": "Logged in",
+      "entity": "user",
+      "entityId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "detail": "User session started"
+    },
+    {
+      "id": "0189eeca-2e82-4fd9-899a-dfb38967fa8b",
+      "at": "2026-08-20T06:20:41.936Z",
+      "userId": "9954d48a-3d88-44b2-ab92-848afe2f670f",
+      "userName": "Vishwas",
+      "action": "Modified storage",
+      "entity": "storage",
+      "entityId": "0e0db07e-aa44-4edd-9d2e-086e01481cb4",
+      "detail": "Fridge 1 / Shelf A / Rack 01 (Fridge) active=true full=true"
+    },
+    {
+      "id": "fda7f54a-82c3-4a24-a43f-a26ff1df81e3",
+      "at": "2026-08-20T06:14:37.838Z",
+      "userId": "9954d48a-3d88-44b2-ab92-848afe2f670f",
+      "userName": "Vishwas",
+      "action": "Logged in",
+      "entity": "user",
+      "entityId": "9954d48a-3d88-44b2-ab92-848afe2f670f",
+      "detail": "User session started"
+    },
+    {
+      "id": "ed9fcad5-9c04-4a2a-bcbb-38b2620d06cf",
+      "at": "2026-08-20T06:14:13.641Z",
+      "userId": "9954d48a-3d88-44b2-ab92-848afe2f670f",
+      "userName": "Vishwas",
+      "action": "Logged in",
+      "entity": "user",
+      "entityId": "9954d48a-3d88-44b2-ab92-848afe2f670f",
+      "detail": "User session started"
+    },
+    {
+      "id": "12a970f0-eaec-42ad-8f72-16c578966889",
+      "at": "2026-08-20T06:13:30.709Z",
+      "userId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "userName": "Lab Admin",
+      "action": "Modified storage",
+      "entity": "storage",
+      "entityId": "0e0db07e-aa44-4edd-9d2e-086e01481cb4",
+      "detail": "Fridge 1 / Shelf A / Rack 01 (Fridge) active=true full=false"
+    },
+    {
+      "id": "03349304-5971-401d-a7b7-b91d1c1cef68",
+      "at": "2026-08-20T06:13:30.687Z",
+      "userId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "userName": "Lab Admin",
+      "action": "Modified storage",
+      "entity": "storage",
+      "entityId": "0e0db07e-aa44-4edd-9d2e-086e01481cb4",
+      "detail": "Fridge 1 / Shelf A / Rack 01 (Fridge) active=true full=true"
+    },
+    {
+      "id": "094906c3-e9a5-4029-b081-f074a226c2ec",
+      "at": "2026-08-20T06:13:30.615Z",
+      "userId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "userName": "Lab Admin",
+      "action": "Logged in",
+      "entity": "user",
+      "entityId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "detail": "User session started"
+    },
+    {
+      "id": "34109d9f-0a3c-4c03-bfa8-fa2ff25faa09",
+      "at": "2026-08-20T05:27:56.295Z",
+      "userId": "9954d48a-3d88-44b2-ab92-848afe2f670f",
+      "userName": "Vishwas",
+      "action": "Logged in",
+      "entity": "user",
+      "entityId": "9954d48a-3d88-44b2-ab92-848afe2f670f",
+      "detail": "User session started"
+    },
+    {
+      "id": "ce00d882-80ea-4e2e-b24d-e17cb656a9da",
+      "at": "2026-08-20T05:24:41.393Z",
+      "userId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "userName": "Lab Admin",
+      "action": "Logged in",
+      "entity": "user",
+      "entityId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "detail": "User session started"
+    },
+    {
+      "id": "7e34cd46-452f-4fdb-aad7-7fb6654c4dd6",
+      "at": "2026-08-20T05:23:56.487Z",
+      "userId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "userName": "Lab Admin",
+      "action": "Logged in",
+      "entity": "user",
+      "entityId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "detail": "User session started"
+    },
+    {
+      "id": "47d2e672-9eda-423d-8fba-57d7a6bfcbfa",
+      "at": "2026-08-20T05:23:44.621Z",
+      "userId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "userName": "Lab Admin",
+      "action": "Logged in",
+      "entity": "user",
+      "entityId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "detail": "User session started"
+    },
+    {
+      "id": "3b0abb53-765c-4947-94b0-5d2575ba14a0",
+      "at": "2026-08-19T10:49:58.751Z",
+      "userId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "userName": "Lab Admin",
+      "action": "Bulk created samples",
+      "entity": "sample",
+      "entityId": "bulk",
+      "detail": "10 samples created"
+    },
+    {
+      "id": "8de52c67-fb82-4694-8a9e-09b47620b3f0",
+      "at": "2026-08-19T06:57:37.282Z",
+      "userId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "userName": "Lab Admin",
+      "action": "Bulk created samples",
+      "entity": "sample",
+      "entityId": "bulk",
+      "detail": "10 samples created"
+    },
+    {
+      "id": "46887a28-dcd1-49b8-93c4-650625b01388",
+      "at": "2026-08-19T06:55:46.361Z",
+      "userId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "userName": "Lab Admin",
+      "action": "Logged in",
+      "entity": "user",
+      "entityId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "detail": "User session started"
+    },
+    {
+      "id": "7e326b7c-9c06-421b-aa51-d6ddc2ada6c8",
+      "at": "2026-08-19T06:48:24.735Z",
+      "userId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "userName": "Lab Admin",
+      "action": "Bulk created samples",
+      "entity": "sample",
+      "entityId": "bulk",
+      "detail": "10 samples created"
+    },
+    {
+      "id": "b9812b3d-33e9-4d75-a333-ef9c748c73f9",
+      "at": "2026-08-19T06:47:01.719Z",
+      "userId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "userName": "Lab Admin",
+      "action": "Logged in",
+      "entity": "user",
+      "entityId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "detail": "User session started"
+    },
+    {
+      "id": "f0e662ad-54f6-4c82-a55e-29da558def34",
+      "at": "2026-08-18T10:46:42.666Z",
+      "userId": "9954d48a-3d88-44b2-ab92-848afe2f670f",
+      "userName": "Vishwas",
+      "action": "Logged in",
+      "entity": "user",
+      "entityId": "9954d48a-3d88-44b2-ab92-848afe2f670f",
+      "detail": "User session started"
+    },
+    {
+      "id": "7e10c2fa-08b9-4c9f-8fdb-80fe02bc7eb3",
+      "at": "2026-08-18T10:33:05.153Z",
+      "userId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "userName": "Lab Admin",
+      "action": "Logged in",
+      "entity": "user",
+      "entityId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "detail": "User session started"
+    },
+    {
+      "id": "eed089ee-dbd6-4dad-ba4e-2db106733176",
+      "at": "2026-08-18T10:30:32.825Z",
+      "userId": "9954d48a-3d88-44b2-ab92-848afe2f670f",
+      "userName": "Vishwas",
+      "action": "Exported backup",
+      "entity": "system",
+      "entityId": "backup",
+      "detail": "Readable HTML backup downloaded"
+    },
+    {
+      "id": "11877095-82d7-42f3-a843-5a27a6cdd8f6",
+      "at": "2026-08-18T10:24:39.402Z",
+      "userId": "9954d48a-3d88-44b2-ab92-848afe2f670f",
+      "userName": "Vishwas",
+      "action": "Bulk created samples",
+      "entity": "sample",
+      "entityId": "bulk",
+      "detail": "10 samples created"
+    },
+    {
+      "id": "da46d7cc-5203-4b1b-aecd-e9c3df66cb04",
+      "at": "2026-08-18T10:18:04.751Z",
+      "userId": "9954d48a-3d88-44b2-ab92-848afe2f670f",
+      "userName": "Vishwas",
+      "action": "Logged in",
+      "entity": "user",
+      "entityId": "9954d48a-3d88-44b2-ab92-848afe2f670f",
+      "detail": "User session started"
+    },
+    {
+      "id": "02dcff2c-23ce-44a3-8961-95574e0ab248",
+      "at": "2026-08-18T10:17:49.556Z",
+      "userId": "9954d48a-3d88-44b2-ab92-848afe2f670f",
+      "userName": "Vishwas",
+      "action": "Reset password",
+      "entity": "user",
+      "entityId": "9954d48a-3d88-44b2-ab92-848afe2f670f",
+      "detail": "Password changed after OTP verification"
+    },
+    {
+      "id": "004a1ed1-321e-4bd6-9280-beb6f305e0fc",
+      "at": "2026-08-18T10:17:24.993Z",
+      "userId": "9954d48a-3d88-44b2-ab92-848afe2f670f",
+      "userName": "Vishwas",
+      "action": "Started password reset",
+      "entity": "user",
+      "entityId": "9954d48a-3d88-44b2-ab92-848afe2f670f",
+      "detail": "Password reset OTP generated"
+    },
+    {
+      "id": "08115821-8c7e-4b41-ad15-8a8528159d44",
+      "at": "2026-08-18T10:16:50.576Z",
+      "userId": "9954d48a-3d88-44b2-ab92-848afe2f670f",
+      "userName": "Vishwas",
+      "action": "Started password reset",
+      "entity": "user",
+      "entityId": "9954d48a-3d88-44b2-ab92-848afe2f670f",
+      "detail": "Password reset OTP generated"
+    },
+    {
+      "id": "c7f45fac-20cb-4578-967d-5f6fc7a9a2cb",
+      "at": "2026-08-18T10:11:26.271Z",
+      "userId": "1417b68e-e077-4697-b032-1a0a82b13563",
+      "userName": "Reset Test User",
+      "action": "Logged in",
+      "entity": "user",
+      "entityId": "1417b68e-e077-4697-b032-1a0a82b13563",
+      "detail": "User session started"
+    },
+    {
+      "id": "76677669-79bb-4b24-8ef2-a0b67ab838c5",
+      "at": "2026-08-18T10:11:26.147Z",
+      "userId": "1417b68e-e077-4697-b032-1a0a82b13563",
+      "userName": "Reset Test User",
+      "action": "Reset password",
+      "entity": "user",
+      "entityId": "1417b68e-e077-4697-b032-1a0a82b13563",
+      "detail": "Password changed after OTP verification"
+    },
+    {
+      "id": "af2d2ab0-7220-4feb-91de-60dc9ddcef60",
+      "at": "2026-08-18T10:11:26.060Z",
+      "userId": "1417b68e-e077-4697-b032-1a0a82b13563",
+      "userName": "Reset Test User",
+      "action": "Started password reset",
+      "entity": "user",
+      "entityId": "1417b68e-e077-4697-b032-1a0a82b13563",
+      "detail": "Password reset OTP generated"
+    },
+    {
+      "id": "71ad0947-2dc2-4bdb-9d75-49d37f1cf3af",
+      "at": "2026-08-18T10:11:26.050Z",
+      "userId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "userName": "Lab Admin",
+      "action": "Created user",
+      "entity": "user",
+      "entityId": "1417b68e-e077-4697-b032-1a0a82b13563",
+      "detail": "Reset Test User added as viewer"
+    },
+    {
+      "id": "4e4bd772-5552-450f-8e37-660a6d53423c",
+      "at": "2026-08-18T10:11:25.902Z",
+      "userId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "userName": "Lab Admin",
+      "action": "Logged in",
+      "entity": "user",
+      "entityId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "detail": "User session started"
+    },
+    {
+      "id": "faa5b19b-37cc-43d1-aa3e-2d034f639c66",
+      "at": "2026-08-18T10:08:12.346Z",
+      "userId": "72a0637a-895e-4fdf-9182-4b125c8a17c7",
+      "userName": "Vishwas",
+      "action": "Reset password",
+      "entity": "user",
+      "entityId": "72a0637a-895e-4fdf-9182-4b125c8a17c7",
+      "detail": "Password changed after OTP verification"
+    },
+    {
+      "id": "4617739e-abd4-4a97-896e-82a8446987f2",
+      "at": "2026-08-18T10:07:49.306Z",
+      "userId": "72a0637a-895e-4fdf-9182-4b125c8a17c7",
+      "userName": "Vishwas",
+      "action": "Started password reset",
+      "entity": "user",
+      "entityId": "72a0637a-895e-4fdf-9182-4b125c8a17c7",
+      "detail": "Password reset OTP generated"
+    },
+    {
+      "id": "5dcc57e2-907c-4bf8-88a1-a6e1f9cb6385",
+      "at": "2026-08-18T10:07:08.371Z",
+      "userId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "userName": "Lab Admin",
+      "action": "Modified user",
+      "entity": "user",
+      "entityId": "9954d48a-3d88-44b2-ab92-848afe2f670f",
+      "detail": "Vishwas: {\"role\":\"viewer\",\"active\":true} -> role=manager, active=true"
+    },
+    {
+      "id": "8bf87c34-b4aa-4115-a2e3-9b7b94b9a673",
+      "at": "2026-08-18T10:04:40.447Z",
+      "userId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "userName": "Lab Admin",
+      "action": "Logged in",
+      "entity": "user",
+      "entityId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "detail": "User session started"
+    },
+    {
+      "id": "d367ffd3-d073-45aa-b30c-4721b639a50a",
+      "at": "2026-08-18T10:03:53.564Z",
+      "userId": "72a0637a-895e-4fdf-9182-4b125c8a17c7",
+      "userName": "Vishwas",
+      "action": "Reset password",
+      "entity": "user",
+      "entityId": "72a0637a-895e-4fdf-9182-4b125c8a17c7",
+      "detail": "Password changed after OTP verification"
+    },
+    {
+      "id": "a5619a2c-1fa7-42a5-a374-1e8d21eef1fc",
+      "at": "2026-08-18T10:03:19.301Z",
+      "userId": "72a0637a-895e-4fdf-9182-4b125c8a17c7",
+      "userName": "Vishwas",
+      "action": "Started password reset",
+      "entity": "user",
+      "entityId": "72a0637a-895e-4fdf-9182-4b125c8a17c7",
+      "detail": "Password reset OTP generated"
+    },
+    {
+      "id": "c0548111-b7e9-4693-b748-cc26df5103ca",
+      "at": "2026-08-18T10:02:32.765Z",
+      "userId": "72a0637a-895e-4fdf-9182-4b125c8a17c7",
+      "userName": "Vishwas",
+      "action": "Started password reset",
+      "entity": "user",
+      "entityId": "72a0637a-895e-4fdf-9182-4b125c8a17c7",
+      "detail": "Password reset OTP generated"
+    },
+    {
+      "id": "6d4f4128-cbe5-4a36-8137-055719507dfe",
+      "at": "2026-08-18T10:00:38.473Z",
+      "userId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "userName": "Lab Admin",
+      "action": "Imported Excel results",
+      "entity": "sample",
+      "entityId": "06899103-f845-4841-9fc9-b7244c5f4e14",
+      "detail": "PL-2026-000003: 2 rows from test-results.xlsx"
+    },
+    {
+      "id": "27eee95e-fc84-4724-b0d0-c00f45d2e591",
+      "at": "2026-08-18T10:00:38.389Z",
+      "userId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "userName": "Lab Admin",
+      "action": "Bulk created samples",
+      "entity": "sample",
+      "entityId": "bulk",
+      "detail": "1 samples created"
+    },
+    {
+      "id": "d060fb93-fd4f-45e3-af44-fa08ec1c60fe",
+      "at": "2026-08-18T10:00:38.357Z",
+      "userId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "userName": "Lab Admin",
+      "action": "Logged in",
+      "entity": "user",
+      "entityId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "detail": "User session started"
+    },
+    {
+      "id": "ea0f1b26-c478-48ad-bee9-c221492667df",
+      "at": "2026-08-18T09:59:26.749Z",
+      "userId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "userName": "Lab Admin",
+      "action": "Logged in",
+      "entity": "user",
+      "entityId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "detail": "User session started"
+    },
+    {
+      "id": "91f14827-792b-42ff-8dac-2f3258287917",
+      "at": "2026-08-18T09:59:02.341Z",
+      "userId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "userName": "Lab Admin",
+      "action": "Bulk created samples",
+      "entity": "sample",
+      "entityId": "bulk",
+      "detail": "1 samples created"
+    },
+    {
+      "id": "04a64c5f-d5aa-445d-acb8-679a8e9e9f71",
+      "at": "2026-08-18T09:59:02.321Z",
+      "userId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "userName": "Lab Admin",
+      "action": "Logged in",
+      "entity": "user",
+      "entityId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "detail": "User session started"
+    },
+    {
+      "id": "19cbab1a-a3a4-4ee5-a604-cf2f4d984a38",
+      "at": "2026-08-18T09:58:40.381Z",
+      "userId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "userName": "Lab Admin",
+      "action": "Bulk created samples",
+      "entity": "sample",
+      "entityId": "bulk",
+      "detail": "1 samples created"
+    },
+    {
+      "id": "660a5db9-0ab7-46fd-8deb-f3119cdca64f",
+      "at": "2026-08-18T09:58:40.246Z",
+      "userId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "userName": "Lab Admin",
+      "action": "Logged in",
+      "entity": "user",
+      "entityId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "detail": "User session started"
+    },
+    {
+      "id": "31c1f12e-70e2-4899-8236-9be295519281",
+      "at": "2026-08-18T08:56:54.507Z",
+      "userId": "72a0637a-895e-4fdf-9182-4b125c8a17c7",
+      "userName": "Vishwas",
+      "action": "Reset password",
+      "entity": "user",
+      "entityId": "72a0637a-895e-4fdf-9182-4b125c8a17c7",
+      "detail": "Password changed after OTP verification"
+    },
+    {
+      "id": "f763cbf6-b933-4c76-aeb1-f5f2c67380d0",
+      "at": "2026-08-18T08:56:04.172Z",
+      "userId": "72a0637a-895e-4fdf-9182-4b125c8a17c7",
+      "userName": "Vishwas",
+      "action": "Started password reset",
+      "entity": "user",
+      "entityId": "72a0637a-895e-4fdf-9182-4b125c8a17c7",
+      "detail": "Password reset OTP generated"
+    },
+    {
+      "id": "706a7425-08ed-4683-a1a4-2a320d088e1a",
+      "at": "2026-08-18T07:39:19.341Z",
+      "userId": "9954d48a-3d88-44b2-ab92-848afe2f670f",
+      "userName": "Vishwas",
+      "action": "Logged in",
+      "entity": "user",
+      "entityId": "9954d48a-3d88-44b2-ab92-848afe2f670f",
+      "detail": "User session started"
+    },
+    {
+      "id": "1ac616f6-f069-4644-b11d-20271be37b47",
+      "at": "2026-08-18T07:39:08.989Z",
+      "userId": "9954d48a-3d88-44b2-ab92-848afe2f670f",
+      "userName": "Vishwas",
+      "action": "Verified signup",
+      "entity": "user",
+      "entityId": "9954d48a-3d88-44b2-ab92-848afe2f670f",
+      "detail": "Vishwas created a verified account"
+    },
+    {
+      "id": "bdf9266e-8f96-4ae5-b367-68aef623aa02",
+      "at": "2026-08-18T07:38:56.351Z",
+      "userId": "system",
+      "userName": "System",
+      "action": "Saved signup phone",
+      "entity": "user",
+      "entityId": "0932aadc-3e94-4bf5-a358-1df94c10961d",
+      "detail": "+91 8792823161"
+    },
+    {
+      "id": "4795ac8b-804b-4c7a-959b-00428a38e459",
+      "at": "2026-08-18T07:38:48.068Z",
+      "userId": "system",
+      "userName": "System",
+      "action": "Verified signup email",
+      "entity": "user",
+      "entityId": "0932aadc-3e94-4bf5-a358-1df94c10961d",
+      "detail": "vp14032001@gmail.com"
+    },
+    {
+      "id": "748feb0c-3882-4676-b272-9f9812fcb9cc",
+      "at": "2026-08-18T07:38:28.132Z",
+      "userId": "system",
+      "userName": "System",
+      "action": "Sent signup email OTP",
+      "entity": "user",
+      "entityId": "0932aadc-3e94-4bf5-a358-1df94c10961d",
+      "detail": "Vishwas requested email verification"
+    },
+    {
+      "id": "c039da9a-ed46-4f19-81a2-6138f92e45b5",
+      "at": "2026-08-18T07:38:09.161Z",
+      "userId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "userName": "Lab Admin",
+      "action": "Deleted user login",
+      "entity": "user",
+      "entityId": "59fb52ab-22f2-41a4-b956-6a4b5da21811",
+      "detail": "Vishwas was deactivated and can no longer login"
+    },
+    {
+      "id": "1293c109-5a6a-48b5-9556-c9a3e4581959",
+      "at": "2026-08-18T07:38:06.170Z",
+      "userId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "userName": "Lab Admin",
+      "action": "Deleted user login",
+      "entity": "user",
+      "entityId": "d88b2dd3-ac9f-49d3-8b45-1a871643fceb",
+      "detail": "Login Return User was deactivated and can no longer login"
+    },
+    {
+      "id": "98ae8f89-627c-4f6e-a5fc-7293efb3422e",
+      "at": "2026-08-18T07:37:57.574Z",
+      "userId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "userName": "Lab Admin",
+      "action": "Logged in",
+      "entity": "user",
+      "entityId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "detail": "User session started"
+    },
+    {
+      "id": "3118ba99-b91d-462b-b3a2-3e5597b7fc31",
+      "at": "2026-08-18T07:37:07.085Z",
+      "userId": "d88b2dd3-ac9f-49d3-8b45-1a871643fceb",
+      "userName": "Login Return User",
+      "action": "Verified signup",
+      "entity": "user",
+      "entityId": "d88b2dd3-ac9f-49d3-8b45-1a871643fceb",
+      "detail": "Login Return User created a verified account"
+    },
+    {
+      "id": "8d5c4765-3014-4e40-8288-ad0b5499bf0b",
+      "at": "2026-08-18T07:37:06.851Z",
+      "userId": "system",
+      "userName": "System",
+      "action": "Saved signup phone",
+      "entity": "user",
+      "entityId": "034c2a5c-2623-4ebd-bc9e-d8704cf4de97",
+      "detail": "+91 7038622834"
+    },
+    {
+      "id": "c7e29f46-3bd1-47f0-9870-903a70cec940",
+      "at": "2026-08-18T07:37:06.755Z",
+      "userId": "system",
+      "userName": "System",
+      "action": "Verified signup email",
+      "entity": "user",
+      "entityId": "034c2a5c-2623-4ebd-bc9e-d8704cf4de97",
+      "detail": "loginreturn1787038622834@lab.local"
+    },
+    {
+      "id": "d52a5aea-c1ce-4703-a763-2e7fe744cbc0",
+      "at": "2026-08-18T07:37:06.203Z",
+      "userId": "system",
+      "userName": "System",
+      "action": "Sent signup email OTP",
+      "entity": "user",
+      "entityId": "034c2a5c-2623-4ebd-bc9e-d8704cf4de97",
+      "detail": "Login Return User requested email verification"
+    },
+    {
+      "id": "cb9e36c6-c84b-43bf-bbdf-57306ccf5ed4",
+      "at": "2026-08-18T07:36:09.394Z",
+      "userId": "59fb52ab-22f2-41a4-b956-6a4b5da21811",
+      "userName": "Vishwas",
+      "action": "Verified signup",
+      "entity": "user",
+      "entityId": "59fb52ab-22f2-41a4-b956-6a4b5da21811",
+      "detail": "Vishwas created a verified account"
+    },
+    {
+      "id": "803352ac-e31d-42ad-9c44-82370a87be34",
+      "at": "2026-08-18T07:35:55.081Z",
+      "userId": "system",
+      "userName": "System",
+      "action": "Saved signup phone",
+      "entity": "user",
+      "entityId": "51d231ff-3208-4fcf-9186-9a7613e4fb0a",
+      "detail": "+91 8792823161"
+    },
+    {
+      "id": "f0090a3b-2be0-4dd6-8407-2148bbf86c8a",
+      "at": "2026-08-18T07:35:48.580Z",
+      "userId": "system",
+      "userName": "System",
+      "action": "Verified signup email",
+      "entity": "user",
+      "entityId": "51d231ff-3208-4fcf-9186-9a7613e4fb0a",
+      "detail": "vp14032001@gmail.com"
+    },
+    {
+      "id": "1658fa46-8cb6-4b4c-be7b-98a6fb14cd07",
+      "at": "2026-08-18T07:34:29.282Z",
+      "userId": "system",
+      "userName": "System",
+      "action": "Sent signup email OTP",
+      "entity": "user",
+      "entityId": "51d231ff-3208-4fcf-9186-9a7613e4fb0a",
+      "detail": "Vishwas requested email verification"
+    },
+    {
+      "id": "a1108e4c-6124-427b-ae84-2fa2b648a2f6",
+      "at": "2026-08-18T07:31:41.964Z",
+      "userId": "system",
+      "userName": "System",
+      "action": "Sent signup email OTP",
+      "entity": "user",
+      "entityId": "1bf8bb1b-ff12-416b-ba51-b610e2214255",
+      "detail": "VIshwas requested email verification"
+    },
+    {
+      "id": "71ea02f3-8124-40c5-8319-aa7644e93fc5",
+      "at": "2026-08-18T07:31:27.367Z",
+      "userId": "system",
+      "userName": "System",
+      "action": "Resent signup OTP",
+      "entity": "user",
+      "entityId": "9d702afd-367e-4bfe-a010-1b744bb64837",
+      "detail": "email code refreshed"
+    },
+    {
+      "id": "dfd16113-db2d-4a71-88df-91df56cb0d7e",
+      "at": "2026-08-18T07:30:02.164Z",
+      "userId": "system",
+      "userName": "System",
+      "action": "Sent signup email OTP",
+      "entity": "user",
+      "entityId": "9d702afd-367e-4bfe-a010-1b744bb64837",
+      "detail": "VIshwas requested email verification"
+    },
+    {
+      "id": "cba66f41-466d-457b-b414-aa9a11e60d6e",
+      "at": "2026-08-18T07:29:06.952Z",
+      "userId": "system",
+      "userName": "System",
+      "action": "Sent signup email OTP",
+      "entity": "user",
+      "entityId": "c5fdd63a-a909-4693-9aa9-f2de3be1ac8f",
+      "detail": "VIshwas requested email verification"
+    },
+    {
+      "id": "fe20512c-344f-4cbf-99ff-272a13c67b2e",
+      "at": "2026-08-18T07:24:04.860Z",
+      "userId": "system",
+      "userName": "System",
+      "action": "Sent signup email OTP",
+      "entity": "user",
+      "entityId": "4058ac38-2005-4a05-8610-19020e2cee5b",
+      "detail": "Reuse New requested email verification"
+    },
+    {
+      "id": "8352dc3c-a78b-487b-8589-58dd7afc8e10",
+      "at": "2026-08-18T07:24:04.828Z",
+      "userId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "userName": "Lab Admin",
+      "action": "Deleted user login",
+      "entity": "user",
+      "entityId": "d7dd30e9-823a-46c8-8119-df6e5c683038",
+      "detail": "Reuse Test was deactivated and can no longer login"
+    },
+    {
+      "id": "ae33ebec-af84-495c-adb5-26db600169b5",
+      "at": "2026-08-18T07:24:04.808Z",
+      "userId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "userName": "Lab Admin",
+      "action": "Created user",
+      "entity": "user",
+      "entityId": "d7dd30e9-823a-46c8-8119-df6e5c683038",
+      "detail": "Reuse Test added as viewer"
+    },
+    {
+      "id": "6862bf1d-c24d-48d5-b5e1-734c5b42fe05",
+      "at": "2026-08-18T07:24:04.668Z",
+      "userId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "userName": "Lab Admin",
+      "action": "Logged in",
+      "entity": "user",
+      "entityId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "detail": "User session started"
+    },
+    {
+      "id": "72ef4300-6709-4f21-8959-6d8beb5f7977",
+      "at": "2026-08-18T07:22:13.766Z",
+      "userId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "userName": "Lab Admin",
+      "action": "Deleted user login",
+      "entity": "user",
+      "entityId": "a8d2d2ec-36f7-4a60-8b29-fa91c8ca0fdc",
+      "detail": "Compact Signup User was deactivated and can no longer login"
+    },
+    {
+      "id": "2e65d770-6941-4731-bc27-a62a7d9261c5",
+      "at": "2026-08-18T07:22:11.471Z",
+      "userId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "userName": "Lab Admin",
+      "action": "Deleted user login",
+      "entity": "user",
+      "entityId": "56e55716-8d0e-41d9-b165-5437007ee188",
+      "detail": "Email Only User was deactivated and can no longer login"
+    },
+    {
+      "id": "5f7dda85-cb48-47a6-9d38-90875e5e0a95",
+      "at": "2026-08-18T07:22:08.576Z",
+      "userId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "userName": "Lab Admin",
+      "action": "Deleted user login",
+      "entity": "user",
+      "entityId": "66e63414-b584-4a1e-bff8-6db97ba0157d",
+      "detail": "OTP Test User was deactivated and can no longer login"
+    },
+    {
+      "id": "67955ffa-e10b-462a-b10a-6c6024277e68",
+      "at": "2026-08-18T07:22:05.150Z",
+      "userId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "userName": "Lab Admin",
+      "action": "Deleted user login",
+      "entity": "user",
+      "entityId": "88c16600-f0cd-4639-95a7-e9e6ee9f9637",
+      "detail": "Vishwas was deactivated and can no longer login"
+    },
+    {
+      "id": "a28a6e64-8227-4da3-ada9-70bb51752633",
+      "at": "2026-08-18T07:22:00.514Z",
+      "userId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "userName": "Lab Admin",
+      "action": "Deleted user login",
+      "entity": "user",
+      "entityId": "27bf0071-1dc9-4bdb-bc13-9fa40ca87e48",
+      "detail": "OTP Test User was deactivated and can no longer login"
+    },
+    {
+      "id": "f32edd80-6bc4-40dd-8b2d-8f612cc88400",
+      "at": "2026-08-18T07:21:51.080Z",
+      "userId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "userName": "Lab Admin",
+      "action": "Logged in",
+      "entity": "user",
+      "entityId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "detail": "User session started"
+    },
+    {
+      "id": "86c38a85-f94e-4c65-8a99-80699b85eb57",
+      "at": "2026-08-18T07:14:28.784Z",
+      "userId": "system",
+      "userName": "System",
+      "action": "Saved signup phone",
+      "entity": "user",
+      "entityId": "4ece5ea8-09bc-40c7-96a9-7b32c5d5a345",
+      "detail": "+91 7037267562"
+    },
+    {
+      "id": "e2befdd0-68b4-4cfd-9986-70efd30c5aae",
+      "at": "2026-08-18T07:14:28.249Z",
+      "userId": "system",
+      "userName": "System",
+      "action": "Verified signup email",
+      "entity": "user",
+      "entityId": "4ece5ea8-09bc-40c7-96a9-7b32c5d5a345",
+      "detail": "optimized1787037267562@lab.local"
+    },
+    {
+      "id": "0d1ddd48-25b9-4e25-a064-e6b5075e4f9f",
+      "at": "2026-08-18T07:14:28.072Z",
+      "userId": "system",
+      "userName": "System",
+      "action": "Sent signup email OTP",
+      "entity": "user",
+      "entityId": "4ece5ea8-09bc-40c7-96a9-7b32c5d5a345",
+      "detail": "Optimized User requested email verification"
+    },
+    {
+      "id": "e9009610-2175-4f66-9ade-eca2dce67dfe",
+      "at": "2026-08-18T07:01:35.274Z",
+      "userId": "88c16600-f0cd-4639-95a7-e9e6ee9f9637",
+      "userName": "Vishwas",
+      "action": "Verified signup",
+      "entity": "user",
+      "entityId": "88c16600-f0cd-4639-95a7-e9e6ee9f9637",
+      "detail": "Vishwas created a verified account"
+    },
+    {
+      "id": "53efe951-dfba-4144-851e-97e05810b90c",
+      "at": "2026-08-18T07:01:20.972Z",
+      "userId": "system",
+      "userName": "System",
+      "action": "Saved signup phone",
+      "entity": "user",
+      "entityId": "6f3ed6ed-424e-4485-a558-c6426f2ae85c",
+      "detail": "+91 8792823161"
+    },
+    {
+      "id": "6e2eca8a-c46a-465b-ad58-3a70ec24b1ed",
+      "at": "2026-08-18T07:01:13.491Z",
+      "userId": "system",
+      "userName": "System",
+      "action": "Verified signup email",
+      "entity": "user",
+      "entityId": "6f3ed6ed-424e-4485-a558-c6426f2ae85c",
+      "detail": "igstcbilateralworkshop2025@gmail.com"
+    },
+    {
+      "id": "7fe953b3-2e6d-4bd0-a563-7ef989f7da76",
+      "at": "2026-08-18T07:00:23.225Z",
+      "userId": "system",
+      "userName": "System",
+      "action": "Sent signup email OTP",
+      "entity": "user",
+      "entityId": "6f3ed6ed-424e-4485-a558-c6426f2ae85c",
+      "detail": "Vishwas requested email verification"
+    },
+    {
+      "id": "584a74bb-15b4-472a-8081-45c68bbe3825",
+      "at": "2026-08-18T06:52:58.623Z",
+      "userId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "userName": "Lab Admin",
+      "action": "Exported backup",
+      "entity": "system",
+      "entityId": "backup",
+      "detail": "Readable HTML backup downloaded"
+    },
+    {
+      "id": "5a7ad980-a3c6-4ad6-bf6e-fbb33a7e8667",
+      "at": "2026-08-18T06:52:58.575Z",
+      "userId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "userName": "Lab Admin",
+      "action": "Exported backup",
+      "entity": "system",
+      "entityId": "backup",
+      "detail": "Readable HTML backup downloaded"
+    },
+    {
+      "id": "52c5b866-15cc-49a1-985a-7a1216a091fe",
+      "at": "2026-08-18T06:52:58.393Z",
+      "userId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "userName": "Lab Admin",
+      "action": "Logged in",
+      "entity": "user",
+      "entityId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "detail": "User session started"
+    },
+    {
+      "id": "7ce89eb0-f72f-4045-a4ed-b06a180dd8d5",
+      "at": "2026-08-18T06:52:57.785Z",
+      "userId": "a8d2d2ec-36f7-4a60-8b29-fa91c8ca0fdc",
+      "userName": "Compact Signup User",
+      "action": "Verified signup",
+      "entity": "user",
+      "entityId": "a8d2d2ec-36f7-4a60-8b29-fa91c8ca0fdc",
+      "detail": "Compact Signup User created a verified account"
+    },
+    {
+      "id": "8645d953-ef3d-4fe0-a86c-f05a17ea95fb",
+      "at": "2026-08-18T06:52:57.567Z",
+      "userId": "system",
+      "userName": "System",
+      "action": "Saved signup phone",
+      "entity": "user",
+      "entityId": "ea5af6c8-ea5a-421c-bba8-9a9015528763",
+      "detail": "+91 7035976507"
+    },
+    {
+      "id": "d4fb9ce2-94be-4ffb-b229-32778af0ab6c",
+      "at": "2026-08-18T06:52:57.106Z",
+      "userId": "system",
+      "userName": "System",
+      "action": "Verified signup email",
+      "entity": "user",
+      "entityId": "ea5af6c8-ea5a-421c-bba8-9a9015528763",
+      "detail": "compact1787035976507@lab.local"
+    },
+    {
+      "id": "ddc02e39-9cc4-478a-afb9-a7c8624c5d80",
+      "at": "2026-08-18T06:52:56.946Z",
+      "userId": "system",
+      "userName": "System",
+      "action": "Sent signup email OTP",
+      "entity": "user",
+      "entityId": "ea5af6c8-ea5a-421c-bba8-9a9015528763",
+      "detail": "Compact Signup User requested email verification"
+    },
+    {
+      "id": "ec6e1d11-07a9-42bd-9f96-e340f2fc6777",
+      "at": "2026-08-18T06:50:08.553Z",
+      "userId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "userName": "Lab Admin",
+      "action": "Deleted user login",
+      "entity": "user",
+      "entityId": "72a0637a-895e-4fdf-9182-4b125c8a17c7",
+      "detail": "Vishwas was deactivated and can no longer login"
+    },
+    {
+      "id": "27874186-c810-48e9-be49-526bf5e95f0c",
+      "at": "2026-08-18T06:50:04.110Z",
+      "userId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "userName": "Lab Admin",
+      "action": "Deleted user login",
+      "entity": "user",
+      "entityId": "72a0637a-895e-4fdf-9182-4b125c8a17c7",
+      "detail": "Vishwas was deactivated and can no longer login"
+    },
+    {
+      "id": "e85e8d13-7207-41a6-8504-4cf6bc5c0fbb",
+      "at": "2026-08-18T06:50:00.413Z",
+      "userId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "userName": "Lab Admin",
+      "action": "Deleted user login",
+      "entity": "user",
+      "entityId": "72a0637a-895e-4fdf-9182-4b125c8a17c7",
+      "detail": "Vishwas was deactivated and can no longer login"
+    },
+    {
+      "id": "e6ba670f-a5da-4efb-9673-e4c5c696b177",
+      "at": "2026-08-18T06:49:46.817Z",
+      "userId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "userName": "Lab Admin",
+      "action": "Logged in",
+      "entity": "user",
+      "entityId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "detail": "User session started"
+    },
+    {
+      "id": "f0af29ea-0d75-4252-a59d-87e65aa2f258",
+      "at": "2026-08-18T06:46:42.880Z",
+      "userId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "userName": "Lab Admin",
+      "action": "Deleted user login",
+      "entity": "user",
+      "entityId": "79fc8d74-598d-4a5f-83dc-7d1d5c1c5f72",
+      "detail": "Delete Test User was deactivated and can no longer login"
+    },
+    {
+      "id": "38c5f29a-1704-46a0-8771-df47452e860e",
+      "at": "2026-08-18T06:46:42.344Z",
+      "userId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "userName": "Lab Admin",
+      "action": "Created user",
+      "entity": "user",
+      "entityId": "79fc8d74-598d-4a5f-83dc-7d1d5c1c5f72",
+      "detail": "Delete Test User added as viewer"
+    },
+    {
+      "id": "7820c263-ccc2-4ae1-b1b3-120148ad176e",
+      "at": "2026-08-18T06:46:41.539Z",
+      "userId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "userName": "Lab Admin",
+      "action": "Logged in",
+      "entity": "user",
+      "entityId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "detail": "User session started"
+    },
+    {
+      "id": "0f12c197-ac63-4e72-b230-c83ade067278",
+      "at": "2026-08-18T06:46:39.162Z",
+      "userId": "system",
+      "userName": "System",
+      "action": "Verified signup email",
+      "entity": "user",
+      "entityId": "c00063d5-826a-4ba7-8935-0511e5a0db27",
+      "detail": "vishwasprabhakara21@gmail.com"
+    },
+    {
+      "id": "86b3774b-3495-481c-8e53-2a7eb486a850",
+      "at": "2026-08-18T06:46:15.974Z",
+      "userId": "system",
+      "userName": "System",
+      "action": "Sent signup email OTP",
+      "entity": "user",
+      "entityId": "c00063d5-826a-4ba7-8935-0511e5a0db27",
+      "detail": "Vishwas requested email verification"
+    },
+    {
+      "id": "a82bd549-04a0-4b21-9f7a-a4194a506c28",
+      "at": "2026-08-18T06:46:14.518Z",
+      "userId": "system",
+      "userName": "System",
+      "action": "Sent signup email OTP",
+      "entity": "user",
+      "entityId": "93cb6ef4-0eed-4832-9225-2b2d3edbdc86",
+      "detail": "Vishwas requested email verification"
+    },
+    {
+      "id": "40e823a3-3ce1-43a6-9a8d-e11bba633756",
+      "at": "2026-08-18T06:45:03.153Z",
+      "userId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "userName": "Lab Admin",
+      "action": "Modified user",
+      "entity": "user",
+      "entityId": "7000cca0-2207-45e9-9e38-ae955151bb72",
+      "detail": "Vishwas: {\"role\":\"viewer\",\"active\":true} -> role=viewer, active=false"
+    },
+    {
+      "id": "2d2f7ed5-0a11-4972-a488-5263ad7d66c6",
+      "at": "2026-08-18T06:44:44.758Z",
+      "userId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "userName": "Lab Admin",
+      "action": "Logged in",
+      "entity": "user",
+      "entityId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "detail": "User session started"
+    },
+    {
+      "id": "3639fc70-2915-4a26-8ba3-42f5e55a4430",
+      "at": "2026-08-18T06:42:47.212Z",
+      "userId": "56e55716-8d0e-41d9-b165-5437007ee188",
+      "userName": "Email Only User",
+      "action": "Reset password",
+      "entity": "user",
+      "entityId": "56e55716-8d0e-41d9-b165-5437007ee188",
+      "detail": "Password changed after OTP verification"
+    },
+    {
+      "id": "432ec8f4-b41e-46ef-86ae-adefa772b643",
+      "at": "2026-08-18T06:42:46.753Z",
+      "userId": "56e55716-8d0e-41d9-b165-5437007ee188",
+      "userName": "Email Only User",
+      "action": "Started password reset",
+      "entity": "user",
+      "entityId": "56e55716-8d0e-41d9-b165-5437007ee188",
+      "detail": "Password reset OTP generated"
+    },
+    {
+      "id": "e4c630c4-a412-4b8c-96d8-1e2d46632138",
+      "at": "2026-08-18T06:42:45.895Z",
+      "userId": "56e55716-8d0e-41d9-b165-5437007ee188",
+      "userName": "Email Only User",
+      "action": "Verified signup",
+      "entity": "user",
+      "entityId": "56e55716-8d0e-41d9-b165-5437007ee188",
+      "detail": "Email Only User created a verified account"
+    },
+    {
+      "id": "54f954bc-d55e-4455-8695-d0e48d288fae",
+      "at": "2026-08-18T06:42:45.596Z",
+      "userId": "system",
+      "userName": "System",
+      "action": "Saved signup phone",
+      "entity": "user",
+      "entityId": "4560a80b-8c24-4291-ac0d-f596b005a70c",
+      "detail": "+91 7035364254"
+    },
+    {
+      "id": "fa613f92-4930-40aa-9387-f4bd2fa779ef",
+      "at": "2026-08-18T06:42:44.953Z",
+      "userId": "system",
+      "userName": "System",
+      "action": "Verified signup email",
+      "entity": "user",
+      "entityId": "4560a80b-8c24-4291-ac0d-f596b005a70c",
+      "detail": "emailonly1787035364254@lab.local"
+    },
+    {
+      "id": "f2f974ec-8582-45be-b477-1ec0e47e8955",
+      "at": "2026-08-18T06:42:44.844Z",
+      "userId": "system",
+      "userName": "System",
+      "action": "Sent signup email OTP",
+      "entity": "user",
+      "entityId": "4560a80b-8c24-4291-ac0d-f596b005a70c",
+      "detail": "Email Only User requested email verification"
+    },
+    {
+      "id": "6d604c8d-92cf-426d-b80a-5a579be2d5a2",
+      "at": "2026-08-18T06:41:48.399Z",
+      "userId": "system",
+      "userName": "System",
+      "action": "Sent signup email OTP",
+      "entity": "user",
+      "entityId": "5a5f318f-fefe-4af0-a164-cb85edc686a3",
+      "detail": "Email Only User requested email verification"
+    },
+    {
+      "id": "e0e10ffc-709b-49b4-8a17-7b2458f57023",
+      "at": "2026-08-18T06:41:47.900Z",
+      "userId": "system",
+      "userName": "System",
+      "action": "Saved signup phone",
+      "entity": "user",
+      "entityId": "7c8d4bf0-d823-45ef-a231-ee3599accd14",
+      "detail": "+91 9876543210"
+    },
+    {
+      "id": "11efff92-695a-4f2e-a7ac-08fb92caa518",
+      "at": "2026-08-18T06:41:46.862Z",
+      "userId": "system",
+      "userName": "System",
+      "action": "Verified signup email",
+      "entity": "user",
+      "entityId": "7c8d4bf0-d823-45ef-a231-ee3599accd14",
+      "detail": "emailonly1787035306129@lab.local"
+    },
+    {
+      "id": "a934eb1e-1c95-475a-836a-bf1f4ae8a190",
+      "at": "2026-08-18T06:41:46.680Z",
+      "userId": "system",
+      "userName": "System",
+      "action": "Sent signup email OTP",
+      "entity": "user",
+      "entityId": "7c8d4bf0-d823-45ef-a231-ee3599accd14",
+      "detail": "Email Only User requested email verification"
+    },
+    {
+      "id": "47e2f761-39cd-49f4-9661-c00049ed7db0",
+      "at": "2026-08-18T06:10:49.079Z",
+      "userId": "7000cca0-2207-45e9-9e38-ae955151bb72",
+      "userName": "Vishwas",
+      "action": "Verified signup",
+      "entity": "user",
+      "entityId": "7000cca0-2207-45e9-9e38-ae955151bb72",
+      "detail": "Vishwas created a verified account"
+    },
+    {
+      "id": "cc2e42dd-6716-45f3-be7b-85351a3df9e6",
+      "at": "2026-08-18T06:10:26.421Z",
+      "userId": "system",
+      "userName": "System",
+      "action": "Started signup verification",
+      "entity": "user",
+      "entityId": "bcdd6f57-a2a9-4b2f-9447-d65d48c20ea8",
+      "detail": "Vishwas requested account verification"
+    },
+    {
+      "id": "37b8c94b-1413-41db-b360-8d7380e46b45",
+      "at": "2026-08-18T06:09:24.006Z",
+      "userId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "userName": "Lab Admin",
+      "action": "Logged in",
+      "entity": "user",
+      "entityId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "detail": "User session started"
+    },
+    {
+      "id": "6875d2c8-e3e4-45fa-b768-b6744ac85128",
+      "at": "2026-08-18T06:08:30.162Z",
+      "userId": "66e63414-b584-4a1e-bff8-6db97ba0157d",
+      "userName": "OTP Test User",
+      "action": "Logged in",
+      "entity": "user",
+      "entityId": "66e63414-b584-4a1e-bff8-6db97ba0157d",
+      "detail": "User session started"
+    },
+    {
+      "id": "ce826ce5-def3-49d2-ae82-5a0e2216e664",
+      "at": "2026-08-18T06:08:29.667Z",
+      "userId": "66e63414-b584-4a1e-bff8-6db97ba0157d",
+      "userName": "OTP Test User",
+      "action": "Reset password",
+      "entity": "user",
+      "entityId": "66e63414-b584-4a1e-bff8-6db97ba0157d",
+      "detail": "Password changed after OTP verification"
+    },
+    {
+      "id": "8bdec880-21ea-451b-8f48-b949cbbdcc54",
+      "at": "2026-08-18T06:08:29.159Z",
+      "userId": "66e63414-b584-4a1e-bff8-6db97ba0157d",
+      "userName": "OTP Test User",
+      "action": "Started password reset",
+      "entity": "user",
+      "entityId": "66e63414-b584-4a1e-bff8-6db97ba0157d",
+      "detail": "Password reset OTP generated"
+    },
+    {
+      "id": "bf22485c-741d-4242-98d1-1d6d079115b9",
+      "at": "2026-08-18T06:08:28.040Z",
+      "userId": "66e63414-b584-4a1e-bff8-6db97ba0157d",
+      "userName": "OTP Test User",
+      "action": "Verified signup",
+      "entity": "user",
+      "entityId": "66e63414-b584-4a1e-bff8-6db97ba0157d",
+      "detail": "OTP Test User created a verified account"
+    },
+    {
+      "id": "69baa428-6f8f-4317-97c1-1d885aa2fbcb",
+      "at": "2026-08-18T06:08:27.729Z",
+      "userId": "system",
+      "userName": "System",
+      "action": "Started signup verification",
+      "entity": "user",
+      "entityId": "f9181ab9-53f0-4a1a-b94a-79182d5489c2",
+      "detail": "OTP Test User requested account verification"
+    },
+    {
+      "id": "8015ca8b-b051-4771-aa6e-6f59f4c8b5e2",
+      "at": "2026-08-18T06:07:22.204Z",
+      "userId": "27bf0071-1dc9-4bdb-bc13-9fa40ca87e48",
+      "userName": "OTP Test User",
+      "action": "Verified signup",
+      "entity": "user",
+      "entityId": "27bf0071-1dc9-4bdb-bc13-9fa40ca87e48",
+      "detail": "OTP Test User created a verified account"
+    },
+    {
+      "id": "58a4a354-fc8a-41b0-acdc-746bec27e314",
+      "at": "2026-08-18T06:07:21.918Z",
+      "userId": "system",
+      "userName": "System",
+      "action": "Started signup verification",
+      "entity": "user",
+      "entityId": "72b28612-327f-450e-a50b-3e893320fb33",
+      "detail": "OTP Test User requested account verification"
+    },
+    {
+      "id": "7372d245-8cf1-4256-a134-b69a1cccf32a",
+      "at": "2026-08-18T06:01:00.352Z",
+      "userId": "72a0637a-895e-4fdf-9182-4b125c8a17c7",
+      "userName": "Vishwas",
+      "action": "Signed up",
+      "entity": "user",
+      "entityId": "72a0637a-895e-4fdf-9182-4b125c8a17c7",
+      "detail": "Vishwas created an account"
+    },
+    {
+      "id": "5c54762d-8701-44b7-87fc-c873daacb942",
+      "at": "2026-08-18T05:58:13.542Z",
+      "userId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "userName": "Lab Admin",
+      "action": "Exported backup",
+      "entity": "system",
+      "entityId": "backup",
+      "detail": "Full JSON backup downloaded"
+    },
+    {
+      "id": "472fb268-1d05-4dc3-b225-0d6147ffd2da",
+      "at": "2026-08-18T05:56:02.217Z",
+      "userId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "userName": "Lab Admin",
+      "action": "Modified sample",
+      "entity": "sample",
+      "entityId": "5b19bf9f-2f82-4be4-83fd-a5bb48c15268",
+      "detail": "WTR-2026-000004: status, assignedTo, storageLocationId, notes"
+    },
+    {
+      "id": "7217c9a7-5531-444d-9f9c-d8bb29d5429f",
+      "at": "2026-08-18T05:55:41.039Z",
+      "userId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "userName": "Lab Admin",
+      "action": "Bulk entered results",
+      "entity": "sample",
+      "entityId": "5b19bf9f-2f82-4be4-83fd-a5bb48c15268",
+      "detail": "WTR-2026-000004: 0 rows"
+    },
+    {
+      "id": "520d8087-72f6-4357-b637-147d869ea1a0",
+      "at": "2026-08-18T05:55:27.535Z",
+      "userId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "userName": "Lab Admin",
+      "action": "Entered result",
+      "entity": "sample",
+      "entityId": "5b19bf9f-2f82-4be4-83fd-a5bb48c15268",
+      "detail": "WTR-2026-000004: Turbidity = 7.4 NTU"
+    },
+    {
+      "id": "26d508a0-f712-415c-9156-173f16eddf73",
+      "at": "2026-08-18T05:53:55.040Z",
+      "userId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "userName": "Lab Admin",
+      "action": "Logged in",
+      "entity": "user",
+      "entityId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "detail": "User session started"
+    },
+    {
+      "id": "9b69318b-ee7b-4b82-9d10-0dde66f757f3",
+      "at": "2026-08-18T05:53:27.059Z",
+      "userId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "userName": "Lab Admin",
+      "action": "Logged in",
+      "entity": "user",
+      "entityId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "detail": "User session started"
+    },
+    {
+      "id": "9d48e433-8246-46db-9cff-46e94ce7b9f6",
+      "at": "2026-08-18T05:53:00.868Z",
+      "userId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "userName": "Lab Admin",
+      "action": "Entered sheet results",
+      "entity": "sample",
+      "entityId": "5b19bf9f-2f82-4be4-83fd-a5bb48c15268",
+      "detail": "WTR-2026-000004: 2 sheet rows"
+    },
+    {
+      "id": "d4779577-01ed-4a52-85cd-604edbb0540a",
+      "at": "2026-08-18T05:53:00.008Z",
+      "userId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "userName": "Lab Admin",
+      "action": "Uploaded files",
+      "entity": "sample",
+      "entityId": "5b19bf9f-2f82-4be4-83fd-a5bb48c15268",
+      "detail": "WTR-2026-000004: robust-lims-ui.png"
+    },
+    {
+      "id": "6c768ae5-f8bc-4ca6-875d-19dd17fda0fe",
+      "at": "2026-08-18T05:52:59.951Z",
+      "userId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "userName": "Lab Admin",
+      "action": "Created sample",
+      "entity": "sample",
+      "entityId": "5b19bf9f-2f82-4be4-83fd-a5bb48c15268",
+      "detail": "WTR-2026-000004 received"
+    },
+    {
+      "id": "281b843b-3956-4648-a8b4-a1a7d7870d74",
+      "at": "2026-08-18T05:52:58.905Z",
+      "userId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "userName": "Lab Admin",
+      "action": "Logged in",
+      "entity": "user",
+      "entityId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "detail": "User session started"
+    },
+    {
+      "id": "666174dc-c41c-4c95-a3f4-6d2e15ed1401",
+      "at": "2026-08-18T05:46:56.123Z",
+      "userId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "userName": "Lab Admin",
+      "action": "Entered sheet results",
+      "entity": "sample",
+      "entityId": "9971a258-7633-44b9-8c80-25c89d1e4bbf",
+      "detail": "WTR-2026-000003: 2 sheet rows"
+    },
+    {
+      "id": "48867f63-ca24-41ff-a355-57fbb99e0f09",
+      "at": "2026-08-18T05:46:55.264Z",
+      "userId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "userName": "Lab Admin",
+      "action": "Modified sample",
+      "entity": "sample",
+      "entityId": "9971a258-7633-44b9-8c80-25c89d1e4bbf",
+      "detail": "WTR-2026-000003: bookReference"
+    },
+    {
+      "id": "6384d478-687f-42f4-a235-1bcf60b6ee22",
+      "at": "2026-08-18T05:46:55.243Z",
+      "userId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "userName": "Lab Admin",
+      "action": "Uploaded files",
+      "entity": "sample",
+      "entityId": "9971a258-7633-44b9-8c80-25c89d1e4bbf",
+      "detail": "WTR-2026-000003: README.md"
+    },
+    {
+      "id": "35c53222-5a9f-44d8-94b5-46b890e56c0b",
+      "at": "2026-08-18T05:46:54.409Z",
+      "userId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "userName": "Lab Admin",
+      "action": "Created sample",
+      "entity": "sample",
+      "entityId": "9971a258-7633-44b9-8c80-25c89d1e4bbf",
+      "detail": "WTR-2026-000003 received"
+    },
+    {
+      "id": "bf2a3ddf-2308-41b1-ba39-2c8643df815a",
+      "at": "2026-08-18T05:46:53.325Z",
+      "userId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "userName": "Lab Admin",
+      "action": "Exported backup",
+      "entity": "system",
+      "entityId": "backup",
+      "detail": "Full JSON backup downloaded"
+    },
+    {
+      "id": "f5a3a071-9b0e-4c3b-be37-389daf915ac5",
+      "at": "2026-08-18T05:46:52.683Z",
+      "userId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "userName": "Lab Admin",
+      "action": "Logged in",
+      "entity": "user",
+      "entityId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "detail": "User session started"
+    },
+    {
+      "id": "033a47a2-bb6e-4b08-a404-5f88d34396fc",
+      "at": "2026-08-17T10:50:24.994Z",
+      "userId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "userName": "Lab Admin",
+      "action": "Entered sheet results",
+      "entity": "sample",
+      "entityId": "9509c841-4303-41ca-9439-039d80c8c9e0",
+      "detail": "WTR-2026-000002: 2 sheet rows"
+    },
+    {
+      "id": "f6e9638d-8c61-46fb-bbdd-3d5659bc68ab",
+      "at": "2026-08-17T10:50:24.110Z",
+      "userId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "userName": "Lab Admin",
+      "action": "Modified sample",
+      "entity": "sample",
+      "entityId": "9509c841-4303-41ca-9439-039d80c8c9e0",
+      "detail": "WTR-2026-000002: bookReference"
+    },
+    {
+      "id": "a6d8d601-b806-4716-8c3e-cdfed6c112cc",
+      "at": "2026-08-17T10:50:24.102Z",
+      "userId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "userName": "Lab Admin",
+      "action": "Uploaded files",
+      "entity": "sample",
+      "entityId": "9509c841-4303-41ca-9439-039d80c8c9e0",
+      "detail": "WTR-2026-000002: README.md"
+    },
+    {
+      "id": "bd76fbd2-2b6e-4e4b-9e23-10ddd9098bad",
+      "at": "2026-08-17T10:50:23.830Z",
+      "userId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "userName": "Lab Admin",
+      "action": "Created sample",
+      "entity": "sample",
+      "entityId": "9509c841-4303-41ca-9439-039d80c8c9e0",
+      "detail": "WTR-2026-000002 received"
+    },
+    {
+      "id": "b49f39dd-f57b-4114-bb82-2ae66df5a8fb",
+      "at": "2026-08-17T10:50:23.099Z",
+      "userId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "userName": "Lab Admin",
+      "action": "Logged in",
+      "entity": "user",
+      "entityId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "detail": "User session started"
+    },
+    {
+      "id": "e09ee3f7-1382-4304-8d0c-b17275160b17",
+      "at": "2026-08-17T10:45:43.926Z",
+      "userId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "userName": "Lab Admin",
+      "action": "Logged in",
+      "entity": "user",
+      "entityId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "detail": "User session started"
+    },
+    {
+      "id": "50fc43a6-9ec5-4416-af60-e7e6acb5c9c3",
+      "at": "2026-08-17T10:17:57.140Z",
+      "userId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "userName": "Lab Admin",
+      "action": "Logged in",
+      "entity": "user",
+      "entityId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "detail": "User session started"
+    },
+    {
+      "id": "ec0ece82-6efc-472c-88bc-ee8baf192144",
+      "at": "2026-08-17T10:17:36.124Z",
+      "userId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "userName": "Lab Admin",
+      "action": "Logged in",
+      "entity": "user",
+      "entityId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "detail": "User session started"
+    },
+    {
+      "id": "ab1fa7e6-5a8a-45eb-befb-2cd37d8ab8d4",
+      "at": "2026-08-17T10:05:59.784Z",
+      "userId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "userName": "Lab Admin",
+      "action": "Uploaded files",
+      "entity": "sample",
+      "entityId": "14ee2a42-6074-4c41-91b0-f054284d840b",
+      "detail": "WTR-2026-000001: package.json"
+    },
+    {
+      "id": "c99f194d-311d-44d2-87ee-d742fb6a5082",
+      "at": "2026-08-17T10:05:59.196Z",
+      "userId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "userName": "Lab Admin",
+      "action": "Entered result",
+      "entity": "sample",
+      "entityId": "14ee2a42-6074-4c41-91b0-f054284d840b",
+      "detail": "WTR-2026-000001: pH = 7.2 pH"
+    },
+    {
+      "id": "cd922736-e9db-43f2-af33-13938738732e",
+      "at": "2026-08-17T10:05:58.919Z",
+      "userId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "userName": "Lab Admin",
+      "action": "Created sample",
+      "entity": "sample",
+      "entityId": "14ee2a42-6074-4c41-91b0-f054284d840b",
+      "detail": "WTR-2026-000001 received"
+    },
+    {
+      "id": "d06bb6c0-40f5-4652-83ec-d37a0d7ccde9",
+      "at": "2026-08-17T10:05:58.519Z",
+      "userId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "userName": "Lab Admin",
+      "action": "Logged in",
+      "entity": "user",
+      "entityId": "54f0e3cb-4b63-4b99-a106-354ed49c8b68",
+      "detail": "User session started"
+    }
+  ],
+  "pendingSignups": [
+    {
+      "id": "5a5f318f-fefe-4af0-a164-cb85edc686a3",
+      "name": "Email Only User",
+      "email": "emailonly1787035306129@lab.local",
+      "countryCode": "",
+      "phone": "",
+      "passwordHash": "",
+      "emailOtp": "599314",
+      "emailVerified": false,
+      "expiresAt": "2026-08-18T06:51:48.399Z",
+      "createdAt": "2026-08-18T06:41:48.399Z"
+    },
+    {
+      "id": "c00063d5-826a-4ba7-8935-0511e5a0db27",
+      "name": "Vishwas",
+      "email": "vishwasprabhakara21@gmail.com",
+      "countryCode": "",
+      "phone": "",
+      "passwordHash": "",
+      "emailOtp": "298937",
+      "emailVerified": true,
+      "expiresAt": "2026-08-18T06:56:39.162Z",
+      "createdAt": "2026-08-18T06:46:15.974Z"
+    },
+    {
+      "id": "4ece5ea8-09bc-40c7-96a9-7b32c5d5a345",
+      "name": "Optimized User",
+      "email": "optimized1787037267562@lab.local",
+      "countryCode": "+91",
+      "phone": "7037267562",
+      "passwordHash": "",
+      "emailOtp": "586761",
+      "emailVerified": true,
+      "expiresAt": "2026-08-18T07:24:28.784Z",
+      "createdAt": "2026-08-18T07:14:28.071Z"
+    },
+    {
+      "id": "4058ac38-2005-4a05-8610-19020e2cee5b",
+      "name": "Reuse New",
+      "email": "reuse1787037844694@lab.local",
+      "countryCode": "",
+      "phone": "",
+      "passwordHash": "",
+      "emailOtp": "339564",
+      "emailVerified": false,
+      "expiresAt": "2026-08-18T07:34:04.860Z",
+      "createdAt": "2026-08-18T07:24:04.860Z"
+    },
+    {
+      "id": "1bf8bb1b-ff12-416b-ba51-b610e2214255",
+      "name": "VIshwas",
+      "email": "pv271296@gmail.com",
+      "countryCode": "",
+      "phone": "",
+      "passwordHash": "",
+      "emailOtp": "423133",
+      "emailVerified": false,
+      "expiresAt": "2026-08-18T07:41:41.964Z",
+      "createdAt": "2026-08-18T07:31:41.964Z"
+    }
+  ],
+  "passwordResets": [],
+  "meta": {
+    "lastWriteAt": "2026-08-20T06:29:25.552Z",
+    "writeCount": 24
+  }
+}
