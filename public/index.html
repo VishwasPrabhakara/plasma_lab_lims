@@ -2,184 +2,239 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Plasma Lab LIMS</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0a2f34" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#f9fbfc" media="(prefers-color-scheme: light)">
+  <meta name="description" content="Plasma Lab LIMS — a laboratory information management system for the Centre for Sustainable Technologies, IISc Bengaluru. Sample intake, QR-labelled custody, analysis and audit-ready records.">
+  <meta name="color-scheme" content="light dark">
+  <title>Plasma Lab LIMS — IISc CST</title>
   <link rel="icon" type="image/png" href="assets/plasma-lab-icon.png">
   <link rel="apple-touch-icon" href="assets/plasma-lab-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap">
   <link rel="stylesheet" href="styles.css">
+  <script>
+    // Restore user's theme preference before paint to avoid flash.
+    try {
+      var t = localStorage.getItem("plasma-lab-theme");
+      if (t === "dark" || t === "light") document.documentElement.setAttribute("data-theme", t);
+    } catch (e) {}
+  </script>
 </head>
 <body>
-  <section class="auth" id="authView">
+
+  <!-- ==============================  AUTH  ============================== -->
+  <section class="auth" id="authView" aria-label="Sign in">
     <div class="auth-panel">
-      <div class="auth-visual">
+
+      <div class="auth-visual" aria-hidden="true">
         <div class="brand-row">
-          <div class="full-logo"><img src="assets/plasma-lab-logo.png" alt="Plasma Lab logo"></div>
+          <div class="full-logo"><img src="assets/plasma-lab-logo.png" alt=""></div>
           <div>
             <h1>Plasma Lab LIMS</h1>
-            <p>IISc laboratory sample records platform</p>
+            <p>Centre for Sustainable Technologies · IISc Bengaluru</p>
           </div>
         </div>
+
         <div class="auth-hero">
-          <span class="eyebrow">Secure Sample Intelligence</span>
-          <h2>Trace every bottle, result, analyst, and file from one clean system.</h2>
-          <p>Built for sample intake, QR labels, written-result uploads, Excel-style entry, approvals, and audit-ready records.</p>
+          <span class="eyebrow">Secure sample intelligence</span>
+          <h2>Every bottle, result, analyst and file traced from one clean system.</h2>
+          <p>Built for sample intake, QR-labelled custody, written-record uploads, spreadsheet-style entry, approvals and audit-ready records.</p>
         </div>
+
         <div class="auth-proof">
-          <div><strong>QR</strong><span>Labels & scanner</span></div>
-          <div><strong>OTP</strong><span>Email verification</span></div>
+          <div><strong>QR</strong><span>Labels &amp; scanner</span></div>
+          <div><strong>OTP</strong><span>Email verified</span></div>
           <div><strong>Log</strong><span>No silent changes</span></div>
         </div>
       </div>
-      <div class="auth-slider">
-        <form id="loginForm" class="auth-slide active">
+
+      <div class="auth-slider" role="tabpanel">
+
+        <!-- Login -->
+        <form id="loginForm" class="auth-slide active" autocomplete="on" novalidate>
           <div class="form-title">
-            <span>Welcome Back</span>
-            <h2>Login to your lab</h2>
+            <span>Welcome back</span>
+            <h2>Sign in to your lab</h2>
           </div>
-          <input name="email" type="email" autocomplete="username" required placeholder="Email">
-          <div class="password-field">
-            <input name="password" type="password" autocomplete="current-password" required placeholder="Password">
-            <button type="button" class="password-toggle" data-toggle-password aria-label="Show password"></button>
-          </div>
-          <label class="remember-line"><input name="rememberMe" type="checkbox"> <span>Remember me on this device</span></label>
-          <button class="primary">Login</button>
-          <p class="auth-links">New to the lab? <a href="#" data-auth="signup">Signup</a></p>
-          <p class="auth-links">Forgot password? <a href="#" data-auth="reset">Reset password</a></p>
+          <label>Email
+            <input name="email" type="email" autocomplete="username" required placeholder="you@example.org">
+          </label>
+          <label>Password
+            <div class="password-field">
+              <input name="password" type="password" autocomplete="current-password" required placeholder="Your password">
+              <button type="button" class="password-toggle" data-toggle-password aria-label="Show password"></button>
+            </div>
+          </label>
+          <label class="remember-line">
+            <input name="rememberMe" type="checkbox">
+            <span>Remember me on this device</span>
+          </label>
+          <button class="primary" type="submit">Sign in</button>
+          <p class="auth-links">New to the lab? <a href="#" data-auth="signup">Create an account</a></p>
+          <p class="auth-links">Forgot your password? <a href="#" data-auth="reset">Reset password</a></p>
         </form>
-        <form id="signupForm" class="auth-slide">
+
+        <!-- Signup -->
+        <form id="signupForm" class="auth-slide" novalidate>
           <div class="form-title">
-            <span>New Staff Access</span>
-            <h2>Create verified account</h2>
+            <span>New staff access</span>
+            <h2>Create a verified account</h2>
           </div>
-          <div class="signup-progress" aria-label="Signup progress">
+
+          <div class="signup-progress" aria-label="Signup progress" role="progressbar">
             <span class="current" data-progress="email">Email</span>
             <span data-progress="phone">Phone</span>
             <span data-progress="password">Password</span>
           </div>
+
           <div class="auth-step active" data-step="email">
             <div class="inline-action two">
-              <input name="name" required placeholder="Full name">
+              <input name="name" required placeholder="Full name" autocomplete="name">
               <span class="step-note">Staff identity</span>
             </div>
             <div class="inline-action two">
               <input name="email" type="email" autocomplete="email" required placeholder="Email">
-              <button type="button" class="primary compact-btn" id="sendEmailOtp" data-busy-label="Sending...">Send OTP</button>
+              <button type="button" class="primary compact-btn" id="sendEmailOtp" data-busy-label="Sending…">Send OTP</button>
             </div>
-            <div class="live-check" id="emailCheck"></div>
+            <div class="live-check" id="emailCheck" aria-live="polite"></div>
             <div class="otp-inline hidden" id="emailOtpBox">
               <div class="otp-demo" id="emailOtpDemo"></div>
-              <div class="inline-action"><input name="emailOtp" inputmode="numeric" maxlength="6" placeholder="Email OTP"><button type="button" id="verifyEmailOtp" data-busy-label="Checking...">Verify</button><button type="button" id="resendEmailOtp" data-busy-label="Sending...">Resend</button></div>
+              <div class="inline-action">
+                <input name="emailOtp" inputmode="numeric" maxlength="6" placeholder="6-digit code">
+                <button type="button" id="verifyEmailOtp" data-busy-label="Checking…">Verify</button>
+                <button type="button" id="resendEmailOtp" data-busy-label="Sending…">Resend</button>
+              </div>
             </div>
           </div>
+
           <div class="auth-step locked" data-step="phone">
             <div class="phone-row">
-              <select name="countryCode" required>
+              <select name="countryCode" required aria-label="Country code">
                 <option value="+91">India +91</option>
-                <option value="+1">US/Canada +1</option>
+                <option value="+1">US / Canada +1</option>
                 <option value="+44">UK +44</option>
                 <option value="+971">UAE +971</option>
                 <option value="+61">Australia +61</option>
               </select>
-              <input name="phone" type="tel" required placeholder="Phone number">
+              <input name="phone" type="tel" required placeholder="Phone number" autocomplete="tel">
             </div>
-            <div class="live-check" id="phoneCheck"></div>
+            <div class="live-check" id="phoneCheck" aria-live="polite"></div>
             <button type="button" class="primary" id="savePhone">Continue</button>
           </div>
+
           <div class="auth-step locked" data-step="password">
             <div class="password-field">
-              <input name="password" type="password" autocomplete="new-password" placeholder="Password">
+              <input name="password" type="password" autocomplete="new-password" placeholder="Choose a password">
               <button type="button" class="password-toggle" data-toggle-password aria-label="Show password"></button>
             </div>
-            <div class="live-check" id="passwordCheck"></div>
+            <div class="live-check" id="passwordCheck" aria-live="polite"></div>
             <div class="inline-action two">
               <div class="password-field">
                 <input name="confirmPassword" type="password" autocomplete="new-password" placeholder="Confirm password">
                 <button type="button" class="password-toggle" data-toggle-password aria-label="Show password"></button>
               </div>
-              <button class="primary">Create Account</button>
+              <button class="primary" type="submit">Create account</button>
             </div>
           </div>
+
           <small class="privacy-line">Email verification protects lab access. Phone is stored for staff contact only.</small>
-          <p class="auth-links">Already registered? <a href="#" data-auth="login">Login</a></p>
+          <p class="auth-links">Already registered? <a href="#" data-auth="login">Sign in</a></p>
         </form>
-        <form id="resetStartForm" class="auth-slide">
+
+        <!-- Reset (start) -->
+        <form id="resetStartForm" class="auth-slide" novalidate>
           <div class="form-title">
-            <span>Account Recovery</span>
-            <h2>Reset password</h2>
+            <span>Account recovery</span>
+            <h2>Reset your password</h2>
           </div>
-          <input name="identifier" type="email" autocomplete="username" required placeholder="Registered email">
-          <button class="primary" data-busy-label="Sending...">Send Email OTP</button>
-          <p class="auth-links">Remembered password? <a href="#" data-auth="login">Login</a></p>
+          <label>Registered email
+            <input name="identifier" type="email" autocomplete="username" required placeholder="you@example.org">
+          </label>
+          <button class="primary" type="submit" data-busy-label="Sending…">Send email OTP</button>
+          <p class="auth-links">Remembered your password? <a href="#" data-auth="login">Sign in</a></p>
         </form>
-        <form id="resetConfirmForm" class="auth-slide">
+
+        <!-- Reset (confirm) -->
+        <form id="resetConfirmForm" class="auth-slide" novalidate>
           <div class="form-title">
-            <span>Email Verified Reset</span>
-            <h2>Set new password</h2>
+            <span>Email verified reset</span>
+            <h2>Set a new password</h2>
           </div>
           <div class="otp-demo" id="resetOtpDemo"></div>
-          <input name="emailOtp" inputmode="numeric" maxlength="6" required placeholder="Email OTP">
-          <div class="password-field">
-            <input name="password" type="password" autocomplete="new-password" required placeholder="New password">
-            <button type="button" class="password-toggle" data-toggle-password aria-label="Show password"></button>
-          </div>
-          <button class="primary">Change Password</button>
-          <p class="auth-links">Back to <a href="#" data-auth="login">login</a></p>
+          <label>Email OTP
+            <input name="emailOtp" inputmode="numeric" maxlength="6" required placeholder="6-digit code">
+          </label>
+          <label>New password
+            <div class="password-field">
+              <input name="password" type="password" autocomplete="new-password" required placeholder="Choose a new password">
+              <button type="button" class="password-toggle" data-toggle-password aria-label="Show password"></button>
+            </div>
+          </label>
+          <button class="primary" type="submit">Change password</button>
+          <p class="auth-links">Back to <a href="#" data-auth="login">sign in</a></p>
         </form>
+
       </div>
     </div>
   </section>
 
+  <!-- ==============================  APP  =============================== -->
   <div class="app hidden" id="appView">
-    <aside>
+
+    <aside aria-label="Primary navigation">
       <div class="brand-row compact">
-        <div class="logo image-logo"><img src="assets/plasma-lab-icon.png" alt="Plasma Lab logo"></div>
+        <div class="logo image-logo"><img src="assets/plasma-lab-icon.png" alt=""></div>
         <div>
           <h1>Plasma Lab</h1>
           <p id="userLabel"></p>
         </div>
       </div>
-      <nav id="nav">
+      <nav id="nav" aria-label="Sections">
         <button data-view="dashboard" class="active">Dashboard</button>
         <button data-view="samples">Samples</button>
         <button data-view="scan">Scan QR</button>
-        <button data-view="masters">People & Storage</button>
+        <button data-view="masters">People &amp; Storage</button>
         <button data-view="users">Users</button>
         <button data-view="audit">Activity Log</button>
       </nav>
-      <button id="logoutBtn" class="ghost">Logout</button>
+      <button id="logoutBtn" class="ghost">Sign out</button>
     </aside>
 
     <main>
       <header>
         <div>
           <h2 id="viewTitle">Dashboard</h2>
-          <p id="viewHint">Live working records stored by the backend and mirrored in this browser.</p>
+          <p id="viewHint">Live records held by the backend and mirrored in this browser.</p>
         </div>
         <div class="header-actions">
-          <button id="syncBtn">Sync</button>
-          <button id="backupBtn">Download Backup</button>
-          <button id="bulkSampleBtn">Bulk Samples</button>
-          <button id="newSampleBtn" class="primary">New Sample</button>
+          <button id="themeToggle" class="theme-toggle" type="button" aria-label="Toggle colour theme" title="Toggle light / dark"></button>
+          <button id="syncBtn" type="button">Sync</button>
+          <button id="backupBtn" type="button">Download backup</button>
+          <button id="bulkSampleBtn" type="button">Bulk samples</button>
+          <button id="newSampleBtn" class="primary" type="button">New sample</button>
         </div>
       </header>
 
       <section class="content">
-        <div id="dashboardView" class="view"></div>
-        <div id="samplesView" class="view hidden"></div>
-        <div id="scanView" class="view hidden"></div>
-        <div id="mastersView" class="view hidden"></div>
-        <div id="usersView" class="view hidden"></div>
-        <div id="backupView" class="view hidden"></div>
-        <div id="auditView" class="view hidden"></div>
+        <div id="dashboardView" class="view" role="region" aria-label="Dashboard"></div>
+        <div id="samplesView"   class="view hidden" role="region" aria-label="Samples"></div>
+        <div id="scanView"      class="view hidden" role="region" aria-label="Scan QR"></div>
+        <div id="mastersView"   class="view hidden" role="region" aria-label="People and storage"></div>
+        <div id="usersView"     class="view hidden" role="region" aria-label="Users"></div>
+        <div id="backupView"    class="view hidden" role="region" aria-label="Data backup"></div>
+        <div id="auditView"     class="view hidden" role="region" aria-label="Activity log"></div>
       </section>
     </main>
   </div>
 
-  <dialog id="sampleDialog">
-    <form id="sampleForm" class="modal">
+  <!-- ==============================  DIALOGS  =========================== -->
+  <dialog id="sampleDialog" aria-labelledby="sampleDialogTitle">
+    <form id="sampleForm" class="modal" novalidate>
       <div class="modal-head">
-        <h3>Prepare Bottle / Register Sample</h3>
-        <button type="button" data-close>Close</button>
+        <h3 id="sampleDialogTitle">Prepare bottle · register sample</h3>
+        <button type="button" data-close aria-label="Close">Close</button>
       </div>
       <div class="form-grid">
         <label>Project / client<input name="clientName" required></label>
@@ -202,54 +257,76 @@
           <label>Add requested test<select id="sampleTestPicker"></select></label>
           <div class="selected-tests" id="selectedTests"></div>
         </div>
-        <label class="wide">Notes<textarea name="notes"></textarea></label>
+        <label class="wide">Notes<textarea name="notes" placeholder="Anything the analyst should know before opening the bottle"></textarea></label>
       </div>
       <div class="modal-foot">
         <button type="reset">Clear</button>
-        <button class="primary">Create Sample</button>
+        <button class="primary" type="submit">Create sample</button>
       </div>
     </form>
   </dialog>
 
-  <dialog id="bulkSampleDialog">
-    <form id="bulkSampleForm" class="modal">
+  <dialog id="bulkSampleDialog" aria-labelledby="bulkSampleDialogTitle">
+    <form id="bulkSampleForm" class="modal" novalidate>
       <div class="modal-head">
-        <h3>Bulk Sample Creation</h3>
-        <button type="button" data-close-bulk>Close</button>
+        <h3 id="bulkSampleDialogTitle">Bulk sample creation</h3>
+        <button type="button" data-close-bulk aria-label="Close">Close</button>
       </div>
       <div class="bulk-create-layout">
         <section class="bulk-card">
-          <h4>Paste bottle/sample rows</h4>
-          <p>Use this header order: Project, Source Type, Site, Brought By, Storage, Analyst, Tests, Target Completion, Notes</p>
+          <h4>Paste bottle / sample rows</h4>
+          <p>Header order: <strong>Project, Source Type, Site, Brought By, Storage, Analyst, Tests, Target Completion, Notes</strong>.</p>
           <textarea id="bulkSampleRows" placeholder="Project, Source Type, Site, Brought By, Storage, Analyst, Tests, Target Completion, Notes&#10;Project A, Drinking Water, Borewell 1, Ramesh, Fridge 1 / Shelf A / Rack 01, Priya Nair, pH; TDS; Turbidity, 2026-08-20 17:00, Morning batch"></textarea>
-          <button class="primary" id="createBulkSamples">Create Samples</button>
+          <button class="primary" id="createBulkSamples" type="button">Create samples</button>
         </section>
         <section class="bulk-card">
           <h4>Upload Excel sheet</h4>
           <p>Excel headers can be Project, Client, Source Type, Site, Brought By, Collector, Storage, Analyst, Tests, Target Completion, Notes.</p>
           <label>Default storage<select id="bulkDefaultStorage"></select></label>
           <label>Excel file<input id="bulkSampleExcel" type="file" accept=".xlsx,.xls"></label>
-          <button type="button" class="primary" id="importBulkExcel">Import Excel Samples</button>
+          <button type="button" class="primary" id="importBulkExcel">Import Excel samples</button>
         </section>
       </div>
-      <div id="bulkCreateResult" class="bulk-result"></div>
+      <div id="bulkCreateResult" class="bulk-result" aria-live="polite"></div>
     </form>
   </dialog>
 
-  <dialog id="resultSheetDialog">
+  <dialog id="resultSheetDialog" aria-labelledby="sheetDialogTitle">
     <div class="modal sheet-modal">
       <div class="modal-head">
         <div>
-          <h3 id="sheetDialogTitle">Input Analysis Data</h3>
+          <h3 id="sheetDialogTitle">Input analysis data</h3>
           <small id="sheetDialogMeta"></small>
         </div>
-        <button type="button" data-close-sheet>Close</button>
+        <button type="button" data-close-sheet aria-label="Close">Close</button>
       </div>
       <div class="sheet-modal-body" id="sheetDialogBody"></div>
     </div>
   </dialog>
 
-  <div id="toast" class="toast"></div>
+  <!-- ==============================  TOAST  ============================= -->
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <!-- ==============================  SCRIPTS  =========================== -->
+  <script>
+    // Theme toggle — isolated, no dependency on app.js
+    (function () {
+      var root = document.documentElement;
+      function apply(theme) {
+        if (theme === "system") { root.removeAttribute("data-theme"); }
+        else { root.setAttribute("data-theme", theme); }
+        try { localStorage.setItem("plasma-lab-theme", theme); } catch (e) {}
+      }
+      document.addEventListener("click", function (e) {
+        var btn = e.target.closest && e.target.closest("#themeToggle");
+        if (!btn) return;
+        var current = root.getAttribute("data-theme");
+        // 3-way cycle: light → dark → system
+        var next = current === "light" ? "dark" : (current === "dark" ? "system" : "light");
+        apply(next);
+      });
+    })();
+  </script>
   <script src="config.js"></script>
   <script src="app.js"></script>
 </body>
