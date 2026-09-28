@@ -617,7 +617,8 @@
       canEnterResults() && { id: 'sheet', label: 'Enter results' },
       { id: 'results', label: 'Saved results' },
       canUploadFiles() && { id: 'files', label: 'Files' },
-      can('admin') && { id: 'retention', label: 'Retention' }
+      can('admin') && { id: 'retention', label: 'Retention' },
+      { id: 'history', label: 'History' }
     ].filter(Boolean);
     tabs.forEach(t => {
       tabsEl.appendChild(h('button', { class: 'tab', type: 'button', role: 'tab', 'aria-selected': state.tab === t.id, onclick: () => { state.tab = t.id; render(); } }, t.label));
@@ -632,6 +633,7 @@
     if (state.tab === 'results')    tabBody.appendChild(resultsTab(sample));
     if (state.tab === 'files')      tabBody.appendChild(filesTab(sample));
     if (state.tab === 'retention')  tabBody.appendChild(retentionTab(sample));
+    if (state.tab === 'history')    tabBody.appendChild(h('div', { class: 'card' }, h('div', { class: 'card-body' }, auditTimelineEl(sample))));
     mainCol.appendChild(tabBody);
 
     // QR + facts card
