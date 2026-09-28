@@ -3,9 +3,9 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#0a2f34" media="(prefers-color-scheme: dark)">
-  <meta name="theme-color" content="#f9fbfc" media="(prefers-color-scheme: light)">
-  <meta name="description" content="Plasma Lab LIMS — a laboratory information management system for the Centre for Sustainable Technologies, IISc Bengaluru. Sample intake, QR-labelled custody, analysis and audit-ready records.">
+  <meta name="theme-color" content="#063a41" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#fafbfc" media="(prefers-color-scheme: light)">
+  <meta name="description" content="Plasma Lab LIMS — laboratory information management system for the Centre for Sustainable Technologies, IISc Bengaluru.">
   <meta name="color-scheme" content="light dark">
   <title>Plasma Lab LIMS — IISc CST</title>
   <link rel="icon" type="image/png" href="assets/plasma-lab-icon.png">
@@ -15,164 +15,227 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap">
   <link rel="stylesheet" href="styles.css">
   <script>
-    // Restore user's theme preference before paint to avoid flash.
+    // Restore theme preference before paint
     try {
-      var t = localStorage.getItem("plasma-lab-theme");
-      if (t === "dark" || t === "light") document.documentElement.setAttribute("data-theme", t);
+      var t = localStorage.getItem('plasma-lab-theme');
+      if (t === 'dark' || t === 'light') document.documentElement.setAttribute('data-theme', t);
     } catch (e) {}
   </script>
 </head>
 <body>
 
-  <!-- ==============================  AUTH  ============================== -->
+  <!-- ================================================================== -->
+  <!-- AUTH SURFACE                                                       -->
+  <!-- ================================================================== -->
   <section class="auth" id="authView" aria-label="Sign in">
     <div class="auth-panel">
 
-      <div class="auth-visual" aria-hidden="true">
-        <div class="brand-row">
-          <div class="full-logo"><img src="assets/plasma-lab-logo.png" alt=""></div>
+      <div class="auth-brand-panel" aria-hidden="true">
+        <div class="auth-brand-row">
+          <div class="brand-mark"><img src="assets/plasma-lab-icon.png" alt=""></div>
           <div>
             <h1>Plasma Lab LIMS</h1>
             <p>Centre for Sustainable Technologies · IISc Bengaluru</p>
           </div>
         </div>
-
         <div class="auth-hero">
-          <span class="eyebrow">Secure sample intelligence</span>
-          <h2>Every bottle, result, analyst and file traced from one clean system.</h2>
-          <p>Built for sample intake, QR-labelled custody, written-record uploads, spreadsheet-style entry, approvals and audit-ready records.</p>
+          <span class="auth-eyebrow">Secure sample intelligence</span>
+          <h2>Every bottle, result, analyst and file — traced from one clean system.</h2>
+          <p>Built for QR-labelled custody, spreadsheet-style entry, approvals, and audit-ready records.</p>
         </div>
-
         <div class="auth-proof">
-          <div><strong>QR</strong><span>Labels &amp; scanner</span></div>
-          <div><strong>OTP</strong><span>Email verified</span></div>
-          <div><strong>Log</strong><span>No silent changes</span></div>
+          <div class="auth-proof-card"><strong>QR</strong><span>Scan-first custody</span></div>
+          <div class="auth-proof-card"><strong>OTP</strong><span>Email verified</span></div>
+          <div class="auth-proof-card"><strong>Log</strong><span>No silent changes</span></div>
         </div>
       </div>
 
-      <div class="auth-slider" role="tabpanel">
+      <div class="auth-slider">
 
-        <!-- Login -->
-        <form id="loginForm" class="auth-slide active" autocomplete="on" novalidate>
-          <div class="form-title">
-            <span>Welcome back</span>
+        <!-- LOGIN -->
+        <form id="loginForm" class="auth-slide is-active" novalidate autocomplete="on">
+          <div>
+            <span class="auth-eyebrow-small">Welcome back</span>
             <h2>Sign in to your lab</h2>
           </div>
-          <label>Email
-            <input name="email" type="email" autocomplete="username" required placeholder="you@example.org">
-          </label>
-          <label>Password
+          <div class="form-error-banner hidden" data-form-error></div>
+          <div class="field">
+            <label class="field-label" for="loginEmail">Email <span class="required">*</span></label>
+            <input class="input" id="loginEmail" name="email" type="email" autocomplete="username" required placeholder="you@example.org">
+          </div>
+          <div class="field">
+            <label class="field-label" for="loginPassword">Password <span class="required">*</span></label>
             <div class="password-field">
-              <input name="password" type="password" autocomplete="current-password" required placeholder="Your password">
-              <button type="button" class="password-toggle" data-toggle-password aria-label="Show password"></button>
+              <input class="input" id="loginPassword" name="password" type="password" autocomplete="current-password" required placeholder="Your password">
+              <button type="button" class="password-toggle" data-toggle-password aria-label="Show password">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+              </button>
             </div>
-          </label>
-          <label class="remember-line">
-            <input name="rememberMe" type="checkbox">
+          </div>
+          <label class="check-label">
+            <input class="checkbox" name="rememberMe" type="checkbox">
             <span>Remember me on this device</span>
           </label>
-          <button class="primary" type="submit">Sign in</button>
+          <button class="btn btn-primary btn-lg btn-block" type="submit" data-busy-label="Signing in…">
+            <span class="btn-label">Sign in</span>
+          </button>
           <p class="auth-links">New to the lab? <a href="#" data-auth="signup">Create an account</a></p>
           <p class="auth-links">Forgot your password? <a href="#" data-auth="reset">Reset password</a></p>
         </form>
 
-        <!-- Signup -->
+        <!-- SIGNUP -->
         <form id="signupForm" class="auth-slide" novalidate>
-          <div class="form-title">
-            <span>New staff access</span>
+          <div>
+            <span class="auth-eyebrow-small">New staff access</span>
             <h2>Create a verified account</h2>
           </div>
-
-          <div class="signup-progress" aria-label="Signup progress" role="progressbar">
-            <span class="current" data-progress="email">Email</span>
-            <span data-progress="phone">Phone</span>
-            <span data-progress="password">Password</span>
+          <div class="form-error-banner hidden" data-form-error></div>
+          <div class="steps" role="group" aria-label="Signup progress">
+            <div class="step" data-progress="email" aria-current="step">
+              <span class="step-num"><span class="step-num-text">1</span></span>
+              <span>Email</span>
+            </div>
+            <span class="step-connector"></span>
+            <div class="step" data-progress="phone">
+              <span class="step-num"><span class="step-num-text">2</span></span>
+              <span>Phone</span>
+            </div>
+            <span class="step-connector"></span>
+            <div class="step" data-progress="password">
+              <span class="step-num"><span class="step-num-text">3</span></span>
+              <span>Password</span>
+            </div>
           </div>
 
-          <div class="auth-step active" data-step="email">
-            <div class="inline-action two">
-              <input name="name" required placeholder="Full name" autocomplete="name">
-              <span class="step-note">Staff identity</span>
+          <!-- Step 1: Email -->
+          <div class="signup-step" data-step="email" data-state="active">
+            <span class="step-done-label">Email verified</span>
+            <div class="field">
+              <label class="field-label" for="signupName">Full name <span class="required">*</span></label>
+              <input class="input" id="signupName" name="name" required placeholder="Your name" autocomplete="name">
             </div>
-            <div class="inline-action two">
-              <input name="email" type="email" autocomplete="email" required placeholder="Email">
-              <button type="button" class="primary compact-btn" id="sendEmailOtp" data-busy-label="Sending…">Send OTP</button>
+            <div class="field">
+              <label class="field-label" for="signupEmail">Email <span class="required">*</span></label>
+              <div class="input-group">
+                <input class="input" id="signupEmail" name="email" type="email" required placeholder="you@example.org" autocomplete="email">
+                <button type="button" class="btn btn-primary" id="sendEmailOtp" data-busy-label="Sending…">
+                  <span class="btn-label">Send OTP</span>
+                </button>
+              </div>
+              <div class="field-check" id="emailCheck" aria-live="polite"></div>
             </div>
-            <div class="live-check" id="emailCheck" aria-live="polite"></div>
-            <div class="otp-inline hidden" id="emailOtpBox">
-              <div class="otp-demo" id="emailOtpDemo"></div>
-              <div class="inline-action">
-                <input name="emailOtp" inputmode="numeric" maxlength="6" placeholder="6-digit code">
-                <button type="button" id="verifyEmailOtp" data-busy-label="Checking…">Verify</button>
-                <button type="button" id="resendEmailOtp" data-busy-label="Sending…">Resend</button>
+            <div class="hidden" id="emailOtpBox">
+              <div class="otp-callout" id="emailOtpDemo">
+                <strong>Email OTP sent</strong>
+                <span>Check the inbox for the 6-digit code.</span>
+              </div>
+              <div class="field">
+                <label class="field-label" for="emailOtpInput">Enter 6-digit code <span class="required">*</span></label>
+                <div class="input-group">
+                  <input class="input" id="emailOtpInput" name="emailOtp" inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="000000">
+                  <button type="button" class="btn" id="verifyEmailOtp" data-busy-label="Checking…"><span class="btn-label">Verify</span></button>
+                  <button type="button" class="btn" id="resendEmailOtp" data-busy-label="Sending…"><span class="btn-label">Resend</span></button>
+                </div>
               </div>
             </div>
           </div>
 
-          <div class="auth-step locked" data-step="phone">
-            <div class="phone-row">
-              <select name="countryCode" required aria-label="Country code">
-                <option value="+91">India +91</option>
-                <option value="+1">US / Canada +1</option>
-                <option value="+44">UK +44</option>
-                <option value="+971">UAE +971</option>
-                <option value="+61">Australia +61</option>
-              </select>
-              <input name="phone" type="tel" required placeholder="Phone number" autocomplete="tel">
+          <!-- Step 2: Phone -->
+          <div class="signup-step" data-step="phone" data-state="hidden">
+            <span class="step-done-label">Phone saved</span>
+            <div class="field">
+              <label class="field-label" for="signupPhone">Contact phone <span class="required">*</span></label>
+              <div class="phone-row">
+                <select class="select" name="countryCode" required aria-label="Country code">
+                  <option value="+91">India +91</option>
+                  <option value="+1">US / Canada +1</option>
+                  <option value="+44">UK +44</option>
+                  <option value="+971">UAE +971</option>
+                  <option value="+61">Australia +61</option>
+                </select>
+                <input class="input" id="signupPhone" name="phone" type="tel" required placeholder="Phone number" autocomplete="tel">
+              </div>
+              <div class="field-check" id="phoneCheck" aria-live="polite"></div>
             </div>
-            <div class="live-check" id="phoneCheck" aria-live="polite"></div>
-            <button type="button" class="primary" id="savePhone">Continue</button>
+            <button type="button" class="btn btn-primary btn-block" id="savePhone" data-busy-label="Saving…">
+              <span class="btn-label">Continue</span>
+            </button>
           </div>
 
-          <div class="auth-step locked" data-step="password">
-            <div class="password-field">
-              <input name="password" type="password" autocomplete="new-password" placeholder="Choose a password">
-              <button type="button" class="password-toggle" data-toggle-password aria-label="Show password"></button>
-            </div>
-            <div class="live-check" id="passwordCheck" aria-live="polite"></div>
-            <div class="inline-action two">
+          <!-- Step 3: Password -->
+          <div class="signup-step" data-step="password" data-state="hidden">
+            <div class="field">
+              <label class="field-label" for="signupPassword">Choose a password <span class="required">*</span></label>
               <div class="password-field">
-                <input name="confirmPassword" type="password" autocomplete="new-password" placeholder="Confirm password">
-                <button type="button" class="password-toggle" data-toggle-password aria-label="Show password"></button>
+                <input class="input" id="signupPassword" name="password" type="password" autocomplete="new-password" required minlength="6" placeholder="At least 6 characters">
+                <button type="button" class="password-toggle" data-toggle-password aria-label="Show password">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+                </button>
               </div>
-              <button class="primary" type="submit">Create account</button>
+              <div class="field-check" id="passwordCheck" aria-live="polite"></div>
             </div>
+            <div class="field">
+              <label class="field-label" for="signupConfirm">Confirm password <span class="required">*</span></label>
+              <div class="password-field">
+                <input class="input" id="signupConfirm" name="confirmPassword" type="password" autocomplete="new-password" required placeholder="Re-enter password">
+                <button type="button" class="password-toggle" data-toggle-password aria-label="Show password">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+                </button>
+              </div>
+            </div>
+            <button class="btn btn-primary btn-lg btn-block" type="submit" data-busy-label="Creating…">
+              <span class="btn-label">Create account</span>
+            </button>
           </div>
 
-          <small class="privacy-line">Email verification protects lab access. Phone is stored for staff contact only.</small>
+          <small>Email verification protects lab access. Phone is stored for staff contact only.</small>
           <p class="auth-links">Already registered? <a href="#" data-auth="login">Sign in</a></p>
         </form>
 
-        <!-- Reset (start) -->
+        <!-- RESET (start) -->
         <form id="resetStartForm" class="auth-slide" novalidate>
-          <div class="form-title">
-            <span>Account recovery</span>
+          <div>
+            <span class="auth-eyebrow-small">Account recovery</span>
             <h2>Reset your password</h2>
           </div>
-          <label>Registered email
-            <input name="identifier" type="email" autocomplete="username" required placeholder="you@example.org">
-          </label>
-          <button class="primary" type="submit" data-busy-label="Sending…">Send email OTP</button>
+          <div class="form-error-banner hidden" data-form-error></div>
+          <div class="field">
+            <label class="field-label" for="resetEmail">Registered email <span class="required">*</span></label>
+            <input class="input" id="resetEmail" name="identifier" type="email" autocomplete="username" required placeholder="you@example.org">
+          </div>
+          <button class="btn btn-primary btn-lg btn-block" type="submit" data-busy-label="Sending…">
+            <span class="btn-label">Send email OTP</span>
+          </button>
           <p class="auth-links">Remembered your password? <a href="#" data-auth="login">Sign in</a></p>
         </form>
 
-        <!-- Reset (confirm) -->
+        <!-- RESET (confirm) -->
         <form id="resetConfirmForm" class="auth-slide" novalidate>
-          <div class="form-title">
-            <span>Email verified reset</span>
+          <div>
+            <span class="auth-eyebrow-small">Verified reset</span>
             <h2>Set a new password</h2>
           </div>
-          <div class="otp-demo" id="resetOtpDemo"></div>
-          <label>Email OTP
-            <input name="emailOtp" inputmode="numeric" maxlength="6" required placeholder="6-digit code">
-          </label>
-          <label>New password
+          <div class="form-error-banner hidden" data-form-error></div>
+          <div class="otp-callout" id="resetOtpDemo">
+            <strong>Reset OTP sent</strong>
+            <span>Check the email inbox.</span>
+          </div>
+          <div class="field">
+            <label class="field-label" for="resetOtpInput">Email OTP <span class="required">*</span></label>
+            <input class="input" id="resetOtpInput" name="emailOtp" inputmode="numeric" maxlength="6" autocomplete="one-time-code" required placeholder="000000">
+          </div>
+          <div class="field">
+            <label class="field-label" for="resetNewPassword">New password <span class="required">*</span></label>
             <div class="password-field">
-              <input name="password" type="password" autocomplete="new-password" required placeholder="Choose a new password">
-              <button type="button" class="password-toggle" data-toggle-password aria-label="Show password"></button>
+              <input class="input" id="resetNewPassword" name="password" type="password" autocomplete="new-password" required minlength="6" placeholder="At least 6 characters">
+              <button type="button" class="password-toggle" data-toggle-password aria-label="Show password">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+              </button>
             </div>
-          </label>
-          <button class="primary" type="submit">Change password</button>
+          </div>
+          <button class="btn btn-primary btn-lg btn-block" type="submit" data-busy-label="Updating…">
+            <span class="btn-label">Change password</span>
+          </button>
           <p class="auth-links">Back to <a href="#" data-auth="login">sign in</a></p>
         </form>
 
@@ -180,150 +243,278 @@
     </div>
   </section>
 
-  <!-- ==============================  APP  =============================== -->
+  <!-- ================================================================== -->
+  <!-- APP SHELL                                                          -->
+  <!-- ================================================================== -->
   <div class="app hidden" id="appView">
 
-    <aside aria-label="Primary navigation">
-      <div class="brand-row compact">
-        <div class="logo image-logo"><img src="assets/plasma-lab-icon.png" alt=""></div>
+    <!-- Left nav (desktop) — role-adaptive, filled by JS -->
+    <nav class="app-nav" id="appNav" aria-label="Primary">
+      <div class="brand">
+        <div class="brand-mark"><img src="assets/plasma-lab-icon.png" alt=""></div>
         <div>
           <h1>Plasma Lab</h1>
-          <p id="userLabel"></p>
+          <div class="brand-sub">IISc CST</div>
         </div>
       </div>
-      <nav id="nav" aria-label="Sections">
-        <button data-view="dashboard" class="active">Dashboard</button>
-        <button data-view="samples">Samples</button>
-        <button data-view="scan">Scan QR</button>
-        <button data-view="masters">People &amp; Storage</button>
-        <button data-view="users">Users</button>
-        <button data-view="audit">Activity Log</button>
-      </nav>
-      <button id="logoutBtn" class="ghost">Sign out</button>
-    </aside>
+      <ul class="nav-list" id="navList"></ul>
+      <div class="user-block">
+        <div class="user-info">
+          <div class="avatar" id="userAvatar">?</div>
+          <div class="grow">
+            <div class="username" id="userName">—</div>
+            <div class="userrole" id="userRole">—</div>
+          </div>
+        </div>
+        <div class="row">
+          <button class="btn btn-ghost btn-sm" id="themeToggle" type="button" aria-label="Toggle theme">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+            <span class="btn-label">Theme</span>
+          </button>
+          <button class="btn btn-ghost btn-sm grow" id="logoutBtn" type="button">
+            <span class="btn-label">Sign out</span>
+          </button>
+        </div>
+      </div>
+    </nav>
 
-    <main>
-      <header>
+    <!-- Header -->
+    <header class="app-header">
+      <div class="mobile-brand">
+        <div class="brand-mark"><img src="assets/plasma-lab-icon.png" alt=""></div>
         <div>
-          <h2 id="viewTitle">Dashboard</h2>
-          <p id="viewHint">Live records held by the backend and mirrored in this browser.</p>
+          <h1 style="font-size:15px;">Plasma Lab</h1>
         </div>
-        <div class="header-actions">
-          <button id="themeToggle" class="theme-toggle" type="button" aria-label="Toggle colour theme" title="Toggle light / dark"></button>
-          <button id="syncBtn" type="button">Sync</button>
-          <button id="backupBtn" type="button">Download backup</button>
-          <button id="bulkSampleBtn" type="button">Bulk samples</button>
-          <button id="newSampleBtn" class="primary" type="button">New sample</button>
-        </div>
-      </header>
+      </div>
+      <div class="title-block grow">
+        <h2 id="viewTitle">Dashboard</h2>
+        <p id="viewHint">Live records held by the backend.</p>
+      </div>
+      <div class="actions">
+        <button class="btn btn-sm" id="syncBtn" type="button" data-busy-label="Syncing…">
+          <span class="btn-label">Sync</span>
+        </button>
+        <button class="btn btn-sm hidden" id="backupBtn" type="button" data-busy-label="Downloading…">
+          <span class="btn-label">Backup</span>
+        </button>
+        <button class="btn btn-sm hidden" id="bulkSampleBtn" type="button">
+          <span class="btn-label">Bulk samples</span>
+        </button>
+        <button class="btn btn-primary btn-sm hidden" id="newSampleBtn" type="button">
+          <span class="btn-label">+ New sample</span>
+        </button>
+      </div>
+    </header>
 
-      <section class="content">
-        <div id="dashboardView" class="view" role="region" aria-label="Dashboard"></div>
-        <div id="samplesView"   class="view hidden" role="region" aria-label="Samples"></div>
-        <div id="scanView"      class="view hidden" role="region" aria-label="Scan QR"></div>
-        <div id="mastersView"   class="view hidden" role="region" aria-label="People and storage"></div>
-        <div id="usersView"     class="view hidden" role="region" aria-label="Users"></div>
-        <div id="backupView"    class="view hidden" role="region" aria-label="Data backup"></div>
-        <div id="auditView"     class="view hidden" role="region" aria-label="Activity log"></div>
-      </section>
+    <!-- Main content -->
+    <main class="app-main" id="appMain">
+      <div class="app-main-inner">
+        <div id="dashboardView"  class="view" role="region" aria-label="Dashboard"></div>
+        <div id="samplesView"    class="view hidden" role="region" aria-label="Samples"></div>
+        <div id="approvalsView"  class="view hidden" role="region" aria-label="Approval queue"></div>
+        <div id="scanView"       class="view hidden" role="region" aria-label="Scan QR"></div>
+        <div id="mastersView"    class="view hidden" role="region" aria-label="People and storage"></div>
+        <div id="usersView"      class="view hidden" role="region" aria-label="Users"></div>
+        <div id="backupView"     class="view hidden" role="region" aria-label="Data backup"></div>
+        <div id="auditView"      class="view hidden" role="region" aria-label="Activity log"></div>
+      </div>
     </main>
+
+    <!-- Bottom tab bar (mobile) -->
+    <nav class="tab-bar" id="tabBar" aria-label="Primary tabs">
+      <button class="tab" data-view="scan" aria-current="page">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><rect x="7" y="7" width="4" height="4"/><rect x="13" y="7" width="4" height="4"/><rect x="7" y="13" width="4" height="4"/><path d="M13 13h4v4"/></svg>
+        <span>Scan</span>
+      </button>
+      <button class="tab" data-view="samples">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6v4l4 4v10a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V11l4-4z"/></svg>
+        <span>Samples</span>
+      </button>
+      <button class="tab" data-view="dashboard">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        <span>Home</span>
+      </button>
+      <button class="tab" data-view="me">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span>Me</span>
+      </button>
+    </nav>
   </div>
 
-  <!-- ==============================  DIALOGS  =========================== -->
-  <dialog id="sampleDialog" aria-labelledby="sampleDialogTitle">
-    <form id="sampleForm" class="modal" novalidate>
-      <div class="modal-head">
-        <h3 id="sampleDialogTitle">Prepare bottle · register sample</h3>
-        <button type="button" data-close aria-label="Close">Close</button>
+  <!-- ================================================================== -->
+  <!-- DIALOGS                                                            -->
+  <!-- ================================================================== -->
+
+  <!-- New sample -->
+  <dialog id="sampleDialog" class="dialog" aria-labelledby="sampleDialogTitle">
+    <form id="sampleForm" class="dialog-inner" novalidate>
+      <div class="dialog-header">
+        <h2 class="dialog-title" id="sampleDialogTitle">Prepare bottle · register sample</h2>
+        <button type="button" class="btn btn-ghost btn-icon" data-close-dialog="sampleDialog" aria-label="Close dialog">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
       </div>
-      <div class="form-grid">
-        <label>Project / client<input name="clientName" required></label>
-        <label>Source type
-          <select name="sourceType" required>
-            <option>Drinking Water</option>
-            <option>Ground Water</option>
-            <option>Surface Water</option>
-            <option>Wastewater</option>
-            <option>Industrial Effluent</option>
-          </select>
-        </label>
-        <label>Sampling site<input name="collectionSite" required></label>
-        <label>Brought by / collected by<input name="collector" required></label>
-        <label>Initial storage<select name="storageLocationId" id="sampleStorage"></select></label>
-        <label>Assign analyst<select name="assignedTo" id="sampleAnalyst"></select></label>
-        <label>Target completion<input name="dueAt" type="datetime-local"></label>
-        <label class="wide">Sample photo<input name="samplePhoto" type="file" accept="image/*"></label>
-        <div class="wide test-picker">
-          <label>Add requested test<select id="sampleTestPicker"></select></label>
-          <div class="selected-tests" id="selectedTests"></div>
+      <div class="dialog-body">
+        <div class="form-error-banner hidden" data-form-error></div>
+        <div class="form-grid">
+          <div class="field"><label class="field-label" for="fClient">Project / client <span class="required">*</span></label><input class="input" id="fClient" name="clientName" required></div>
+          <div class="field"><label class="field-label" for="fSource">Source type <span class="required">*</span></label>
+            <select class="select" id="fSource" name="sourceType" required>
+              <option>Drinking Water</option>
+              <option>Ground Water</option>
+              <option>Surface Water</option>
+              <option>Wastewater</option>
+              <option>Industrial Effluent</option>
+            </select>
+          </div>
+          <div class="field"><label class="field-label" for="fSite">Sampling site <span class="required">*</span></label><input class="input" id="fSite" name="collectionSite" required></div>
+          <div class="field"><label class="field-label" for="fCollector">Brought by / collected by <span class="required">*</span></label><input class="input" id="fCollector" name="collector" required></div>
+          <div class="field"><label class="field-label" for="fStorage">Initial storage</label><select class="select" id="fStorage" name="storageLocationId"></select></div>
+          <div class="field"><label class="field-label" for="fAnalyst">Assign analyst</label><select class="select" id="fAnalyst" name="assignedTo"></select></div>
+          <div class="field"><label class="field-label" for="fDue">Target completion</label><input class="input" id="fDue" name="dueAt" type="datetime-local"></div>
+          <div class="field"><label class="field-label" for="fPhoto">Sample photo</label><input class="input" id="fPhoto" name="samplePhoto" type="file" accept="image/*"></div>
+          <div class="field field-wide">
+            <label class="field-label" for="fTestPicker">Add requested test</label>
+            <select class="select" id="fTestPicker"></select>
+            <div id="fSelectedTests" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;"></div>
+          </div>
+          <div class="field field-wide"><label class="field-label" for="fNotes">Notes</label><textarea class="textarea" id="fNotes" name="notes" placeholder="Anything the analyst should know"></textarea></div>
         </div>
-        <label class="wide">Notes<textarea name="notes" placeholder="Anything the analyst should know before opening the bottle"></textarea></label>
       </div>
-      <div class="modal-foot">
-        <button type="reset">Clear</button>
-        <button class="primary" type="submit">Create sample</button>
+      <div class="dialog-footer">
+        <button type="button" class="btn" data-close-dialog="sampleDialog"><span class="btn-label">Cancel</span></button>
+        <button type="submit" class="btn btn-primary" data-busy-label="Creating…"><span class="btn-label">Create sample</span></button>
       </div>
     </form>
   </dialog>
 
-  <dialog id="bulkSampleDialog" aria-labelledby="bulkSampleDialogTitle">
-    <form id="bulkSampleForm" class="modal" novalidate>
-      <div class="modal-head">
-        <h3 id="bulkSampleDialogTitle">Bulk sample creation</h3>
-        <button type="button" data-close-bulk aria-label="Close">Close</button>
+  <!-- Bulk samples -->
+  <dialog id="bulkSampleDialog" class="dialog" data-size="lg" aria-labelledby="bulkSampleTitle">
+    <form id="bulkSampleForm" class="dialog-inner" novalidate>
+      <div class="dialog-header">
+        <h2 class="dialog-title" id="bulkSampleTitle">Bulk sample creation</h2>
+        <button type="button" class="btn btn-ghost btn-icon" data-close-dialog="bulkSampleDialog" aria-label="Close dialog">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
       </div>
-      <div class="bulk-create-layout">
-        <section class="bulk-card">
-          <h4>Paste bottle / sample rows</h4>
-          <p>Header order: <strong>Project, Source Type, Site, Brought By, Storage, Analyst, Tests, Target Completion, Notes</strong>.</p>
-          <textarea id="bulkSampleRows" placeholder="Project, Source Type, Site, Brought By, Storage, Analyst, Tests, Target Completion, Notes&#10;Project A, Drinking Water, Borewell 1, Ramesh, Fridge 1 / Shelf A / Rack 01, Priya Nair, pH; TDS; Turbidity, 2026-08-20 17:00, Morning batch"></textarea>
-          <button class="primary" id="createBulkSamples" type="button">Create samples</button>
-        </section>
-        <section class="bulk-card">
-          <h4>Upload Excel sheet</h4>
-          <p>Excel headers can be Project, Client, Source Type, Site, Brought By, Collector, Storage, Analyst, Tests, Target Completion, Notes.</p>
-          <label>Default storage<select id="bulkDefaultStorage"></select></label>
-          <label>Excel file<input id="bulkSampleExcel" type="file" accept=".xlsx,.xls"></label>
-          <button type="button" class="primary" id="importBulkExcel">Import Excel samples</button>
-        </section>
+      <div class="dialog-body">
+        <div class="section-grid" data-cols="2">
+          <div class="card">
+            <div class="card-header"><h3 class="card-title">Paste rows</h3></div>
+            <div class="card-body">
+              <p class="muted text-sm">Header order: Project, Source Type, Site, Brought By, Storage, Analyst, Tests, Target Completion, Notes.</p>
+              <div class="field">
+                <label class="field-label sr-only" for="bulkRows">Sample rows</label>
+                <textarea class="textarea" id="bulkRows" style="min-height:220px;font-family:var(--font-mono);font-size:var(--fs-sm);" placeholder="Project A, Drinking Water, Borewell 1, Ramesh, Fridge 1, Priya, pH; TDS, 2026-08-20 17:00, note"></textarea>
+              </div>
+              <button type="button" class="btn btn-primary" id="createBulkSamples" data-busy-label="Creating…">
+                <span class="btn-label">Create samples</span>
+              </button>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header"><h3 class="card-title">Upload Excel</h3></div>
+            <div class="card-body">
+              <p class="muted text-sm">Accepts headers: Project · Source Type · Site · Brought By · Storage · Analyst · Tests · Target Completion · Notes.</p>
+              <div class="field">
+                <label class="field-label" for="bulkStorage">Default storage</label>
+                <select class="select" id="bulkStorage"></select>
+              </div>
+              <div class="field">
+                <label class="field-label" for="bulkExcel">Excel file</label>
+                <input class="input" id="bulkExcel" type="file" accept=".xlsx,.xls">
+              </div>
+              <button type="button" class="btn btn-primary" id="importBulkExcel" data-busy-label="Importing…">
+                <span class="btn-label">Import Excel</span>
+              </button>
+            </div>
+          </div>
+        </div>
+        <div id="bulkResult" aria-live="polite"></div>
       </div>
-      <div id="bulkCreateResult" class="bulk-result" aria-live="polite"></div>
     </form>
   </dialog>
 
-  <dialog id="resultSheetDialog" aria-labelledby="sheetDialogTitle">
-    <div class="modal sheet-modal">
-      <div class="modal-head">
+  <!-- Result Sheet -->
+  <dialog id="resultSheetDialog" class="dialog" data-size="xl" aria-labelledby="sheetTitle">
+    <div class="dialog-inner">
+      <div class="dialog-header">
         <div>
-          <h3 id="sheetDialogTitle">Input analysis data</h3>
-          <small id="sheetDialogMeta"></small>
+          <h2 class="dialog-title" id="sheetTitle">Analysis data entry</h2>
+          <small class="dialog-subtitle" id="sheetSubtitle"></small>
         </div>
-        <button type="button" data-close-sheet aria-label="Close">Close</button>
+        <button type="button" class="btn btn-ghost btn-icon" data-close-dialog="resultSheetDialog" aria-label="Close dialog">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
       </div>
-      <div class="sheet-modal-body" id="sheetDialogBody"></div>
+      <div class="dialog-body" id="sheetBody"></div>
     </div>
   </dialog>
 
-  <!-- ==============================  TOAST  ============================= -->
-  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <!-- Approval ceremony -->
+  <dialog id="approvalDialog" class="dialog" data-size="sm" aria-labelledby="approvalTitle">
+    <form id="approvalForm" class="dialog-inner" novalidate>
+      <div class="dialog-header">
+        <h2 class="dialog-title" id="approvalTitle">Approve results</h2>
+        <button type="button" class="btn btn-ghost btn-icon" data-close-dialog="approvalDialog" aria-label="Close dialog">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="dialog-body">
+        <div class="form-error-banner hidden" data-form-error></div>
+        <div class="ceremony-block">
+          <p class="meaning">By signing, you attest that you have reviewed these results and take responsibility for approval. This decision is recorded permanently in the activity log.</p>
+          <div class="field">
+            <label class="field-label" for="approvalReason">Reason / notes (optional)</label>
+            <textarea class="textarea" id="approvalReason" placeholder="Optional context — visible in the audit trail"></textarea>
+          </div>
+          <div class="field">
+            <label class="field-label" for="approvalPassword">Re-enter your password to sign <span class="required">*</span></label>
+            <input class="input" id="approvalPassword" type="password" autocomplete="current-password" required>
+          </div>
+        </div>
+      </div>
+      <div class="dialog-footer">
+        <button type="button" class="btn" data-close-dialog="approvalDialog"><span class="btn-label">Cancel</span></button>
+        <button type="submit" class="btn btn-primary" data-busy-label="Signing…"><span class="btn-label">Sign &amp; approve</span></button>
+      </div>
+    </form>
+  </dialog>
 
-  <!-- ==============================  SCRIPTS  =========================== -->
+  <!-- Generic confirm dialog -->
+  <dialog id="confirmDialog" class="dialog" data-size="sm" aria-labelledby="confirmTitle">
+    <div class="dialog-inner">
+      <div class="dialog-header">
+        <h2 class="dialog-title" id="confirmTitle">Confirm</h2>
+      </div>
+      <div class="dialog-body">
+        <p id="confirmMessage"></p>
+      </div>
+      <div class="dialog-footer">
+        <button type="button" class="btn" data-confirm="false"><span class="btn-label">Cancel</span></button>
+        <button type="button" class="btn btn-primary" data-confirm="true" id="confirmOk"><span class="btn-label">Confirm</span></button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- ================================================================== -->
+  <!-- NOTIFICATION STACK                                                 -->
+  <!-- ================================================================== -->
+  <div class="notification-stack" id="notificationStack" role="region" aria-label="Notifications"></div>
+
+  <!-- ================================================================== -->
+  <!-- SCRIPTS                                                            -->
+  <!-- ================================================================== -->
   <script>
-    // Theme toggle — isolated, no dependency on app.js
+    // Theme toggle — 3-way cycle
     (function () {
       var root = document.documentElement;
-      function apply(theme) {
-        if (theme === "system") { root.removeAttribute("data-theme"); }
-        else { root.setAttribute("data-theme", theme); }
-        try { localStorage.setItem("plasma-lab-theme", theme); } catch (e) {}
-      }
-      document.addEventListener("click", function (e) {
-        var btn = e.target.closest && e.target.closest("#themeToggle");
-        if (!btn) return;
-        var current = root.getAttribute("data-theme");
-        // 3-way cycle: light → dark → system
-        var next = current === "light" ? "dark" : (current === "dark" ? "system" : "light");
-        apply(next);
+      document.addEventListener('click', function (e) {
+        if (!e.target.closest('#themeToggle')) return;
+        var current = root.getAttribute('data-theme');
+        var next = current === 'light' ? 'dark' : (current === 'dark' ? null : 'light');
+        if (next) { root.setAttribute('data-theme', next); localStorage.setItem('plasma-lab-theme', next); }
+        else { root.removeAttribute('data-theme'); localStorage.removeItem('plasma-lab-theme'); }
       });
     })();
   </script>
