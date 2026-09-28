@@ -1880,12 +1880,29 @@ dialog.dialog::backdrop {
     flex: 0 0 auto;
     gap: 4px;
   }
-  /* Hide secondary header actions on mobile — accessible from Me tab */
+  /* Hide sync + backup on mobile (rare admin actions) — accessible on desktop */
   .app-header #syncBtn,
-  .app-header #backupBtn,
-  .app-header #bulkSampleBtn {
+  .app-header #backupBtn {
     display: none !important;
   }
+  /* Bulk samples: keep visible on mobile as compact icon button next to + */
+  .app-header #bulkSampleBtn {
+    padding: 0;
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    justify-content: center;
+    font-size: 16px;
+  }
+  .app-header #bulkSampleBtn .btn-label { font-size: 0; }
+  .app-header #bulkSampleBtn::after {
+    content: "☰";
+    font-size: 18px;
+    line-height: 1;
+  }
+
+  /* Card action rows: wrap so nothing gets clipped */
+  .card-body .row { flex-wrap: wrap; }
   /* Primary action becomes icon-only on mobile */
   .app-header #newSampleBtn {
     padding: 0;
