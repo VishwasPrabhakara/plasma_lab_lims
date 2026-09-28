@@ -1793,6 +1793,67 @@ dialog.dialog::backdrop {
 .app-main-inner > * { min-width: 0; }
 .sample-header, .sample-header > *, .lifecycle-strip, .card, .card-body { min-width: 0; }
 
+/* DENSITY PASS — hide bulky vertical content on mobile */
+@media (max-width: 640px) {
+  /* Auth: skip the entire brand hero panel on mobile — go straight to sign in */
+  .auth-brand-panel { display: none !important; }
+  .auth-panel { min-height: auto !important; grid-template-columns: 1fr !important; }
+  .auth-slider { padding: var(--s-5) var(--s-4) !important; }
+  .auth { padding: var(--s-3); align-items: flex-start; padding-top: var(--s-6); }
+
+  /* Dashboard: kill the greeting hero, tighten metrics */
+  .dashboard-hero { display: none !important; }
+
+  /* Metric tiles: horizontal scrolling row instead of stacked grid */
+  .metric-grid {
+    grid-template-columns: repeat(6, minmax(130px, 1fr));
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: var(--s-2);
+  }
+  .metric-grid .metric { scroll-snap-align: start; min-height: 70px; padding: var(--s-3); }
+  .metric-grid .metric-label { font-size: 10px; }
+  .metric-grid .metric-value { font-size: var(--fs-xl); }
+
+  /* Cards: tighter global padding on mobile */
+  .card-body { padding: var(--s-3); gap: var(--s-3); }
+  .card-header { padding: var(--s-3); }
+  .card-footer { padding: var(--s-2) var(--s-3); }
+
+  /* Sample cards: single-line meta, smaller padding */
+  .sample-card { padding: var(--s-3); gap: 4px; }
+  .sample-card .primary-line { font-size: var(--fs-sm); }
+  .sample-card .meta { font-size: var(--fs-xs); }
+
+  /* Sample detail: hide right-rail audit stream on mobile — accessible via tab */
+  .audit-rail { display: none !important; }
+
+  /* Sample header + lifecycle strip: tighter */
+  .sample-header { padding: var(--s-3); }
+  .lifecycle-strip { padding: var(--s-2) var(--s-3); }
+
+  /* Facts grid: compact single-line rows */
+  .facts { grid-template-columns: 1fr 1fr; gap: 6px; }
+  .fact { padding-bottom: 6px; }
+  .fact-label { font-size: 10px; letter-spacing: 0.04em; }
+  .fact-value { font-size: var(--fs-sm); }
+
+  /* QR block: smaller on mobile — QR only, no photo placeholder unless present */
+  .qr-block { padding: var(--s-2); }
+
+  /* Ledger layout: kill inter-column gap on mobile to save vertical space */
+  .ledger-layout { gap: var(--s-3); }
+
+  /* Approval card tighter */
+  .approval-card { padding: var(--s-3); gap: var(--s-2); }
+
+  /* Bottom tab bar: slimmer */
+  .tab-bar { padding: 4px 4px; }
+  .tab-bar .tab { min-height: 48px; font-size: 10px; }
+  .tab-bar .tab svg { width: 20px; height: 20px; }
+}
+
 /* Mobile-specific overrides — under 640px */
 @media (max-width: 640px) {
   .app-main { padding: var(--s-3); }
