@@ -1598,9 +1598,41 @@ dialog.dialog::backdrop {
   background: var(--surface-2);
   border: 1px solid var(--border);
   border-radius: var(--r-md);
+  max-width: 260px;
+  justify-self: start;
 }
-.qr-block img { width: 100%; background: #fff; border-radius: var(--r-sm); }
+.qr-block img.sample-photo {
+  width: 100%;
+  max-height: 160px;
+  object-fit: cover;
+  background: #fff;
+  border-radius: var(--r-sm);
+}
+.qr-block img.qr-image {
+  width: 180px;
+  height: 180px;
+  max-width: 100%;
+  align-self: center;
+  justify-self: center;
+  background: #fff;
+  border-radius: var(--r-sm);
+  padding: 6px;
+}
 .qr-block .qr-actions { display: grid; gap: var(--s-2); }
+
+/* Sample detail: two-column layout for QR + facts on desktop */
+.detail-body {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--s-4);
+}
+@media (min-width: 720px) {
+  .detail-body { grid-template-columns: 260px 1fr; align-items: start; }
+}
+@media (max-width: 640px) {
+  .qr-block { max-width: 100%; justify-self: stretch; }
+  .qr-block img.qr-image { width: 160px; height: 160px; }
+}
 
 .facts {
   display: grid;

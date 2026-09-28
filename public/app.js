@@ -735,29 +735,31 @@
     if (state.tab === 'history')    tabBody.appendChild(h('div', { class: 'card' }, h('div', { class: 'card-body' }, auditTimelineEl(sample))));
     mainCol.appendChild(tabBody);
 
-    // QR + facts card
+    // QR + facts card — side-by-side on desktop, stacked on mobile
     const details = h('div', { class: 'card', style: { marginBottom: '16px' } });
     details.appendChild(h('div', { class: 'card-body' },
-      h('div', { class: 'stack-lg' },
+      h('div', { class: 'detail-body' },
         qrBlockEl(sample),
-        h('div', { class: 'facts' },
-          factEl('Project / client', sample.clientName),
-          factEl('Site', sample.collectionSite),
-          factEl('Source', sample.sourceType),
-          factEl('Bottle labelled', fmtDate(sample.createdAt || sample.receivedAt)),
-          factEl('Last updated', fmtDate(sample.updatedAt || sample.receivedAt)),
-          factEl('Target completion', sample.dueAt ? fmtDate(sample.dueAt) : '—'),
-          factEl('Brought by', sample.collector),
-          factEl('Analyst', sample.assignedTo || 'Unassigned'),
-          factEl('Storage', storage),
-          factEl('Retention', sample.retentionStatus || 'Active'),
-          factEl('Tests', (sample.requestedTests || []).join(', '))
-        ),
-        h('div', { class: 'readiness' },
-          h('span', { class: 'ready-item', 'data-done': String(hasStorage) }, `Storage ${hasStorage ? 'set' : 'needed'}`),
-          h('span', { class: 'ready-item', 'data-done': String(hasBook) }, `Written record ${hasBook ? 'uploaded' : 'needed'}`),
-          h('span', { class: 'ready-item', 'data-done': String(hasResults) }, `Results ${hasResults ? 'entered' : 'needed'}`),
-          h('span', { class: 'ready-item', 'data-done': String(sample.status === 'Approved') }, `Approval ${sample.status === 'Approved' ? 'done' : 'pending'}`)
+        h('div', { class: 'stack' },
+          h('div', { class: 'facts' },
+            factEl('Project / client', sample.clientName),
+            factEl('Site', sample.collectionSite),
+            factEl('Source', sample.sourceType),
+            factEl('Bottle labelled', fmtDate(sample.createdAt || sample.receivedAt)),
+            factEl('Last updated', fmtDate(sample.updatedAt || sample.receivedAt)),
+            factEl('Target completion', sample.dueAt ? fmtDate(sample.dueAt) : '—'),
+            factEl('Brought by', sample.collector),
+            factEl('Analyst', sample.assignedTo || 'Unassigned'),
+            factEl('Storage', storage),
+            factEl('Retention', sample.retentionStatus || 'Active'),
+            factEl('Tests', (sample.requestedTests || []).join(', '))
+          ),
+          h('div', { class: 'readiness' },
+            h('span', { class: 'ready-item', 'data-done': String(hasStorage) }, `Storage ${hasStorage ? 'set' : 'needed'}`),
+            h('span', { class: 'ready-item', 'data-done': String(hasBook) }, `Written record ${hasBook ? 'uploaded' : 'needed'}`),
+            h('span', { class: 'ready-item', 'data-done': String(hasResults) }, `Results ${hasResults ? 'entered' : 'needed'}`),
+            h('span', { class: 'ready-item', 'data-done': String(sample.status === 'Approved') }, `Approval ${sample.status === 'Approved' ? 'done' : 'pending'}`)
+          )
         )
       )
     ));
@@ -777,8 +779,8 @@
   function qrBlockEl(sample) {
     const photo = (sample.files || []).find(f => f.category === 'Sample Photo');
     return h('div', { class: 'qr-block' },
-      photo ? h('img', { src: apiUrl(photo.url), alt: 'Sample photo' }) : h('div', { class: 'empty-state', style: { padding: '24px', minHeight: '120px' } }, 'No sample photo'),
-      h('img', { src: apiUrl(`/api/samples/${sample.id}/qr.svg?token=${encodeURIComponent(state.token)}`), alt: 'QR code' }),
+      photo ? h('img', { class: 'sample-photo', src: apiUrl(photo.url), alt: 'Sample photo' }) : h('div', { class: 'empty-state', style: { padding: '16px', minHeight: '110px', fontSize: '12px' } }, 'No sample photo'),
+      h('img', { class: 'qr-image', src: apiUrl(`/api/samples/${sample.id}/qr.svg?token=${encodeURIComponent(state.token)}`), alt: 'QR code' }),
       h('div', { class: 'qr-actions' },
         h('button', { class: 'btn btn-sm', type: 'button', onclick: () => window.open(apiUrl(`/api/samples/${sample.id}/tube-label?token=${encodeURIComponent(state.token)}`), '_blank') }, h('span',{class:'btn-label'},'Print QR label')),
         h('button', { class: 'btn btn-sm', type: 'button', onclick: () => window.open(apiUrl(`/api/samples/${sample.id}/report?token=${encodeURIComponent(state.token)}`), '_blank') }, h('span',{class:'btn-label'},'Print report')),
