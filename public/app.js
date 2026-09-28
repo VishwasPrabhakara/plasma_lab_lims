@@ -25,11 +25,16 @@
     sampleDetailOpen: false,
     openedUrlSample: false,
     sampleFilters: { q:'', status:'', from:'', to:'', project:'', collector:'', analyst:'', storage:'' },
+    auditFilters: { q:'', user:'', action:'', from:'', to:'' },
     pendingSignupId: '', resetId: '',
     showInactiveUsers: false,
     selectedRequestedTests: [],
+    selectedSamples: new Set(),
     pendingConfirm: null,
-    pendingApproval: null
+    pendingApproval: null,
+    fullScannerOpen: false,
+    scannerStream: null,
+    meSheetOpen: false
   };
 
   const CONFIG = window.PLASMA_LIMS_CONFIG || {};
@@ -347,8 +352,8 @@
   });
   $('#tabBar').addEventListener('click', e => {
     const btn = e.target.closest('[data-view]'); if (!btn) return;
-    if (btn.dataset.view === 'scan') switchView('scan');
-    else if (btn.dataset.view === 'me') switchView('backup'); // fallback for admin; for analyst just show sign-out
+    if (btn.dataset.view === 'scan') openFullScreenScanner();
+    else if (btn.dataset.view === 'me') openMeSheet();
     else switchView(btn.dataset.view);
   });
 
@@ -462,14 +467,31 @@
     return 'evening';
   }
 
-  function sampleCard(sample) {
+  function sampleCard(sample, opts = {}) {
     const storage = state.storageLocations.find(x => x.id === sample.storageLocationId)?.name || 'No storage';
+    const selected = state.selectedSamples.has(sample.id);
+    const showSelect = opts.allowSelect !== false && can('admin');
     return h('button', {
-      class: 'sample-card', type: 'button',
+      class: 'sample-card' + (selected ? ' is-selected' : ''), type: 'button',
       'data-sample': sample.id,
       'aria-current': sample.id === state.selectedId ? 'true' : 'false',
-      onclick: () => openSampleDetail(sample.id)
+      onclick: e => {
+        // Long-press or Shift+click enters bulk mode
+        if (e.shiftKey || state.selectedSamples.size > 0) {
+          e.preventDefault();
+          toggleSampleSelect(sample.id);
+        } else {
+          openSampleDetail(sample.id);
+        }
+      }
     },
+      showSelect ? h('span', {
+        class: 'select-box',
+        role: 'checkbox',
+        'aria-checked': selected,
+        'aria-label': 'Select ' + sample.sampleCode,
+        onclick: e => { e.stopPropagation(); toggleSampleSelect(sample.id); }
+      }) : null,
       h('div', { class: 'top' },
         h('span', { class: 'code' }, sample.sampleCode),
         h('span', { class: 'chip ' + statusClass(sample.status) }, sample.status)
@@ -481,6 +503,80 @@
         h('span', null, sample.assignedTo || 'Unassigned')
       )
     );
+  }
+
+  function toggleSampleSelect(id) {
+    if (state.selectedSamples.has(id)) state.selectedSamples.delete(id);
+    else state.selectedSamples.add(id);
+    render();
+  }
+  function clearSampleSelection() {
+    state.selectedSamples.clear();
+    render();
+  }
+  function renderBulkActionBar() {
+    if (state.selectedSamples.size === 0) return null;
+    const count = state.selectedSamples.size;
+    return h('div', { class: 'bulk-action-bar', role: 'toolbar', 'aria-label': 'Bulk actions' },
+      h('span', { class: 'bulk-count' }, `${count} selected`),
+      h('div', { class: 'bulk-actions' },
+        h('button', { class: 'btn btn-sm', type: 'button', onclick: () => bulkAssign() }, h('span',{class:'btn-label'},'Assign…')),
+        h('button', { class: 'btn btn-sm', type: 'button', onclick: () => bulkMarkStatus('Stored') }, h('span',{class:'btn-label'},'Mark Stored')),
+        h('button', { class: 'btn btn-sm', type: 'button', onclick: () => bulkPrintQr() }, h('span',{class:'btn-label'},'Print QR')),
+        h('button', { class: 'btn btn-sm', type: 'button', onclick: () => bulkExportCsv() }, h('span',{class:'btn-label'},'Export CSV')),
+        h('button', { class: 'btn btn-sm btn-clear', type: 'button', onclick: clearSampleSelection }, h('span',{class:'btn-label'},'Clear'))
+      )
+    );
+  }
+  async function bulkAssign() {
+    const names = state.people.map(p => p.name);
+    if (names.length === 0) return notify({ type: 'warn', title: 'No analysts', description: 'Add people in Masters first.' });
+    const analyst = window.prompt('Assign selected samples to (analyst name):\n\n' + names.join(', '));
+    if (!analyst) return;
+    const ids = [...state.selectedSamples];
+    let ok = 0, fail = 0;
+    for (const id of ids) {
+      try { await api(`/api/samples/${id}`, { method: 'PATCH', body: JSON.stringify({ assignedTo: analyst.trim() }) }); ok++; }
+      catch { fail++; }
+    }
+    clearSampleSelection();
+    await load();
+    notify({ type: fail ? 'warn' : 'success', title: `${ok} assigned`, description: fail ? `${fail} failed` : `All to ${analyst}` });
+  }
+  async function bulkMarkStatus(status) {
+    const confirmed = await confirmDialog({ title: 'Bulk update', message: `Mark ${state.selectedSamples.size} samples as "${status}"?`, okLabel: 'Update' });
+    if (!confirmed) return;
+    const ids = [...state.selectedSamples];
+    let ok = 0, fail = 0;
+    for (const id of ids) {
+      try { await api(`/api/samples/${id}`, { method: 'PATCH', body: JSON.stringify({ status }) }); ok++; }
+      catch { fail++; }
+    }
+    clearSampleSelection();
+    await load();
+    notify({ type: fail ? 'warn' : 'success', title: `${ok} updated`, description: fail ? `${fail} failed` : null });
+  }
+  function bulkPrintQr() {
+    const ids = [...state.selectedSamples].join(',');
+    if (!ids) return;
+    window.open(apiUrl(`/api/samples/bulk-tube-qr-labels?ids=${encodeURIComponent(ids)}&token=${encodeURIComponent(state.token)}`), '_blank');
+  }
+  function bulkExportCsv() {
+    const ids = [...state.selectedSamples];
+    const rows = state.samples.filter(s => ids.includes(s.id));
+    const csv = ['Sample Code,Status,Client,Site,Source,Storage,Analyst,Created,Due'].concat(rows.map(s => [
+      s.sampleCode, s.status, s.clientName, s.collectionSite, s.sourceType,
+      state.storageLocations.find(l => l.id === s.storageLocationId)?.name || '',
+      s.assignedTo || '',
+      fmtDate(s.createdAt),
+      s.dueAt ? fmtDate(s.dueAt) : ''
+    ].map(v => `"${String(v).replaceAll('"','""')}"`).join(','))).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `samples-${new Date().toISOString().slice(0,10)}.csv`; a.click();
+    URL.revokeObjectURL(url);
+    notify({ type: 'success', title: `${rows.length} samples exported` });
   }
 
   /* ---------------------------------------------------------------------- */
@@ -503,8 +599,11 @@
         onAction: state.samples.length === 0 ? openSampleDialog : resetFilters
       }));
     } else {
-      root.appendChild(h('div', { class: 'card-grid' }, ...rows.map(sampleCard)));
+      const grid = h('div', { class: 'card-grid' + (state.selectedSamples.size > 0 ? ' bulk-mode' : '') }, ...rows.map(s => sampleCard(s)));
+      root.appendChild(grid);
     }
+    const bar = renderBulkActionBar();
+    if (bar) root.appendChild(bar);
   }
   function sampleFiltersEl(count) {
     const f = state.sampleFilters;
@@ -860,6 +959,33 @@
     ));
 
     $('#resultSheetDialog').showModal();
+
+    // Arrow-key nav between cells: Up/Down/Left/Right + Enter
+    const gridEl = gridWrap.querySelector('table');
+    gridEl.addEventListener('keydown', e => {
+      const cell = e.target.closest('input, select'); if (!cell) return;
+      const row = cell.closest('tr'); if (!row) return;
+      const cellsInRow = [...row.querySelectorAll('input, select')];
+      const colIdx = cellsInRow.indexOf(cell);
+      const allRows = [...gridEl.querySelectorAll('tbody tr')];
+      const rowIdx = allRows.indexOf(row);
+      let target = null;
+      if (e.key === 'ArrowRight' || (e.key === 'Enter' && !e.shiftKey && colIdx < cellsInRow.length - 1)) {
+        target = cellsInRow[colIdx + 1];
+      } else if (e.key === 'ArrowLeft') {
+        target = cellsInRow[colIdx - 1];
+      } else if (e.key === 'ArrowDown' || (e.key === 'Enter' && colIdx === cellsInRow.length - 1)) {
+        const nextRow = allRows[rowIdx + 1];
+        if (nextRow) target = nextRow.querySelectorAll('input, select')[Math.min(colIdx, nextRow.querySelectorAll('input, select').length - 1)];
+      } else if (e.key === 'ArrowUp') {
+        const prevRow = allRows[rowIdx - 1];
+        if (prevRow) target = prevRow.querySelectorAll('input, select')[Math.min(colIdx, prevRow.querySelectorAll('input, select').length - 1)];
+      }
+      if (target) { e.preventDefault(); target.focus(); if (target.select) target.select(); }
+    });
+
+    // Focus first cell for immediate typing
+    setTimeout(() => body.querySelector('[data-field="value"]')?.focus(), 150);
   }
   async function saveSheet(sample) {
     const rows = $$('#sheetBody tbody tr').map(tr => {
@@ -1231,11 +1357,185 @@
     if (state.stream) state.stream.getTracks().forEach(t => t.stop());
     state.stream = null;
   }
-  function flash() {
-    const el = h('div', { class: 'scan-flash' });
+  function flash(cls) {
+    const el = h('div', { class: cls || 'scan-flash' });
     document.body.appendChild(el);
     setTimeout(() => el.remove(), 400);
   }
+  function beep() {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.frequency.value = 880;
+      gain.gain.value = 0.15;
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.start(); osc.stop(ctx.currentTime + 0.08);
+      setTimeout(() => ctx.close(), 200);
+    } catch {}
+    try { if (navigator.vibrate) navigator.vibrate(50); } catch {}
+  }
+
+  /* Full-screen scanner overlay ---------------------------------------- */
+  async function openFullScreenScanner() {
+    if (state.fullScannerOpen) return;
+    state.fullScannerOpen = true;
+
+    const overlay = h('div', { class: 'scanner-full', role: 'dialog', 'aria-label': 'Scan QR code' });
+    const closeBtn = h('button', {
+      class: 'btn-icon', type: 'button', 'aria-label': 'Close scanner',
+      html: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>'
+    });
+    const torchBtn = h('button', {
+      class: 'btn-icon', type: 'button', 'aria-label': 'Toggle torch', 'data-torch-off': true,
+      html: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2h6l-1 4h-4L9 2z"/><path d="M8 6h8v14a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2V6z"/></svg>'
+    });
+    const header = h('div', { class: 'scanner-header' },
+      closeBtn,
+      h('div', { class: 'title' }, 'Scan a sample'),
+      torchBtn
+    );
+    const video = h('video', { muted: true, playsinline: true, autoplay: true });
+    const viewport = h('div', { class: 'viewport-wrap' },
+      video,
+      h('div', { class: 'reticle-frame' }, h('i'), h('i'), h('div', { class: 'scan-line' }))
+    );
+    const hint = h('div', { class: 'hint' }, 'Point the camera at the QR label on the bottle');
+    const manualInput = h('input', { class: 'input', placeholder: 'Or type PL-2026-000001', 'aria-label': 'Sample code' });
+    const manualBtn = h('button', { class: 'btn btn-primary', type: 'button' }, h('span',{class:'btn-label'},'Open'));
+    const footer = h('div', { class: 'footer' },
+      hint,
+      h('div', { class: 'manual-row' }, manualInput, manualBtn)
+    );
+    overlay.appendChild(header);
+    overlay.appendChild(viewport);
+    overlay.appendChild(footer);
+    document.body.appendChild(overlay);
+
+    function close() {
+      if (state.scannerStream) state.scannerStream.getTracks().forEach(t => t.stop());
+      state.scannerStream = null;
+      state.fullScannerOpen = false;
+      overlay.remove();
+    }
+    closeBtn.onclick = close;
+    document.addEventListener('keydown', function esc(e) {
+      if (e.key === 'Escape' && state.fullScannerOpen) { close(); document.removeEventListener('keydown', esc); }
+    });
+    manualBtn.onclick = async () => {
+      const c = manualInput.value.trim();
+      if (!c) return;
+      close();
+      await openByCode(c);
+    };
+    manualInput.addEventListener('keydown', e => { if (e.key === 'Enter') manualBtn.click(); });
+
+    try {
+      state.scannerStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      video.srcObject = state.scannerStream;
+      await video.play();
+      // torch support
+      const track = state.scannerStream.getVideoTracks()[0];
+      const caps = track.getCapabilities?.() || {};
+      if (caps.torch) {
+        torchBtn.style.display = 'grid';
+        torchBtn.onclick = async () => {
+          const on = torchBtn.dataset.torchOff === 'true';
+          try { await track.applyConstraints({ advanced: [{ torch: on }] }); torchBtn.dataset.torchOff = String(!on); }
+          catch {}
+        };
+      } else {
+        torchBtn.style.display = 'none';
+      }
+      if ('BarcodeDetector' in window) {
+        const detector = new BarcodeDetector({ formats: ['qr_code'] });
+        const tick = async () => {
+          if (!state.fullScannerOpen) return;
+          try {
+            const codes = await detector.detect(video);
+            if (codes.length) {
+              beep();
+              flash('scan-success-flash');
+              const code = codes[0].rawValue;
+              close();
+              await openByCode(code);
+              return;
+            }
+          } catch {}
+          requestAnimationFrame(tick);
+        };
+        tick();
+      } else {
+        hint.textContent = 'Your browser cannot auto-scan. Type the code below.';
+      }
+    } catch (e) {
+      hint.textContent = 'Camera unavailable — type the code below.';
+      notify({ type: 'warn', title: 'Camera blocked', description: e.message || 'Grant camera permission and reopen.' });
+    }
+  }
+
+  /* Me sheet (bottom sheet) ------------------------------------------- */
+  function openMeSheet() {
+    if (state.meSheetOpen) return;
+    state.meSheetOpen = true;
+    const backdrop = h('div', { class: 'sheet-backdrop', onclick: closeMeSheet });
+    const sheet = h('div', { class: 'me-sheet', role: 'dialog', 'aria-label': 'Account menu' });
+    const iconTheme = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>';
+    const iconSync = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>';
+    const iconOut = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>';
+    const iconBackup = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>';
+    const iconUsers = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>';
+    const iconAudit = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>';
+
+    const themeLabel = document.documentElement.getAttribute('data-theme');
+    const currentThemeText = themeLabel === 'dark' ? 'Theme: Dark' : themeLabel === 'light' ? 'Theme: Light' : 'Theme: System';
+
+    const user = state.user;
+    sheet.appendChild(h('div', { class: 'me-user' },
+      h('div', { class: 'avatar' }, initials(user?.name)),
+      h('div', { class: 'grow' },
+        h('div', { class: 'username' }, user?.name || '—'),
+        h('div', { class: 'userrole' }, roleLabel(user?.role) + ' · ' + (user?.email || ''))
+      )
+    ));
+
+    const actions = h('div', { class: 'me-actions' });
+
+    // Theme toggle
+    actions.appendChild(h('button', { type: 'button', html: iconTheme + '<span>' + currentThemeText + '</span>', onclick: () => { cycleTheme(); closeMeSheet(); } }));
+
+    // Sync
+    actions.appendChild(h('button', { type: 'button', html: iconSync + '<span>Sync now</span>', onclick: async () => { closeMeSheet(); await safeSync(); } }));
+
+    if (can('admin')) {
+      actions.appendChild(h('div', { class: 'divider' }));
+      actions.appendChild(h('button', { type: 'button', html: iconUsers + '<span>Manage users</span>', onclick: () => { closeMeSheet(); switchView('users'); } }));
+      actions.appendChild(h('button', { type: 'button', html: iconAudit + '<span>Activity log</span>', onclick: () => { closeMeSheet(); switchView('audit'); } }));
+      actions.appendChild(h('button', { type: 'button', html: iconBackup + '<span>Data backup</span>', onclick: () => { closeMeSheet(); switchView('backup'); } }));
+    }
+
+    actions.appendChild(h('div', { class: 'divider' }));
+    actions.appendChild(h('button', { type: 'button', class: 'danger', html: iconOut + '<span>Sign out</span>', onclick: () => { closeMeSheet(); $('#logoutBtn').click(); } }));
+
+    sheet.appendChild(actions);
+    document.body.appendChild(backdrop);
+    document.body.appendChild(sheet);
+    document.addEventListener('keydown', function esc(e) {
+      if (e.key === 'Escape' && state.meSheetOpen) { closeMeSheet(); document.removeEventListener('keydown', esc); }
+    });
+  }
+  function closeMeSheet() {
+    document.querySelectorAll('.me-sheet, .sheet-backdrop').forEach(el => el.remove());
+    state.meSheetOpen = false;
+  }
+  function cycleTheme() {
+    const root = document.documentElement;
+    const current = root.getAttribute('data-theme');
+    const next = current === 'light' ? 'dark' : (current === 'dark' ? null : 'light');
+    if (next) { root.setAttribute('data-theme', next); localStorage.setItem('plasma-lab-theme', next); }
+    else { root.removeAttribute('data-theme'); localStorage.removeItem('plasma-lab-theme'); }
+  }
+  const safeSync = safe(async () => { await load(); notify({ type: 'success', title: 'Synced' }); });
   async function openByCode(raw) {
     const code = extractSampleCode(raw);
     if (!code) return notify({ type: 'warn', title: 'No sample code found' });
@@ -1482,24 +1782,64 @@
   function renderAudit() {
     const root = $('#auditView');
     root.innerHTML = '';
+    const f = state.auditFilters;
+    const users = uniqueValues(state.audit.map(e => e.userName));
+    const actions = uniqueValues(state.audit.map(e => e.action));
+
+    // Filter bar
+    const filterBar = h('div', { class: 'audit-filter-bar' },
+      h('input', { class: 'input', placeholder: 'Search entries…', value: f.q, oninput: e => { f.q = e.target.value; render(); }, 'aria-label': 'Search activity' }),
+      (() => {
+        const s = h('select', { class: 'select', 'aria-label': 'Filter by user', onchange: e => { f.user = e.target.value; render(); } });
+        s.appendChild(h('option', { value: '' }, 'All users'));
+        users.forEach(u => s.appendChild(h('option', { value: u, selected: u === f.user ? true : null }, u)));
+        return s;
+      })(),
+      (() => {
+        const s = h('select', { class: 'select', 'aria-label': 'Filter by action', onchange: e => { f.action = e.target.value; render(); } });
+        s.appendChild(h('option', { value: '' }, 'All actions'));
+        actions.forEach(a => s.appendChild(h('option', { value: a, selected: a === f.action ? true : null }, a)));
+        return s;
+      })(),
+      h('input', { class: 'input', type: 'date', value: f.from, 'aria-label': 'From date', onchange: e => { f.from = e.target.value; render(); } })
+    );
+
+    // Apply filters
+    const q = (f.q || '').toLowerCase();
+    const from = f.from ? new Date(f.from + 'T00:00:00').getTime() : 0;
+    const filtered = state.audit.filter(evt => {
+      const text = [evt.action, evt.userName, evt.entity, evt.detail].join(' ').toLowerCase();
+      const at = new Date(evt.at || 0).getTime();
+      return (!q || text.includes(q))
+        && (!f.user || evt.userName === f.user)
+        && (!f.action || evt.action === f.action)
+        && at >= from;
+    });
+
+    // Card + timeline
     root.appendChild(h('div', { class: 'card' },
-      h('div', { class: 'card-header' }, h('h3', { class: 'card-title' }, `Activity log · ${state.audit.length} entries`)),
+      h('div', { class: 'card-header' },
+        h('h3', { class: 'card-title' }, `Activity log · ${filtered.length} of ${state.audit.length}`),
+        (f.q || f.user || f.action || f.from) ? h('button', { class: 'btn btn-sm', type: 'button', onclick: () => { state.auditFilters = { q:'', user:'', action:'', from:'', to:'' }; render(); } }, h('span',{class:'btn-label'},'Reset filters')) : null
+      ),
       h('div', { class: 'card-body' },
-        state.audit.length === 0 ? emptyState({ title: 'No activity yet', message: 'System actions will appear here as they occur.' })
-        : (() => {
-            const tl = h('div', { class: 'timeline', role: 'feed' });
-            state.audit.forEach(evt => {
-              tl.appendChild(h('article', { class: 'timeline-event', 'data-type': evt.action?.toLowerCase().includes('approve') ? 'approve' : evt.action?.toLowerCase().includes('dispos') ? 'dispose' : 'default' },
-                h('div', { class: 'event-title' }, `${evt.action} — ${evt.userName || 'system'}`),
-                h('div', { class: 'event-meta' },
-                  h('time', { datetime: evt.at }, fmtDate(evt.at)),
-                  h('span', null, evt.entity),
-                  evt.detail ? h('span', null, evt.detail) : null
-                )
-              ));
-            });
-            return tl;
-          })()
+        filterBar,
+        filtered.length === 0
+          ? emptyState({ title: state.audit.length === 0 ? 'No activity yet' : 'No matches', message: state.audit.length === 0 ? 'System actions will appear here as they occur.' : 'Try clearing filters.' })
+          : (() => {
+              const tl = h('div', { class: 'timeline', role: 'feed' });
+              filtered.forEach(evt => {
+                tl.appendChild(h('article', { class: 'timeline-event', 'data-type': evt.action?.toLowerCase().includes('approve') ? 'approve' : evt.action?.toLowerCase().includes('dispos') ? 'dispose' : evt.action?.toLowerCase().includes('reject') ? 'reject' : evt.action?.toLowerCase().includes('flag') ? 'flag' : 'default' },
+                  h('div', { class: 'event-title' }, `${evt.action} — ${evt.userName || 'system'}`),
+                  h('div', { class: 'event-meta' },
+                    h('time', { datetime: evt.at }, fmtDate(evt.at)),
+                    evt.entity ? h('span', null, evt.entity) : null,
+                    evt.detail ? h('span', null, evt.detail) : null
+                  )
+                ));
+              });
+              return tl;
+            })()
       )
     ));
   }
