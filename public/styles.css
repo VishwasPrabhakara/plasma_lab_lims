@@ -1848,10 +1848,17 @@ dialog.dialog::backdrop {
   /* Approval card tighter */
   .approval-card { padding: var(--s-3); gap: var(--s-2); }
 
-  /* Bottom tab bar: slimmer */
-  .tab-bar { padding: 4px 4px; }
-  .tab-bar .tab { min-height: 48px; font-size: 10px; }
+  /* Bottom tab bar: slimmer, flush to phone edge — no gap below */
+  .tab-bar {
+    padding: 4px 4px 0 4px !important;
+  }
+  .tab-bar .tab { min-height: 48px; font-size: 10px; padding-bottom: 4px; }
   .tab-bar .tab svg { width: 20px; height: 20px; }
+
+  /* App main: no bottom padding — tab bar handles it */
+  .app-main { padding-bottom: 0 !important; }
+  /* But give the last card in main breathing room above tab bar */
+  .app-main-inner > *:last-child { margin-bottom: var(--s-3); }
 }
 
 /* Mobile-specific overrides — under 640px */
