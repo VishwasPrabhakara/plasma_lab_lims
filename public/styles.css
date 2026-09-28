@@ -1787,7 +1787,113 @@ dialog.dialog::backdrop {
   display: grid; gap: var(--s-2);
 }
 
-/* 22. RESPONSIVE ============================================================== */
+/* 22. RESPONSIVE / MOBILE FIXES ============================================== */
+/* Ensure grid children can shrink below content width */
+.app-main, .app-main-inner, .ledger-layout > * { min-width: 0; }
+.app-main-inner > * { min-width: 0; }
+.sample-header, .sample-header > *, .lifecycle-strip, .card, .card-body { min-width: 0; }
+
+/* Mobile-specific overrides — under 640px */
+@media (max-width: 640px) {
+  .app-main { padding: var(--s-3); }
+  /* Header: compact — brand shrinks, title truncates, only primary action + overflow */
+  .app-header {
+    padding: var(--s-3) var(--s-3);
+    flex-wrap: nowrap;
+    gap: var(--s-2);
+  }
+  .app-header .title-block {
+    min-width: 0;
+    overflow: hidden;
+  }
+  .app-header .title-block h2 {
+    font-size: var(--fs-lg);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .app-header .title-block p {
+    display: none; /* hint hidden on mobile — surfaced in view body */
+  }
+  .app-header .actions {
+    flex: 0 0 auto;
+    gap: 4px;
+  }
+  /* Hide secondary header actions on mobile — accessible from Me tab */
+  .app-header #syncBtn,
+  .app-header #backupBtn,
+  .app-header #bulkSampleBtn {
+    display: none !important;
+  }
+  /* Primary action becomes icon-only on mobile */
+  .app-header #newSampleBtn {
+    padding: 0;
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    justify-content: center;
+    font-size: 22px;
+    line-height: 1;
+  }
+  .app-header #newSampleBtn .btn-label {
+    font-size: 0; /* hide "New sample" text */
+  }
+  .app-header #newSampleBtn::after {
+    content: "+";
+    font-size: 22px;
+    line-height: 1;
+    font-weight: var(--fw-x);
+  }
+  .app-header .mobile-brand h1 { display: none; }
+
+  /* Sample header: single-column stack on mobile */
+  .sample-header {
+    grid-template-columns: 1fr;
+    padding: var(--s-3);
+    gap: var(--s-2);
+  }
+  .sample-header h2 { font-size: var(--fs-lg); overflow-wrap: anywhere; }
+  .sample-header .subline { font-size: var(--fs-xs); overflow-wrap: anywhere; }
+
+  /* Lifecycle strip: horizontal scroll, edge fade, scroll-snap */
+  .lifecycle-strip {
+    padding: var(--s-2) var(--s-3);
+    scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch;
+    max-width: 100%;
+  }
+  .lifecycle-strip .step { scroll-snap-align: start; }
+
+  /* QR block: cap the image size so it doesn't push the layout */
+  .qr-block { max-width: 100%; }
+  .qr-block img { max-width: 100%; height: auto; }
+
+  /* Facts wrap tighter */
+  .facts { grid-template-columns: 1fr 1fr; gap: var(--s-2); }
+
+  /* Metrics: 2 columns on small screens */
+  .metric-grid { grid-template-columns: 1fr 1fr; }
+  .metric { padding: var(--s-3); min-height: 76px; }
+  .metric-value { font-size: var(--fs-2xl); }
+
+  /* Dashboard hero: less padding */
+  .dashboard-hero { padding: var(--s-4); }
+
+  /* Card grids stack single-column */
+  .card-grid { grid-template-columns: 1fr; }
+
+  /* Result grid: allow horizontal scroll on tiny screens */
+  .result-grid table { min-width: 640px; }
+
+  /* Dialogs: tighter padding */
+  .dialog-header, .dialog-footer { padding: var(--s-3); }
+  .dialog-body { padding: var(--s-3); }
+
+  /* Approval card: full-width buttons stack */
+  .approval-card .approval-actions { flex-direction: column; align-items: stretch; }
+  .approval-card .approval-actions .btn { width: 100%; }
+}
+
 @media print {
   .app-nav, .app-header, .tab-bar, .notification-stack, .btn { display: none !important; }
   .app { display: block; }
