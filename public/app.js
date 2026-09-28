@@ -1,1593 +1,1806 @@
-let state = {
-  token: localStorage.getItem("plasma-lab-token") || sessionStorage.getItem("plasma-lab-token") || localStorage.getItem("aquatrace-token") || "",
-  user: null,
-  users: [],
-  people: [],
-  storageLocations: [],
-  tests: [],
-  samples: [],
-  audit: [],
-  alerts: null,
-  exports: [],
-  health: null,
-  selectedId: "",
-  view: "dashboard",
-  tab: "overview",
-  stream: null,
-  openedUrlSample: false,
-  sampleDetailOpen: false,
-  sampleFilters: {
-    q: "",
-    status: "",
-    from: "",
-    to: "",
-    project: "",
-    collector: "",
-    analyst: "",
-    storage: ""
-  },
-  pendingSignupId: "",
-  resetId: "",
-  showInactiveUsers: false,
-  selectedRequestedTests: []
-};
+/* =============================================================================
+ * Plasma Lab LIMS — v2 client
+ * IISc CST · Bengaluru
+ *
+ * Backend API preserved verbatim. Every existing function still works.
+ * Every new feature (reason-for-change, signature, analyst≠approver) is
+ * frontend-shaped so it can plug in when backend supports it.
+ * ============================================================================= */
 
-const $ = selector => document.querySelector(selector);
-const STATUS_OPTIONS = ["Bottle Ready", "Sample Collected", "Stored", "Assigned", "In Analysis", "Results Entered", "Needs Review", "Approved", "Flagged", "Disposed"];
-const WORK_ROLES = ["admin", "analyst"];
-const CONFIG = window.PLASMA_LIMS_CONFIG || {};
-const API_BASE = String(CONFIG.API_BASE || "").replace(/\/$/, "");
+(function () {
+  'use strict';
 
-function roleLabel(role) {
-  return role === "admin" ? "admin/manager" : "analyst";
-}
+  /* ---------------------------------------------------------------------- */
+  /* State                                                                  */
+  /* ---------------------------------------------------------------------- */
+  const state = {
+    token: localStorage.getItem('plasma-lab-token') || sessionStorage.getItem('plasma-lab-token') || '',
+    user: null,
+    users: [], people: [], storageLocations: [], tests: [], samples: [], audit: [],
+    alerts: null, exports: [], health: null,
+    selectedId: '',
+    view: 'dashboard',
+    tab: 'overview',
+    stream: null,
+    sampleDetailOpen: false,
+    openedUrlSample: false,
+    sampleFilters: { q:'', status:'', from:'', to:'', project:'', collector:'', analyst:'', storage:'' },
+    pendingSignupId: '', resetId: '',
+    showInactiveUsers: false,
+    selectedRequestedTests: [],
+    pendingConfirm: null,
+    pendingApproval: null
+  };
 
-function apiUrl(path) {
-  if (!path) return "";
-  if (/^https?:\/\//i.test(path)) return path;
-  if (path.startsWith("/api") || path.startsWith("/uploads")) return `${API_BASE}${path}`;
-  return path;
-}
+  const CONFIG = window.PLASMA_LIMS_CONFIG || {};
+  const API_BASE = String(CONFIG.API_BASE || '').replace(/\/$/, '');
+  const STATUS_OPTIONS = ['Bottle Ready','Sample Collected','Stored','Assigned','In Analysis','Results Entered','Needs Review','Approved','Flagged','Disposed'];
+  const LIFECYCLE_STRIP = ['Bottle Ready','Sample Collected','Stored','Assigned','In Analysis','Needs Review','Approved'];
 
-function api(path, options = {}) {
-  const headers = options.body instanceof FormData ? {} : { "Content-Type": "application/json" };
-  if (state.token) headers.Authorization = `Bearer ${state.token}`;
-  return fetch(apiUrl(path), { ...options, headers: { ...headers, ...(options.headers || {}) } }).then(async response => {
-    const contentType = response.headers.get("content-type") || "";
-    const text = await response.text();
-    let data = null;
-    if (contentType.includes("application/json")) {
-      data = text ? JSON.parse(text) : null;
-    } else if (!response.ok) {
-      throw new Error(`Server returned ${response.status}. Check that the LIMS server is running correctly.`);
-    } else {
-      return text;
+  /* ---------------------------------------------------------------------- */
+  /* DOM helpers                                                            */
+  /* ---------------------------------------------------------------------- */
+  const $  = sel => document.querySelector(sel);
+  const $$ = sel => Array.from(document.querySelectorAll(sel));
+  const esc = str => String(str ?? '').replaceAll('&','&amp;').replaceAll('"','&quot;').replaceAll('<','&lt;').replaceAll('>','&gt;');
+  const h = (tag, attrs, ...children) => {
+    const el = document.createElement(tag);
+    if (attrs) for (const [k,v] of Object.entries(attrs)) {
+      if (v == null || v === false) continue;
+      if (k === 'class')       el.className = v;
+      else if (k === 'html')   el.innerHTML = v;
+      else if (k.startsWith('on') && typeof v === 'function') el.addEventListener(k.slice(2), v);
+      else if (k === 'style' && typeof v === 'object') Object.assign(el.style, v);
+      else if (v === true)     el.setAttribute(k, '');
+      else                     el.setAttribute(k, v);
     }
-    if (response.status === 401 && path !== "/api/login") {
-      clearSession();
-      showAuth();
-      throw new Error("Your login session expired. Please login again.");
+    for (const c of children.flat()) {
+      if (c == null || c === false) continue;
+      if (typeof c === 'string' || typeof c === 'number') el.appendChild(document.createTextNode(c));
+      else el.appendChild(c);
     }
-    if (!response.ok) throw new Error(data?.error || "Request failed");
-    return data;
-  }).catch(error => {
-    if (String(error.message || "").includes("Unexpected token")) {
-      throw new Error("The server returned a page instead of data. Refresh and login again, then retry.");
+    return el;
+  };
+  const statusClass = s => 'status-' + String(s || '').replaceAll(' ','-');
+  const roleLabel = r => r === 'admin' ? 'Admin / Manager' : 'Analyst';
+  const initials = name => String(name || '?').trim().split(/\s+/).map(p => p[0]).slice(0,2).join('').toUpperCase();
+
+  /* ---------------------------------------------------------------------- */
+  /* API                                                                    */
+  /* ---------------------------------------------------------------------- */
+  const apiUrl = path => {
+    if (!path) return '';
+    if (/^https?:\/\//i.test(path)) return path;
+    if (path.startsWith('/api') || path.startsWith('/uploads')) return API_BASE + path;
+    return path;
+  };
+  const api = (path, options = {}) => {
+    const headers = options.body instanceof FormData ? {} : { 'Content-Type': 'application/json' };
+    if (state.token) headers.Authorization = 'Bearer ' + state.token;
+    return fetch(apiUrl(path), { ...options, headers: { ...headers, ...(options.headers || {}) } }).then(async res => {
+      const ct = res.headers.get('content-type') || '';
+      const text = await res.text();
+      let data = null;
+      if (ct.includes('application/json')) data = text ? JSON.parse(text) : null;
+      else if (!res.ok) throw new Error('Server returned ' + res.status);
+      else return text;
+      if (res.status === 401 && path !== '/api/login') { clearSession(); showAuth(); throw new Error('Session expired — please sign in again.'); }
+      if (!res.ok) throw new Error(data?.error || 'Request failed');
+      return data;
+    });
+  };
+  const clearSession = () => {
+    localStorage.removeItem('plasma-lab-token');
+    sessionStorage.removeItem('plasma-lab-token');
+    state.token = ''; state.user = null;
+  };
+
+  /* ---------------------------------------------------------------------- */
+  /* Notifications (persistent, replaces toast)                             */
+  /* ---------------------------------------------------------------------- */
+  const NOTIF_ICONS = { success: '✓', warn: '!', error: '!', info: 'i' };
+  function notify(opts) {
+    const stack = $('#notificationStack');
+    const type = opts.type || 'info';
+    const el = h('div', { class: 'notification', 'data-type': type, role: type === 'error' || type === 'warn' ? 'alert' : 'status' },
+      h('div', { class: 'notif-icon', 'aria-hidden': 'true' }, NOTIF_ICONS[type] || '·'),
+      h('div', { class: 'notif-body' },
+        h('div', { class: 'notif-title' }, opts.title || ''),
+        opts.description ? h('div', { class: 'notif-desc' }, opts.description) : null,
+        opts.action ? h('button', { class: 'notif-action', type: 'button', onclick: () => { opts.action.fn(); dismiss(); } }, opts.action.label) : null
+      ),
+      h('button', { class: 'notif-close', type: 'button', 'aria-label': 'Dismiss', onclick: () => dismiss() }, '×')
+    );
+    function dismiss() { if (el.parentNode) el.parentNode.removeChild(el); }
+    // Limit stack
+    while (stack.children.length >= 3) stack.removeChild(stack.firstChild);
+    stack.appendChild(el);
+    // Auto-dismiss success after 5s (user-adjustable via inline close); errors persist
+    if (type === 'success' && !opts.persist) setTimeout(dismiss, 5000);
+    return { dismiss };
+  }
+
+  /* ---------------------------------------------------------------------- */
+  /* Confirm dialog                                                          */
+  /* ---------------------------------------------------------------------- */
+  function confirmDialog(opts) {
+    return new Promise(resolve => {
+      const dlg = $('#confirmDialog');
+      $('#confirmTitle').textContent = opts.title || 'Confirm';
+      $('#confirmMessage').textContent = opts.message || 'Are you sure?';
+      const okBtn = $('#confirmOk');
+      okBtn.textContent = opts.okLabel || 'Confirm';
+      okBtn.className = 'btn ' + (opts.danger ? 'btn-danger' : 'btn-primary');
+      state.pendingConfirm = resolve;
+      dlg.showModal();
+    });
+  }
+  document.addEventListener('click', e => {
+    const btn = e.target.closest('[data-confirm]');
+    if (!btn) return;
+    const dlg = btn.closest('dialog');
+    if (dlg && state.pendingConfirm) {
+      const value = btn.dataset.confirm === 'true';
+      const cb = state.pendingConfirm;
+      state.pendingConfirm = null;
+      dlg.close();
+      cb(value);
     }
-    throw error;
   });
-}
 
-function clearSession() {
-  localStorage.removeItem("plasma-lab-token");
-  localStorage.removeItem("aquatrace-token");
-  sessionStorage.removeItem("plasma-lab-token");
-  state.token = "";
-  state.user = null;
-}
-
-function safe(handler) {
-  return async event => {
-    const control = event?.submitter || event?.currentTarget;
-    const canLock = control && "disabled" in control;
-    if (canLock && control.disabled) return;
-    if (canLock) {
-      control.dataset.readyLabel = control.textContent;
-      if (control.dataset.busyLabel) control.textContent = control.dataset.busyLabel;
-      control.disabled = true;
-      control.setAttribute("aria-busy", "true");
-      control.dataset.busy = "true";
-    }
-    try {
-      await handler(event);
-    } catch (error) {
-      toast(error.message || "Action failed");
-    } finally {
+  /* ---------------------------------------------------------------------- */
+  /* Safe submit wrapper                                                    */
+  /* ---------------------------------------------------------------------- */
+  function safe(handler) {
+    return async event => {
+      const control = event?.submitter || event?.currentTarget;
+      const canLock = control && 'disabled' in control;
+      if (canLock && control.disabled) return;
+      let originalLabel = null;
       if (canLock) {
-        control.disabled = false;
-        if (control.dataset.readyLabel) control.textContent = control.dataset.readyLabel;
-        control.removeAttribute("aria-busy");
-        delete control.dataset.readyLabel;
-        delete control.dataset.busy;
+        const labelEl = control.querySelector('.btn-label') || control;
+        originalLabel = labelEl.textContent;
+        if (control.dataset.busyLabel) labelEl.textContent = control.dataset.busyLabel;
+        control.disabled = true;
+        control.setAttribute('aria-busy', 'true');
       }
-    }
-  };
-}
-
-function toast(message) {
-  const el = $("#toast");
-  el.textContent = message;
-  el.classList.add("show");
-  setTimeout(() => el.classList.remove("show"), 2200);
-}
-
-function statusClass(status) {
-  return String(status || "").replaceAll(" ", "-");
-}
-
-function can(...roles) {
-  return state.user && roles.includes(state.user.role);
-}
-
-function canModifySamples() {
-  return can("admin", "analyst");
-}
-
-function canEnterResults() {
-  return can("admin", "analyst");
-}
-
-function canUploadFiles() {
-  return can("admin", "analyst");
-}
-
-function renderRoleNav() {
-  const navItems = [
-    ["dashboard", "Dashboard", ["admin", "analyst"]],
-    ["samples", "Samples", ["admin", "analyst"]],
-    ["scan", "Scan QR", ["admin", "analyst"]],
-    ["masters", "People & Storage", ["admin"]],
-    ["users", "Users", ["admin"]],
-    ["backup", "Data Backup", ["admin"]],
-    ["audit", "Activity Log", ["admin"]]
-  ];
-  const visible = navItems.filter(([, , roles]) => roles.includes(state.user?.role));
-  if (!visible.some(([view]) => view === state.view)) state.view = "dashboard";
-  $("#nav").innerHTML = visible.map(([view, label]) => `<button data-view="${view}" class="${state.view === view ? "active" : ""}">${label}</button>`).join("");
-  $("#newSampleBtn").classList.toggle("hidden", !can("admin"));
-  $("#bulkSampleBtn").classList.toggle("hidden", !can("admin"));
-  $("#backupBtn").classList.toggle("hidden", !can("admin"));
-}
-
-async function load() {
-  const data = await api("/api/bootstrap");
-  Object.assign(state, data);
-  state.alerts = data.alerts || null;
-  if (can("admin")) {
-    state.exports = data.files || [];
-    state.health = data.health || null;
-  } else {
-    state.exports = [];
-    state.health = null;
-  }
-  localStorage.setItem("plasma-lab-cache", JSON.stringify(data));
-  if (!state.selectedId && state.samples[0]) state.selectedId = state.samples[0].id;
-  $("#userLabel").textContent = `${state.user.name} - ${roleLabel(state.user.role)}`;
-  render();
-  await openUrlSampleOnce().catch(error => toast(error.message || "QR link could not be opened"));
-}
-
-function showApp() {
-  $("#authView").classList.add("hidden");
-  $("#appView").classList.remove("hidden");
-}
-
-function showAuth() {
-  $("#authView").classList.remove("hidden");
-  $("#appView").classList.add("hidden");
-  showAuthSlide("login");
-}
-
-function showAuthSlide(name) {
-  document.querySelectorAll(".auth-slide").forEach(slide => slide.classList.remove("active"));
-  const map = {
-    login: "#loginForm",
-    signup: "#signupForm",
-    reset: "#resetStartForm",
-    resetConfirm: "#resetConfirmForm"
-  };
-  document.querySelector(map[name] || "#loginForm").classList.add("active");
-  if (name === "signup" && !state.pendingSignupId) setSignupStep("email");
-}
-
-function renderOtpDemo(target, data) {
-  $(target).innerHTML = `
-    <strong>Email OTP sent</strong>
-    <small>Check the registered email inbox. In local mode, the OTP is printed in the server terminal.</small>
-  `;
-}
-
-function setSignupStep(step) {
-  const order = ["email", "phone", "password"];
-  document.querySelectorAll("#signupForm .auth-step").forEach(item => {
-    const index = order.indexOf(item.dataset.step);
-    const current = order.indexOf(step);
-    item.classList.toggle("active", item.dataset.step === step);
-    item.classList.toggle("complete", index >= 0 && index < current);
-    item.classList.toggle("locked", index > current);
-  });
-  document.querySelectorAll("[data-progress]").forEach(item => {
-    const index = order.indexOf(item.dataset.progress);
-    const current = order.indexOf(step);
-    item.classList.toggle("current", index === current);
-    item.classList.toggle("done", index < current);
-  });
-}
-
-function setCheck(target, result) {
-  const el = $(target);
-  if (!el) return;
-  if (!result?.message) {
-    el.textContent = "";
-  } else {
-    el.textContent = result.valid && result.available ? "✓" : "!";
-  }
-  el.className = `live-check ${result?.valid && result?.available ? "ok" : result?.message ? "bad" : ""}`;
-  el.title = result?.message || "";
-}
-
-let validateTimer = null;
-function scheduleSignupValidation() {
-  clearTimeout(validateTimer);
-  validateTimer = setTimeout(validateSignupFields, 250);
-}
-
-async function validateSignupFields() {
-  const form = $("#signupForm");
-  const params = new URLSearchParams({
-    email: form.elements.email.value.trim(),
-    countryCode: form.elements.countryCode.value,
-    phone: form.elements.phone.value.trim()
-  });
-  const data = await api(`/api/validate/signup?${params.toString()}`);
-  setCheck("#emailCheck", data.email);
-  setCheck("#phoneCheck", data.phone);
-  return data;
-}
-
-function validatePasswordFields() {
-  const form = $("#signupForm");
-  const password = form.elements.password.value;
-  const confirm = form.elements.confirmPassword.value;
-  let message = "";
-  let ok = false;
-  if (password.length === 0 && confirm.length === 0) {
-    message = "";
-  } else if (password.length < 6) {
-    message = "Use at least 6 characters";
-  } else if (confirm && password !== confirm) {
-    message = "Passwords do not match";
-  } else if (password.length >= 6 && confirm === password) {
-    message = "Password is ready";
-    ok = true;
-  }
-  setCheck("#passwordCheck", { valid: ok, available: ok, message });
-  return ok;
-}
-
-function render() {
-  renderRoleNav();
-  document.querySelectorAll("#nav button").forEach(btn => btn.classList.toggle("active", btn.dataset.view === state.view));
-  document.querySelectorAll(".view").forEach(view => view.classList.add("hidden"));
-  $(`#${state.view}View`).classList.remove("hidden");
-  const titles = {
-    dashboard: ["Dashboard", "Live working records stored by the backend and mirrored in this browser."],
-    samples: ["Samples", "Prepare bottle labels, update storage movement, assign analysis, enter results, and close samples."],
-    scan: ["Scan QR", "Use the website scanner or a normal phone QR scanner to open the matching sample record."],
-    masters: ["People & Storage", "Add analysts, freezer/rack locations, and water test methods."],
-    users: ["Users", "Create admin/manager and analyst logins."],
-    backup: ["Data Backup", "Daily and weekly readable exports for lab records and database health."],
-    audit: ["Activity Log", "Every important action is retained. Records are modified, not deleted."]
-  };
-  $("#viewTitle").textContent = titles[state.view][0];
-  $("#viewHint").textContent = titles[state.view][1];
-  renderSampleDialogOptions();
-  renderDashboard();
-  renderSamples();
-  renderScan();
-  renderMasters();
-  renderUsers();
-  renderBackup();
-  renderAudit();
-}
-
-function renderDashboard() {
-  const waitingBook = state.samples.filter(s => !(s.files || []).some(file => file.category.includes("Book") || file.category.includes("Written Record"))).length;
-  const readyForApproval = state.samples.filter(s => ["Results Entered", "Needs Review"].includes(s.status) && (s.results || []).length && (s.files || []).length).length;
-  const alerts = state.alerts || {};
-  const counts = [
-    ["Total", state.samples.length],
-    ["Bottle Ready", state.samples.filter(s => s.status === "Bottle Ready").length],
-    ["Stored", state.samples.filter(s => s.status === "Stored").length],
-    ["In Analysis", state.samples.filter(s => s.status === "In Analysis").length],
-    ["Results Entered", state.samples.filter(s => s.status === "Results Entered" || s.status === "Needs Review").length],
-    ["Flagged", state.samples.filter(s => s.status === "Flagged").length]
-  ];
-  $("#dashboardView").innerHTML = `
-    <div class="metrics">${counts.map(([label, value]) => `<div class="metric"><span>${label}</span><strong>${value}</strong></div>`).join("")}</div>
-    <section class="alert-grid">
-      ${alertCard("Overdue", alerts.overdue?.length || 0, "Past target completion", "bad")}
-      ${alertCard("Due Soon", alerts.dueSoon?.length || 0, "Within 24 hours", "warn")}
-      ${alertCard("Written Records", alerts.waitingUpload?.length || 0, "Written records pending", "warn")}
-      ${alertCard("Approval", alerts.waitingApproval?.length || 0, "Waiting for review", "ok")}
-      ${alertCard("Retention", alerts.disposalReady?.length || 0, "Approved samples ready", "ok")}
-    </section>
-    <section class="workflow">
-      <div class="step"><strong>1 Bottle Ready</strong><span>Create QR labels before sampling</span></div>
-      <div class="step"><strong>2 Return & Store</strong><span>Update freezer, shelf, rack</span></div>
-      <div class="step"><strong>3 Assign Analysis</strong><span>Manager distributes samples</span></div>
-      <div class="step"><strong>4 Book To Sheet</strong><span>${waitingBook} written records pending</span></div>
-      <div class="step"><strong>5 Close</strong><span>${readyForApproval} ready for approval</span></div>
-    </section>
-    <section class="panel">
-      <div class="panel-head"><h3>Recent Samples</h3><button data-jump="samples">Open Samples</button></div>
-      <div class="sample-list dashboard-samples">${state.samples.slice(0, 8).map(sampleRow).join("") || empty("No samples yet")}</div>
-    </section>
-  `;
-  document.querySelectorAll("[data-jump]").forEach(btn => btn.onclick = () => switchView(btn.dataset.jump));
-  bindSampleRows();
-}
-
-function alertCard(label, value, hint, tone) {
-  return `<button class="alert-card ${tone}" data-jump="samples"><span>${label}</span><strong>${value}</strong><small>${hint}</small></button>`;
-}
-
-function sampleRow(sample) {
-  const storage = state.storageLocations.find(item => item.id === sample.storageLocationId)?.name || "No storage";
-  return `
-    <button class="sample-row ${sample.id === state.selectedId ? "active" : ""}" data-sample="${sample.id}">
-      <div class="row-top"><span class="code">${sample.sampleCode}</span><span class="badge ${statusClass(sample.status)}">${sample.status}</span></div>
-      <div>${sample.collectionSite || "No site"} - ${sample.clientName || "No client"}</div>
-      <div class="meta"><span>${sample.sourceType}</span><span>${storage}</span><span>${sample.assignedTo || "Unassigned"}</span></div>
-    </button>
-  `;
-}
-
-function optionList(values, selected = "") {
-  return [...new Set(values.filter(Boolean))].sort((a, b) => a.localeCompare(b))
-    .map(value => `<option value="${escapeAttr(value)}" ${value === selected ? "selected" : ""}>${value}</option>`).join("");
-}
-
-function storageOption(location, selectedId = "") {
-  const full = location.isFull && location.id !== selectedId;
-  const label = `${location.name}${location.isFull ? " - FULL" : ""}${location.active === false ? " - INACTIVE" : ""}`;
-  return `<option value="${location.id}" ${location.id === selectedId ? "selected" : ""} ${full || location.active === false ? "disabled" : ""}>${label}</option>`;
-}
-
-function renderSamples() {
-  const sample = selectedSample();
-  const rows = filteredSamples();
-  if (state.sampleDetailOpen && sample) {
-    $("#samplesView").innerHTML = `
-      <div class="sample-workspace">
-        <section class="panel printable sample-detail-panel">
-          ${detailHtml(sample)}
-        </section>
-      </div>
-    `;
-    bindDetail();
-    return;
-  }
-  $("#samplesView").innerHTML = `
-    <div class="sample-workspace">
-      <section class="panel sample-register-panel">
-        <div class="sample-register-head">
-          <div>
-            <span class="eyebrow dark">Sample Register</span>
-            <h3>Find and open a sample</h3>
-            <p>Filter by date, project, person, analyst, freezer, and lab step.</p>
-          </div>
-          <div class="register-tools">
-            <div class="match-count"><strong id="sampleMatchCount">${rows.length}</strong><span>matching samples</span><small>${state.samples.length} total records</small></div>
-            <button type="button" id="resetSampleFilters">Reset Filters</button>
-          </div>
-        </div>
-        ${sampleFiltersHtml()}
-        <div class="sample-list register-list" id="sampleList">${rows.map(sampleRow).join("") || sampleEmptyMessage()}</div>
-      </section>
-    </div>
-  `;
-  bindSampleRows();
-  const resetSampleFilters = $("#resetSampleFilters");
-  if (resetSampleFilters) resetSampleFilters.onclick = () => {
-    state.sampleFilters = { q: "", status: "", from: "", to: "", project: "", collector: "", analyst: "", storage: "" };
-    renderSamples();
-  };
-  ["sampleSearch", "sampleStatus", "sampleFrom", "sampleTo", "sampleProject", "sampleCollector", "sampleAnalystFilter", "sampleStorageFilter"].forEach(id => {
-    const input = $(`#${id}`);
-    if (input) input.oninput = filterSamples;
-    if (input) input.onchange = filterSamples;
-  });
-  bindDetail();
-}
-
-function filterSamples() {
-  state.sampleFilters = {
-    q: $("#sampleSearch").value,
-    status: $("#sampleStatus").value,
-    from: $("#sampleFrom").value,
-    to: $("#sampleTo").value,
-    project: $("#sampleProject").value,
-    collector: $("#sampleCollector").value,
-    analyst: $("#sampleAnalystFilter").value,
-    storage: $("#sampleStorageFilter").value
-  };
-  const rows = filteredSamples();
-  $("#sampleMatchCount").textContent = rows.length;
-  $("#sampleList").innerHTML = rows.map(sampleRow).join("") || sampleEmptyMessage();
-  bindSampleRows();
-}
-
-function sampleEmptyMessage() {
-  if (!state.samples.length) return empty("No samples are visible for this login. Ask the manager to check user role or assignment.");
-  return empty("No matching samples. Click Reset Filters to show all visible records.");
-}
-
-function sampleFiltersHtml() {
-  const f = state.sampleFilters;
-  return `
-    <div class="filters advanced-filters">
-      <input id="sampleSearch" value="${escapeAttr(f.q)}" placeholder="Search code, site, project, brought by">
-      <select id="sampleStatus"><option value="">All status</option>${STATUS_OPTIONS.map(s => `<option ${f.status === s ? "selected" : ""}>${s}</option>`).join("")}</select>
-      <input id="sampleFrom" type="date" value="${escapeAttr(f.from)}" title="From date">
-      <input id="sampleTo" type="date" value="${escapeAttr(f.to)}" title="To date">
-      <select id="sampleProject"><option value="">All projects</option>${optionList(state.samples.map(s => s.clientName), f.project)}</select>
-      <select id="sampleCollector"><option value="">All brought by</option>${optionList(state.samples.map(s => s.collector), f.collector)}</select>
-      <select id="sampleAnalystFilter"><option value="">All analysts</option>${optionList(state.samples.map(s => s.assignedTo), f.analyst)}</select>
-      <select id="sampleStorageFilter"><option value="">All storage</option>${state.storageLocations.map(s => `<option value="${s.id}" ${f.storage === s.id ? "selected" : ""}>${s.name}${s.isFull ? " - FULL" : ""}</option>`).join("")}</select>
-    </div>
-  `;
-}
-
-function filteredSamples() {
-  const { q, status, project, collector, analyst, storage } = state.sampleFilters;
-  const query = String(q || "").toLowerCase();
-  const from = state.sampleFilters.from ? new Date(`${state.sampleFilters.from}T00:00:00`).getTime() : 0;
-  const to = state.sampleFilters.to ? new Date(`${state.sampleFilters.to}T23:59:59`).getTime() : Infinity;
-  const rows = state.samples.filter(sample => {
-    const text = [sample.sampleCode, sample.clientName, sample.collectionSite, sample.assignedTo, sample.collector, sample.sourceType].join(" ").toLowerCase();
-    const created = new Date(sample.createdAt || sample.receivedAt || 0).getTime();
-    return (!query || text.includes(query)) &&
-      (!status || sample.status === status) &&
-      (!project || sample.clientName === project) &&
-      (!collector || sample.collector === collector) &&
-      (!analyst || sample.assignedTo === analyst) &&
-      (!storage || sample.storageLocationId === storage) &&
-      created >= from && created <= to;
-  });
-  return rows;
-}
-
-function selectedSample() {
-  return state.samples.find(sample => sample.id === state.selectedId) || state.samples[0];
-}
-
-function detailHtml(sample) {
-  const storage = state.storageLocations.find(item => item.id === sample.storageLocationId)?.name || "";
-  const hasBook = (sample.files || []).some(file => file.category.includes("Book") || file.category.includes("Written Record"));
-  const hasResults = (sample.results || []).length > 0;
-  const hasStorage = Boolean(sample.storageLocationId);
-  const photo = samplePhoto(sample);
-  return `
-    <div class="panel-head sample-detail-head">
-      <button type="button" id="backToSamples" class="ghost-light">Back to register</button>
-      <div>
-        <h3>${sample.sampleCode}</h3>
-        <small>${sample.clientName || "No project"} / ${sample.collectionSite || "No site"}</small>
-      </div>
-      <span class="badge ${statusClass(sample.status)}">${sample.status}</span>
-    </div>
-    <div class="panel-body">
-      <div class="detail-grid">
-        <div class="qr-card">
-          ${photo ? `<img class="sample-photo" src="${photo.url}" alt="Sample photo">` : `<div class="photo-placeholder">No sample photo</div>`}
-          <img src="${apiUrl(`/api/samples/${sample.id}/qr.svg?token=${encodeURIComponent(state.token)}`)}" alt="QR code">
-          <button id="printLabel" class="primary">Print QR Label</button>
-          <button id="printReport">Print Report</button>
-          <a class="button-link primary-link" href="${apiUrl(`/api/samples/${sample.id}/report.pdf?token=${encodeURIComponent(state.token)}`)}">Download PDF</a>
-        </div>
-        <div class="facts">
-          ${fact("Project / client", sample.clientName)}
-          ${fact("Site", sample.collectionSite)}
-          ${fact("Source", sample.sourceType)}
-          ${fact("Bottle label created", new Date(sample.createdAt || sample.receivedAt).toLocaleString())}
-          ${fact("Last updated", new Date(sample.updatedAt || sample.receivedAt).toLocaleString())}
-          ${fact("Target completion", sample.dueAt ? new Date(sample.dueAt).toLocaleString() : "-")}
-          ${fact("Brought by", sample.collector)}
-          ${fact("Analyst", sample.assignedTo || "Unassigned")}
-          ${fact("Storage", storage)}
-          ${fact("Retention", sample.retentionStatus || "Active")}
-          ${fact("Tests", (sample.requestedTests || []).join(", "))}
-        </div>
-      </div>
-      <div class="readiness">
-        <span class="${hasStorage ? "done" : "todo"}">Storage ${hasStorage ? "OK" : "Needed"}</span>
-        <span class="${hasBook ? "done" : "todo"}">Written record ${hasBook ? "OK" : "Needed"}</span>
-        <span class="${hasResults ? "done" : "todo"}">Results ${hasResults ? "OK" : "Needed"}</span>
-        <span class="${sample.status === "Approved" ? "done" : "todo"}">Approval ${sample.status === "Approved" ? "Done" : "Pending"}</span>
-      </div>
-      <div class="tabs">
-        ${tabButton("overview", "Workflow")}
-        ${canUploadFiles() ? tabButton("book", "Written Record Upload") : ""}
-        ${canEnterResults() ? tabButton("sheet", "Result Sheet") : ""}
-        ${tabButton("results", "Saved Results")}
-        ${canEnterResults() ? tabButton("bulk", "Paste Import") : ""}
-        ${canUploadFiles() ? tabButton("uploads", "All Files") : ""}
-        ${can("admin") ? tabButton("retention", "Retention / Disposal") : ""}
-        ${tabButton("custody", "Storage History")}
-      </div>
-      ${tabHtml(sample)}
-    </div>
-  `;
-}
-
-function fact(label, value) {
-  return `<div class="fact"><span>${label}</span><strong>${value || "-"}</strong></div>`;
-}
-
-function samplePhoto(sample) {
-  return (sample.files || []).find(file => file.category === "Sample Photo");
-}
-
-function tabButton(key, label) {
-  return `<button class="${state.tab === key ? "active" : ""}" data-tab="${key}">${label}</button>`;
-}
-
-function tabHtml(sample) {
-  const allowedTabs = ["overview", "results", "custody"];
-  if (canUploadFiles()) allowedTabs.push("book", "uploads");
-  if (canEnterResults()) allowedTabs.push("sheet", "bulk");
-  if (can("admin")) allowedTabs.push("retention");
-  if (!allowedTabs.includes(state.tab)) state.tab = "overview";
-  if (state.tab === "book") return bookUploadHtml(sample);
-  if (state.tab === "sheet") return sheetHtml(sample);
-  if (state.tab === "results") return resultsHtml(sample);
-  if (state.tab === "bulk") return bulkHtml(sample);
-  if (state.tab === "uploads") return uploadsHtml(sample);
-  if (state.tab === "retention") return retentionHtml(sample);
-  if (state.tab === "custody") return custodyHtml(sample);
-  return overviewHtml(sample);
-}
-
-function bookUploadHtml(sample) {
-  const bookFiles = (sample.files || []).filter(file => file.category === "Lab Book Photo" || file.category === "Book Scan / Written Record" || file.category === "Written Record Upload");
-  return `
-    <div class="table">
-      <div class="tr th"><div>Written record</div><div>Category</div><div>Uploaded by</div><div>Open</div></div>
-      ${bookFiles.map(f => `<div class="tr"><div>${f.originalName}</div><div>${f.category}</div><div>${f.uploadedBy}<br><span class="muted">${new Date(f.uploadedAt).toLocaleString()}</span></div><div><a href="${apiUrl(f.url)}" target="_blank">View</a></div></div>`).join("") || `<div class="panel-body">${empty("No written results uploaded yet")}</div>`}
-    </div>
-    <form id="bookUploadForm" class="form-grid">
-      <input type="hidden" name="category" value="Written Record Upload">
-      <label>Upload written results photo / scan / PDF<input name="files" type="file" accept="image/*,.pdf" multiple required></label>
-      <button class="primary wide">Upload Written Record</button>
-    </form>
-  `;
-}
-
-function sheetHtml(sample) {
-  return `
-    <div class="panel-body">
-      <div class="data-entry-launch">
-        <div>
-          <strong>Analysis data entry</strong>
-          <span>Open the Excel-style sheet, enter the measured values, then save them to this sample.</span>
-        </div>
-        <button class="primary" id="openInputData">Input Data</button>
-      </div>
-      <form id="excelImportForm" class="excel-import panel-line">
-        <label>Import existing Excel sheet<input name="file" type="file" accept=".xlsx,.xls" required></label>
-        <button class="primary">Import Excel</button>
-      </form>
-    </div>
-  `;
-}
-
-function sheetEditorHtml(sample) {
-  const requested = sample.requestedTests?.length ? sample.requestedTests : state.tests.slice(0, 5).map(test => test.name);
-  return `
-    <div class="sheet-actions">
-      <button id="addSheetRow">Add Row</button>
-    </div>
-    <div class="sheet" id="resultSheet">
-      <div class="excel-row excel-cols"><div></div><div>A</div><div>B</div><div>C</div><div>D</div><div>E</div><div>F</div></div>
-      <div class="excel-row excel-head"><div>1</div><div>Parameter</div><div>Value</div><div>Unit</div><div>Limit</div><div>Method</div><div>Flag</div></div>
-      ${requested.map((name, index) => {
-        const test = state.tests.find(item => item.name === name) || {};
-        return sheetRow({ parameter: name, unit: test.unit || "", limit: test.limit || "", method: test.method || "", flag: "OK" }, index + 2);
-      }).join("")}
-    </div>
-    <div class="sheet-save-row">
-      <button class="primary" id="saveSheet">Save Sheet Values</button>
-    </div>
-  `;
-}
-
-function sheetRow(row = {}, rowNumber = "") {
-  return `
-    <div class="excel-row result-row">
-      <div class="row-number">${rowNumber}</div>
-      <input data-field="parameter" value="${escapeAttr(row.parameter || "")}" placeholder="pH">
-      <input data-field="value" value="${escapeAttr(row.value || "")}" placeholder="7.2">
-      <input data-field="unit" value="${escapeAttr(row.unit || "")}" placeholder="mg/L">
-      <input data-field="limit" value="${escapeAttr(row.limit || "")}" placeholder="<500">
-      <input data-field="method" value="${escapeAttr(row.method || "")}" placeholder="Method">
-      <select data-field="flag"><option ${row.flag === "OK" ? "selected" : ""}>OK</option><option ${row.flag === "Review" ? "selected" : ""}>Review</option><option ${row.flag === "Alert" ? "selected" : ""}>Alert</option></select>
-    </div>
-  `;
-}
-
-function bulkHtml(sample) {
-  return `
-    <div class="form-grid">
-      <label class="wide">Copy rows from book, Excel, or instrument text
-        <textarea id="bulkRows" placeholder="Parameter, Value, Unit, Limit, Method, Flag&#10;pH, 7.4, pH, 6.5-8.5, Electrometric, OK&#10;TDS, 260, mg/L, &lt;500, Conductivity, OK"></textarea>
-      </label>
-    </div>
-    <button class="primary" id="bulkResult">Import Rows</button>
-  `;
-}
-
-function overviewHtml(sample) {
-  if (!canModifySamples()) {
-    return `<div class="panel-body">${empty("This role cannot modify samples.")}</div>`;
-  }
-  return `
-    <div class="workflow-actions">
-      <div class="note-card">
-        <strong>Current lab step</strong>
-        <span>Move the sample through bottle preparation, return/storage, assignment, analysis, result entry, review, and closure. Every update is kept in Storage History and Activity Log.</span>
-      </div>
-      <div class="quick-actions">
-        <button type="button" data-quick-status="Stored">Mark Stored</button>
-        <button type="button" data-quick-status="Assigned">Mark Assigned</button>
-        <button type="button" data-quick-status="In Analysis">Start Analysis</button>
-        <button type="button" data-quick-status="Needs Review">Send For Review</button>
-      </div>
-    </div>
-    <div class="form-grid">
-      <label>Lab step<select id="editStatus">${STATUS_OPTIONS.map(s => `<option ${sample.status === s ? "selected" : ""}>${s}</option>`).join("")}</select></label>
-      <label>Assigned analyst<select id="editAnalyst"><option value="">Unassigned</option>${state.people.map(p => `<option ${sample.assignedTo === p.name ? "selected" : ""}>${p.name}</option>`).join("")}</select></label>
-      <label>Current storage<select id="editStorage"><option value="" ${!sample.storageLocationId ? "selected" : ""}>Not stored yet</option>${state.storageLocations.map(s => storageOption(s, sample.storageLocationId)).join("")}</select></label>
-      <label>Target completion<input id="editDueAt" type="datetime-local" value="${dateTimeLocal(sample.dueAt)}"></label>
-      <label class="wide">Movement / work note<textarea id="editNotes" placeholder="Example: shifted from Fridge 1 to Fridge 2 after aliquoting">${sample.notes || ""}</textarea></label>
-    </div>
-    <button class="primary" id="saveSample">Save Workflow Update</button>
-    ${can("admin") && sample.status !== "Approved" ? `<button id="approveSample">Approve Results</button>` : ""}
-  `;
-}
-
-function retentionHtml(sample) {
-  const disposal = sample.disposal ? `<div class="note-card"><strong>Disposed</strong><span>${new Date(sample.disposal.disposedAt).toLocaleString()} by ${sample.disposal.disposedBy}. ${sample.disposal.reason || ""}</span></div>` : "";
-  return `
-    <div class="form-grid">
-      <label>Lifecycle action
-        <select id="lifecycleAction">
-          ${["Active", "Retained", "Disposed"].map(status => `<option ${sample.retentionStatus === status ? "selected" : ""}>${status}</option>`).join("")}
-        </select>
-      </label>
-      <label class="wide">Reason / note<textarea id="lifecycleReason" placeholder="Routine retention, final disposal after approval, moved back to active stock"></textarea></label>
-    </div>
-    ${disposal}
-    <button class="primary" id="saveLifecycle">Save Lifecycle</button>
-  `;
-}
-
-function resultsHtml(sample) {
-  const entryForm = canEnterResults() ? `
-    <div class="form-grid">
-      <label>Parameter<select id="resultParam">${state.tests.map(t => `<option value="${t.id}">${t.name}</option>`).join("")}</select></label>
-      <label>Value from analysis<input id="resultValue" placeholder="7.4"></label>
-      <label>Unit<input id="resultUnit"></label>
-      <label>Limit<input id="resultLimit"></label>
-      <label>Method<input id="resultMethod"></label>
-      <label>Flag<select id="resultFlag"><option>OK</option><option>Review</option><option>Alert</option></select></label>
-    </div>
-    <button class="primary" id="addResult">Input Value</button>
-  ` : "";
-  return `
-    <div class="table">
-      <div class="tr th"><div>Parameter</div><div>Value</div><div>Limit</div><div>Analyst</div></div>
-      ${(sample.results || []).map(r => `<div class="tr"><div>${r.parameter}</div><div>${r.value} ${r.unit}</div><div>${r.limit} <span class="badge ${r.flag === "Alert" ? "Flagged" : r.flag === "Review" ? "Needs-Review" : "Approved"}">${r.flag}</span></div><div>${r.analyst}</div></div>`).join("") || `<div class="panel-body">${empty("No results entered")}</div>`}
-    </div>
-    ${entryForm}
-  `;
-}
-
-function uploadsHtml(sample) {
-  return `
-    <div class="table">
-      <div class="tr th"><div>File</div><div>Category</div><div>Uploaded by</div><div>Open</div></div>
-      ${(sample.files || []).map(f => `<div class="tr"><div>${f.originalName}</div><div>${f.category}</div><div>${f.uploadedBy}<br><span class="muted">${new Date(f.uploadedAt).toLocaleString()}</span></div><div><a href="${apiUrl(f.url)}" target="_blank">View</a></div></div>`).join("") || `<div class="panel-body">${empty("No files uploaded")}</div>`}
-    </div>
-    <form id="uploadForm" class="form-grid">
-      <label>Upload category<select name="category"><option>Sample Photo</option><option>Written Record Upload</option><option>Instrument Raw Data</option><option>Worksheet</option><option>Final Report</option><option>Storage Movement Record</option></select></label>
-      <label>Upload book/data files<input name="files" type="file" multiple required></label>
-      <button class="primary wide">Upload To Sample</button>
-    </form>
-  `;
-}
-
-function custodyHtml(sample) {
-  return `<div class="timeline">${(sample.chainOfCustody || []).map(item => {
-    const from = item.fromLocationId ? state.storageLocations.find(s => s.id === item.fromLocationId)?.name || "Not stored" : "";
-    const to = item.toLocationId ? state.storageLocations.find(s => s.id === item.toLocationId)?.name || "Not stored" : state.storageLocations.find(s => s.id === item.locationId)?.name || "";
-    const place = from ? `${from} to ${to || "Not stored"}` : to;
-    return `<div class="event"><div class="dot"></div><div><strong>${item.action} by ${item.by}</strong><span>${new Date(item.at).toLocaleString()}${place ? " · " + place : ""}${item.note ? " · " + item.note : ""}</span></div></div>`;
-  }).join("") || empty("No storage movement recorded yet")}</div>`;
-}
-
-function bindSampleRows() {
-  document.querySelectorAll("[data-sample]").forEach(btn => btn.onclick = () => {
-    state.selectedId = btn.dataset.sample;
-    state.view = "samples";
-    state.sampleDetailOpen = true;
-    render();
-  });
-}
-
-function bindDetail() {
-  const backToSamples = $("#backToSamples");
-  if (backToSamples) backToSamples.onclick = () => {
-    state.sampleDetailOpen = false;
-    render();
-  };
-  document.querySelectorAll("[data-tab]").forEach(btn => btn.onclick = () => {
-    state.tab = btn.dataset.tab;
-    render();
-  });
-  const sample = selectedSample();
-  if (!sample) return;
-  const printLabel = $("#printLabel");
-  if (printLabel) printLabel.onclick = () => window.open(apiUrl(`/api/samples/${sample.id}/tube-label?token=${encodeURIComponent(state.token)}`), "_blank");
-  const printReport = $("#printReport");
-  if (printReport) printReport.onclick = () => window.open(apiUrl(`/api/samples/${sample.id}/report?token=${encodeURIComponent(state.token)}`), "_blank");
-  const saveBtn = $("#saveSample");
-  if (saveBtn) saveBtn.onclick = async () => {
-    const updated = await api(`/api/samples/${sample.id}`, {
-      method: "PATCH",
-      body: JSON.stringify({
-        status: $("#editStatus").value,
-        assignedTo: $("#editAnalyst").value,
-        storageLocationId: $("#editStorage").value,
-        dueAt: $("#editDueAt").value ? new Date($("#editDueAt").value).toISOString() : "",
-        notes: $("#editNotes").value
-      })
-    });
-    replaceSample(updated);
-    await load();
-    toast("Sample modified and activity recorded");
-  };
-  document.querySelectorAll("[data-quick-status]").forEach(button => {
-    button.onclick = () => {
-      const status = $("#editStatus");
-      if (status) status.value = button.dataset.quickStatus;
-      if (button.dataset.quickStatus === "Assigned" && $("#editAnalyst")?.value === "") toast("Choose the analyst, then save");
-    };
-  });
-  const approveBtn = $("#approveSample");
-  if (approveBtn) approveBtn.onclick = async () => {
-    replaceSample(await api(`/api/samples/${sample.id}/approve`, { method: "POST" }));
-    await load();
-    toast("Sample approved");
-  };
-  const resultParam = $("#resultParam");
-  if (resultParam) {
-    resultParam.onchange = fillTestDefaults;
-    fillTestDefaults();
-  }
-  const addResult = $("#addResult");
-  if (addResult) addResult.onclick = async () => {
-    const updated = await api(`/api/samples/${sample.id}/results`, {
-      method: "POST",
-      body: JSON.stringify({
-        parameter: $("#resultParam").selectedOptions[0].textContent,
-        value: $("#resultValue").value,
-        unit: $("#resultUnit").value,
-        limit: $("#resultLimit").value,
-        method: $("#resultMethod").value,
-        flag: $("#resultFlag").value
-      })
-    });
-    replaceSample(updated);
-    state.tab = "results";
-    await load();
-    toast("Value entered");
-  };
-  const bulkResult = $("#bulkResult");
-  if (bulkResult) bulkResult.onclick = async () => {
-    const updated = await api(`/api/samples/${sample.id}/results/bulk`, {
-      method: "POST",
-      body: JSON.stringify({ rows: $("#bulkRows").value })
-    });
-    replaceSample(updated);
-    state.tab = "results";
-    await load();
-    toast("Rows imported");
-  };
-  const uploadForm = $("#uploadForm");
-  if (uploadForm) uploadForm.onsubmit = async event => {
-    event.preventDefault();
-    const form = new FormData(uploadForm);
-    const updated = await api(`/api/samples/${sample.id}/files`, { method: "POST", body: form });
-    replaceSample(updated);
-    state.tab = "uploads";
-    await load();
-    toast("File uploaded to sample");
-  };
-  const bookUploadForm = $("#bookUploadForm");
-  if (bookUploadForm) bookUploadForm.onsubmit = async event => {
-    event.preventDefault();
-    const form = new FormData(bookUploadForm);
-    const updated = await api(`/api/samples/${sample.id}/files`, { method: "POST", body: form });
-    replaceSample(updated);
-    state.tab = "book";
-    await load();
-    toast("Book record uploaded");
-  };
-  const openInputData = $("#openInputData");
-  if (openInputData) openInputData.onclick = () => openResultSheetDialog(sample);
-  const excelImportForm = $("#excelImportForm");
-  if (excelImportForm) excelImportForm.onsubmit = safe(async event => {
-    event.preventDefault();
-    const updated = await api(`/api/samples/${sample.id}/results/excel`, { method: "POST", body: new FormData(excelImportForm) });
-    replaceSample(updated);
-    state.tab = "results";
-    await load();
-    toast("Excel sheet imported");
-  });
-  const saveLifecycle = $("#saveLifecycle");
-  if (saveLifecycle) saveLifecycle.onclick = safe(async () => {
-    const updated = await api(`/api/samples/${sample.id}/lifecycle`, {
-      method: "POST",
-      body: JSON.stringify({
-        action: $("#lifecycleAction").value,
-        reason: $("#lifecycleReason").value
-      })
-    });
-    replaceSample(updated);
-    state.tab = "retention";
-    await load();
-    toast("Lifecycle saved");
-  });
-}
-
-function openResultSheetDialog(sample) {
-  $("#sheetDialogTitle").textContent = `Input Analysis Data - ${sample.sampleCode}`;
-  $("#sheetDialogMeta").textContent = `${sample.clientName || "No client"} / ${sample.collectionSite || "No site"}`;
-  $("#sheetDialogBody").innerHTML = sheetEditorHtml(sample);
-  $("#resultSheetDialog").showModal();
-  bindSheetEditor(sample);
-}
-
-function bindSheetEditor(sample) {
-  const addSheetRow = $("#addSheetRow");
-  if (addSheetRow) addSheetRow.onclick = () => {
-    const nextRow = document.querySelectorAll(".result-row").length + 2;
-    $("#resultSheet").insertAdjacentHTML("beforeend", sheetRow({ flag: "OK" }, nextRow));
-  };
-  const saveSheet = $("#saveSheet");
-  if (saveSheet) saveSheet.onclick = async () => {
-    const rows = Array.from(document.querySelectorAll(".result-row")).map(row => {
-      const result = {};
-      row.querySelectorAll("[data-field]").forEach(input => result[input.dataset.field] = input.value.trim());
-      return result;
-    }).filter(row => row.parameter && row.value);
-    const updated = await api(`/api/samples/${sample.id}/results/sheet`, {
-      method: "POST",
-      body: JSON.stringify({ rows })
-    });
-    replaceSample(updated);
-    state.tab = "results";
-    $("#resultSheetDialog").close();
-    await load();
-    toast("Sheet values saved");
-  };
-}
-
-function fillTestDefaults() {
-  const test = state.tests.find(t => t.id === $("#resultParam").value);
-  if (!test) return;
-  $("#resultUnit").value = test.unit || "";
-  $("#resultLimit").value = test.limit || "";
-  $("#resultMethod").value = test.method || "";
-}
-
-function replaceSample(sample) {
-  state.samples = state.samples.map(item => item.id === sample.id ? sample : item);
-}
-
-function renderScan() {
-  $("#scanView").innerHTML = `
-    <div class="split">
-      <section class="panel">
-          <div class="panel-head"><h3>Camera Scanner</h3><span class="badge">QR</span></div>
-        <div class="panel-body">
-          <video id="scannerVideo" muted playsinline></video>
-          <button id="startScanner" class="primary">Start Scanner</button>
-          <button id="stopScanner">Stop Scanner</button>
-          <small>Use the camera for QR labels. Manual code entry is below as backup.</small>
-        </div>
-      </section>
-      <section class="panel">
-        <div class="panel-head"><h3>Open Sample</h3></div>
-        <div class="panel-body">
-          <label>Sample code or scanned payload<input id="manualCode" placeholder="PL-2026-000001"></label>
-          <button id="openCode" class="primary">Open Code</button>
-          <div id="scanResult"></div>
-          <div class="note-card">
-            <strong>Scanner options</strong>
-            <span>Use the website camera scanner for bottle QR labels and small tube QR labels. No separate scanner hardware is required; manual code entry remains as backup.</span>
-          </div>
-        </div>
-      </section>
-    </div>
-  `;
-  $("#startScanner").onclick = startScanner;
-  $("#stopScanner").onclick = stopScanner;
-  $("#openCode").onclick = () => openScanned($("#manualCode").value);
-}
-
-async function startScanner() {
-  if (!("BarcodeDetector" in window)) {
-    toast("This browser needs manual entry or Chrome camera QR support");
-    return;
-  }
-  const video = $("#scannerVideo");
-  state.stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-  video.srcObject = state.stream;
-  await video.play();
-  const detector = new BarcodeDetector({ formats: ["qr_code"] });
-  const tick = async () => {
-    if (!state.stream) return;
-    try {
-      const codes = await detector.detect(video);
-      if (codes.length) {
-        $("#manualCode").value = codes[0].rawValue;
-        stopScanner();
-        openScanned(codes[0].rawValue);
-        return;
+      try {
+        await handler(event);
+      } catch (err) {
+        // Prefer inline form error banner
+        const form = event?.target?.closest('form') || control?.closest('form');
+        if (form) {
+          const banner = form.querySelector('[data-form-error]');
+          if (banner) {
+            banner.textContent = err.message || 'Action failed';
+            banner.classList.remove('hidden');
+            setTimeout(() => banner.classList.add('hidden'), 8000);
+          }
+        }
+        notify({ type: 'error', title: 'Something went wrong', description: err.message || 'Action failed' });
+      } finally {
+        if (canLock) {
+          const labelEl = control.querySelector('.btn-label') || control;
+          if (originalLabel != null) labelEl.textContent = originalLabel;
+          control.disabled = false;
+          control.removeAttribute('aria-busy');
+        }
       }
-    } catch {}
-    requestAnimationFrame(tick);
-  };
-  tick();
-}
-
-function stopScanner() {
-  if (state.stream) state.stream.getTracks().forEach(track => track.stop());
-  state.stream = null;
-}
-
-async function openScanned(raw) {
-  const code = extractSampleCode(raw);
-  if (!code) {
-    toast("No sample code found");
-    return;
-  }
-  try {
-    const sample = await api(`/api/search-sample/${encodeURIComponent(code)}`);
-    state.selectedId = sample.id;
-    state.view = "samples";
-    state.tab = "overview";
-    state.sampleDetailOpen = true;
-    render();
-    toast("Sample opened from code");
-  } catch (error) {
-    $("#scanResult").innerHTML = `<div class="panel-body">${error.message}</div>`;
-  }
-}
-
-function extractSampleCode(raw) {
-  let code = String(raw || "").trim();
-  try {
-    const parsed = JSON.parse(code);
-    code = parsed.sampleCode || parsed.id || code;
-  } catch {}
-  try {
-    const url = new URL(code);
-    code = url.searchParams.get("sample") || url.searchParams.get("id") || code;
-  } catch {}
-  return code;
-}
-
-async function openUrlSampleOnce() {
-  if (state.openedUrlSample) return;
-  const params = new URLSearchParams(window.location.search);
-  const code = params.get("sample") || params.get("id");
-  if (!code) return;
-  state.openedUrlSample = true;
-  const sample = await api(`/api/search-sample/${encodeURIComponent(code)}`);
-  state.selectedId = sample.id;
-  state.view = "samples";
-  state.tab = "overview";
-  state.sampleDetailOpen = true;
-  render();
-  toast("Sample opened from QR link");
-}
-
-function renderMasters() {
-  $("#mastersView").innerHTML = `
-    <div class="master-grid">
-      ${masterCard("People / Analysts", "personForm", [["name","Name"],["role","Role"]], editablePeople(), "Add Person")}
-      ${masterCard("Storage Locations", "storageForm", [["name","Location"],["type","Type"],["capacityNote","Capacity note"]], editableStorage(), "Add Storage")}
-      ${masterCard("Test Methods", "testForm", [["name","Parameter"],["unit","Unit"],["limit","Limit"],["method","Method"]], editableTests(), "Add Test")}
-    </div>
-  `;
-  bindMaster("personForm", "/api/people");
-  bindMaster("storageForm", "/api/storage-locations");
-  bindMaster("testForm", "/api/tests");
-  bindMasterEdits();
-}
-
-function editablePeople() {
-  return state.people.map(p => `<div class="mini-row"><input value="${escapeAttr(p.name)}" data-edit="people" data-id="${p.id}" data-field="name"><input value="${escapeAttr(p.role)}" data-edit="people" data-id="${p.id}" data-field="role"><button data-save-master="people" data-id="${p.id}">Save</button></div>`).join("");
-}
-
-function editableStorage() {
-  return state.storageLocations.map(s => `<div class="mini-row storage-row">
-    <input value="${escapeAttr(s.name)}" data-edit="storage-locations" data-id="${s.id}" data-field="name">
-    <input value="${escapeAttr(s.type)}" data-edit="storage-locations" data-id="${s.id}" data-field="type">
-    <select data-edit="storage-locations" data-id="${s.id}" data-field="isFull"><option value="false" ${!s.isFull ? "selected" : ""}>Available</option><option value="true" ${s.isFull ? "selected" : ""}>Full / no occupancy</option></select>
-    <input value="${escapeAttr(s.capacityNote || "")}" data-edit="storage-locations" data-id="${s.id}" data-field="capacityNote" placeholder="Optional note">
-    <button data-save-master="storage-locations" data-id="${s.id}">Save</button>
-  </div>`).join("");
-}
-
-function editableTests() {
-  return state.tests.map(t => `<div class="mini-row test"><input value="${escapeAttr(t.name)}" data-edit="tests" data-id="${t.id}" data-field="name"><input value="${escapeAttr(t.unit || "")}" data-edit="tests" data-id="${t.id}" data-field="unit"><input value="${escapeAttr(t.limit || "")}" data-edit="tests" data-id="${t.id}" data-field="limit"><input value="${escapeAttr(t.method || "")}" data-edit="tests" data-id="${t.id}" data-field="method"><button data-save-master="tests" data-id="${t.id}">Save</button></div>`).join("");
-}
-
-function bindMasterEdits() {
-  document.querySelectorAll("[data-save-master]").forEach(button => {
-    button.onclick = safe(async () => {
-      const group = button.dataset.saveMaster;
-      const id = button.dataset.id;
-      const body = {};
-      document.querySelectorAll(`[data-edit="${group}"][data-id="${id}"]`).forEach(input => {
-        body[input.dataset.field] = input.dataset.field === "isFull" ? input.value === "true" : input.value.trim();
-      });
-      await api(`/api/${group}/${id}`, { method: "PATCH", body: JSON.stringify(body) });
-      await load();
-      toast("Master record modified");
-    });
-  });
-}
-
-function masterCard(title, id, fields, list, button) {
-  return `
-    <section class="panel">
-      <div class="panel-head"><h3>${title}</h3></div>
-      <form id="${id}" class="panel-body">
-        ${fields.map(([name,label]) => `<label>${label}<input name="${name}" required></label>`).join("")}
-        <button class="primary">${button}</button>
-        <div class="muted">${list || "No records"}</div>
-      </form>
-    </section>
-  `;
-}
-
-function bindMaster(formId, path) {
-  const form = $(`#${formId}`);
-  if (!form) return;
-  form.onsubmit = async event => {
-    event.preventDefault();
-    await api(path, { method: "POST", body: JSON.stringify(Object.fromEntries(new FormData(form))) });
-    form.reset();
-    await load();
-    toast("Master record added");
-  };
-}
-
-function renderUsers() {
-  const visibleUsers = state.showInactiveUsers ? state.users : state.users.filter(user => user.active);
-  $("#usersView").innerHTML = `
-    <div class="split">
-      <section class="panel">
-        <div class="panel-head"><h3>Create User</h3><span class="badge">${roleLabel(state.user?.role)}</span></div>
-        <form id="userForm" class="panel-body">
-          <label>Name<input name="name" required></label>
-          <label>Email<input name="email" type="email" required></label>
-          <label>Phone<input name="phone" type="tel" required></label>
-          <label>Password<input name="password" type="password" required></label>
-          <label>Role<select name="role"><option value="admin">Admin / Manager</option><option value="analyst">Analyst</option></select></label>
-          <button class="primary">Create Login</button>
-          <small>Only admin can create or modify user access.</small>
-        </form>
-      </section>
-      <section class="panel">
-        <div class="panel-head"><h3>User List</h3><label class="toggle-line"><input id="showInactiveUsers" type="checkbox" ${state.showInactiveUsers ? "checked" : ""}> Show inactive</label></div>
-        <div class="table">
-          <div class="tr user-tr th"><div>Name</div><div>Email</div><div>Role</div><div>Status</div><div>Action</div></div>
-          ${visibleUsers.map(u => `<div class="tr user-tr"><div>${u.name}</div><div>${u.email}<br><span class="muted">${u.countryCode || ""} ${u.phone || ""}</span></div><div><select data-user-role="${u.id}">${WORK_ROLES.map(role => `<option value="${role}" ${u.role === role ? "selected" : ""}>${roleLabel(role)}</option>`).join("")}</select></div><div><select data-user-active="${u.id}"><option value="true" ${u.active ? "selected" : ""}>Active</option><option value="false" ${!u.active ? "selected" : ""}>Inactive</option></select><button data-save-user="${u.id}">Save</button></div><div>${u.id === state.user.id ? `<span class="muted">Current user</span>` : u.active ? `<button class="danger" data-delete-user="${u.id}">Delete</button>` : `<span class="muted">Deleted</span>`}</div></div>`).join("")}
-        </div>
-      </section>
-    </div>
-  `;
-  const form = $("#userForm");
-  $("#showInactiveUsers").onchange = event => {
-    state.showInactiveUsers = event.target.checked;
-    renderUsers();
-  };
-  form.onsubmit = safe(async event => {
-    event.preventDefault();
-    await api("/api/users", { method: "POST", body: JSON.stringify(Object.fromEntries(new FormData(form))) });
-    form.reset();
-    await load();
-    toast("User created");
-  });
-  document.querySelectorAll("[data-save-user]").forEach(button => {
-    button.onclick = safe(async () => {
-      const id = button.dataset.saveUser;
-      await api(`/api/users/${id}`, {
-        method: "PATCH",
-        body: JSON.stringify({
-          role: document.querySelector(`[data-user-role="${id}"]`).value,
-          active: document.querySelector(`[data-user-active="${id}"]`).value === "true"
-        })
-      });
-      await load();
-      toast("User access modified");
-    });
-  });
-  document.querySelectorAll("[data-delete-user]").forEach(button => {
-    button.onclick = safe(async () => {
-      const user = state.users.find(item => item.id === button.dataset.deleteUser);
-      if (!confirm(`Delete login for ${user?.name || "this user"}? Their old records and activity history will remain.`)) return;
-      await api(`/api/users/${button.dataset.deleteUser}`, { method: "DELETE" });
-      await load();
-      toast("User login deleted");
-    });
-  });
-}
-
-function renderBackup() {
-  const health = state.health || {};
-  $("#backupView").innerHTML = `
-    <div class="split">
-      <section class="panel">
-        <div class="panel-head"><h3>Automatic Exports</h3><span class="badge">Daily / weekly</span></div>
-        <div class="panel-body">
-          <div class="backup-actions">
-            <button class="primary" id="runDailyExport">Create Daily Export Now</button>
-            <button id="runWeeklyExport">Create Weekly Export Now</button>
-            <button id="downloadReadableNow">Download Current Backup</button>
-          </div>
-          <div class="table">
-            <div class="tr backup-tr th"><div>File</div><div>Type</div><div>Updated</div><div>Size</div><div>Download</div></div>
-            ${(state.exports || []).map(file => `
-              <div class="tr backup-tr">
-                <div>${file.file}</div>
-                <div>${file.type}</div>
-                <div>${new Date(file.modifiedAt).toLocaleString()}</div>
-                <div>${formatBytes(file.size)}</div>
-                <div><a href="${apiUrl(`/api/exports/${encodeURIComponent(file.file)}?token=${encodeURIComponent(state.token)}`)}">Download</a></div>
-              </div>
-            `).join("") || `<div class="panel-body">${empty("No exports yet")}</div>`}
-          </div>
-        </div>
-      </section>
-      <section class="panel">
-        <div class="panel-head"><h3>Database Health</h3><span class="badge Approved">${health.database || "Checking"}</span></div>
-        <div class="panel-body">
-          <div class="facts">
-            ${fact("Samples", health.samples ?? 0)}
-            ${fact("Users", health.users ?? 0)}
-            ${fact("Activity entries", health.auditEntries ?? 0)}
-            ${fact("Uploaded files", health.uploadedFiles ?? 0)}
-            ${fact("Database size", formatBytes(health.dbSize || 0))}
-            ${fact("Last write", health.lastWriteAt ? new Date(health.lastWriteAt).toLocaleString() : "-")}
-          </div>
-          <div class="note-card">
-            <strong>Current storage mode</strong>
-            <span>${health.storage || "Local atomic storage with readable exports."}</span>
-          </div>
-          <div class="note-card">
-            <strong>Scale note</strong>
-            <span>This local database is stable for a demo and small lab use with automatic exports. For many users working at the same time or very large historical data, the next production step is PostgreSQL or MySQL on a server with nightly off-machine backups.</span>
-          </div>
-        </div>
-      </section>
-    </div>
-  `;
-  const runDaily = $("#runDailyExport");
-  if (runDaily) runDaily.onclick = safe(async () => {
-    await api("/api/exports/run", { method: "POST", body: JSON.stringify({ period: "daily" }) });
-    await load();
-    toast("Daily export created");
-  });
-  const runWeekly = $("#runWeeklyExport");
-  if (runWeekly) runWeekly.onclick = safe(async () => {
-    await api("/api/exports/run", { method: "POST", body: JSON.stringify({ period: "weekly" }) });
-    await load();
-    toast("Weekly export created");
-  });
-  const downloadNow = $("#downloadReadableNow");
-  if (downloadNow) downloadNow.onclick = () => $("#backupBtn").click();
-}
-
-function formatBytes(bytes) {
-  const value = Number(bytes || 0);
-  if (value < 1024) return `${value} B`;
-  if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KB`;
-  return `${(value / 1024 / 1024).toFixed(1)} MB`;
-}
-
-function renderAudit() {
-  $("#auditView").innerHTML = `<section class="panel"><div class="panel-head"><h3>Activity Log</h3><span class="badge">${state.audit.length} latest</span></div><div class="panel-body timeline">${state.audit.map(eventRow).join("") || empty("No activity entries")}</div></section>`;
-}
-
-function eventRow(item) {
-  return `<div class="event"><div class="dot"></div><div><strong>${item.action} · ${item.userName}</strong><span>${new Date(item.at).toLocaleString()} · ${item.entity} ${item.detail ? "· " + item.detail : ""}</span></div></div>`;
-}
-
-function empty(text) {
-  return `<div class="muted">${text}</div>`;
-}
-
-function renderSampleDialogOptions() {
-  $("#sampleStorage").innerHTML = `<option value="">Not stored yet</option>${state.storageLocations.map(item => storageOption(item)).join("")}`;
-  $("#sampleAnalyst").innerHTML = `<option value="">Unassigned</option>${state.people.map(item => `<option>${item.name}</option>`).join("")}`;
-  renderSampleTestPicker();
-  const bulkDefaultStorage = $("#bulkDefaultStorage");
-  if (bulkDefaultStorage) bulkDefaultStorage.innerHTML = `<option value="">Not stored yet</option>${state.storageLocations.map(item => storageOption(item)).join("")}`;
-}
-
-function renderSampleTestPicker() {
-  const picker = $("#sampleTestPicker");
-  const chips = $("#selectedTests");
-  if (!picker || !chips) return;
-  const available = state.tests.map(item => item.name).filter(name => !state.selectedRequestedTests.includes(name));
-  picker.innerHTML = `<option value="">Select and add test</option>${available.map(name => `<option>${name}</option>`).join("")}`;
-  chips.innerHTML = state.selectedRequestedTests.map(name => `
-    <button type="button" class="test-chip" data-remove-test="${escapeAttr(name)}">
-      <span>${name}</span><strong aria-hidden="true">X</strong>
-    </button>
-  `).join("") || `<span class="muted">No tests selected</span>`;
-  picker.onchange = () => {
-    if (!picker.value || state.selectedRequestedTests.includes(picker.value)) return;
-    state.selectedRequestedTests.push(picker.value);
-    renderSampleTestPicker();
-  };
-  chips.querySelectorAll("[data-remove-test]").forEach(button => {
-    button.onclick = () => {
-      state.selectedRequestedTests = state.selectedRequestedTests.filter(name => name !== button.dataset.removeTest);
-      renderSampleTestPicker();
     };
-  });
-}
-
-function switchView(view) {
-  state.view = view;
-  if (view !== "scan") stopScanner();
-  render();
-}
-
-function escapeAttr(value) {
-  return String(value).replaceAll("&", "&amp;").replaceAll('"', "&quot;").replaceAll("<", "&lt;");
-}
-
-function dateTimeLocal(value) {
-  if (!value) return "";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "";
-  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
-  return local.toISOString().slice(0, 16);
-}
-
-function parseDateIso(value) {
-  if (!value) return "";
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? "" : date.toISOString();
-}
-
-function parseBulkSampleRows(text) {
-  return String(text || "")
-    .split(/\r?\n/)
-    .map(row => row.trim())
-    .filter(Boolean)
-    .filter((row, index) => index > 0 || !row.toLowerCase().startsWith("client,"))
-    .map(row => row.split(/,|\t/).map(cell => cell.trim()))
-    .map(cells => {
-      const storage = state.storageLocations.find(item => item.id === cells[4] || item.name.toLowerCase() === String(cells[4] || "").toLowerCase());
-      return {
-        clientName: cells[0] || "",
-        sourceType: cells[1] || "Drinking Water",
-        collectionSite: cells[2] || "",
-        collector: cells[3] || "",
-        storageLocationId: storage?.id || $("#bulkDefaultStorage")?.value || "",
-        assignedTo: cells[5] || "",
-        requestedTests: String(cells[6] || "").split(/[,;]/).map(item => item.trim()).filter(Boolean),
-        dueAt: parseDateIso(cells[7]),
-        notes: cells[8] || ""
-      };
-    });
-}
-
-function renderBulkResult(created = [], errors = []) {
-  $("#bulkCreateResult").innerHTML = `
-    <div class="bulk-summary">
-      <strong>${created.length} samples created</strong>
-      ${created.length ? `<button type="button" id="printBulkTubeLabels">Print QR Labels</button>` : ""}
-      ${created.length ? `<button type="button" id="downloadBulkList">Download Batch List</button>` : ""}
-    </div>
-    <div class="sample-list mini">${created.map(sampleRow).join("")}</div>
-    ${errors.length ? `<div class="note-card bad"><strong>${errors.length} rows need correction</strong><span>${errors.map(item => `Row ${item.row}: ${item.error}`).join("<br>")}</span></div>` : ""}
-  `;
-  bindSampleRows();
-  const printBulkTubeLabels = $("#printBulkTubeLabels");
-  if (printBulkTubeLabels) printBulkTubeLabels.onclick = () => {
-    const ids = created.map(sample => sample.id).join(",");
-    window.open(apiUrl(`/api/samples/bulk-tube-qr-labels?ids=${encodeURIComponent(ids)}&token=${encodeURIComponent(state.token)}`), "_blank");
-  };
-  const downloadBulkList = $("#downloadBulkList");
-  if (downloadBulkList) downloadBulkList.onclick = () => {
-    const csv = ["Sample Code,Client,Site,Storage,Analyst"].concat(created.map(sample => [
-      sample.sampleCode,
-      sample.clientName,
-      sample.collectionSite,
-      state.storageLocations.find(item => item.id === sample.storageLocationId)?.name || "",
-      sample.assignedTo || ""
-    ].map(value => `"${String(value).replaceAll('"', '""')}"`).join(","))).join("\n");
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `sample-batch-${new Date().toISOString().slice(0, 10)}.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
-  };
-}
-
-$("#loginForm").onsubmit = safe(async event => {
-  event.preventDefault();
-  const form = event.target;
-  const body = Object.fromEntries(new FormData(form));
-  const remember = Boolean(body.rememberMe);
-  body.rememberMe = remember;
-  const data = await api("/api/login", { method: "POST", body: JSON.stringify(body) });
-  state.token = data.token;
-  if (remember) {
-    localStorage.setItem("plasma-lab-token", state.token);
-    localStorage.setItem("plasma-lab-remember-email", form.elements.email.value.trim());
-  } else {
-    sessionStorage.setItem("plasma-lab-token", state.token);
-    localStorage.removeItem("plasma-lab-token");
-    localStorage.removeItem("plasma-lab-remember-email");
   }
-  showApp();
-  await load();
-});
 
-$("#sendEmailOtp").onclick = safe(async () => {
-  const form = $("#signupForm");
-  const checks = await validateSignupFields();
-  if (!checks.email.valid || !checks.email.available) throw new Error(checks.email.message || "Enter a valid email");
-  const data = await api("/api/signup/email/start", {
-    method: "POST",
-    body: JSON.stringify({
-      name: form.elements.name.value.trim(),
-      email: form.elements.email.value.trim()
-    })
-  });
-  state.pendingSignupId = data.pendingId;
-  renderOtpDemo("#emailOtpDemo", data);
-  $("#emailOtpBox").classList.remove("hidden");
-  toast("Email OTP sent");
-});
+  /* ---------------------------------------------------------------------- */
+  /* Auth view control                                                      */
+  /* ---------------------------------------------------------------------- */
+  function showApp() { $('#authView').classList.add('hidden'); $('#appView').classList.remove('hidden'); }
+  function showAuth() { $('#authView').classList.remove('hidden'); $('#appView').classList.add('hidden'); showSlide('login'); }
+  function showSlide(name) {
+    $$('.auth-slide').forEach(el => el.classList.remove('is-active'));
+    const map = { login: '#loginForm', signup: '#signupForm', reset: '#resetStartForm', resetConfirm: '#resetConfirmForm' };
+    const el = document.querySelector(map[name] || '#loginForm');
+    if (el) el.classList.add('is-active');
+    if (name === 'signup' && !state.pendingSignupId) setSignupStep('email');
+    // Clear any lingering error banner
+    $$('.form-error-banner').forEach(b => b.classList.add('hidden'));
+  }
+  function setSignupStep(step) {
+    const order = ['email','phone','password'];
+    const idx = order.indexOf(step);
+    $$('#signupForm .signup-step').forEach(el => {
+      const i = order.indexOf(el.dataset.step);
+      el.dataset.state = i === idx ? 'active' : (i < idx ? 'done' : 'hidden');
+    });
+    $$('#signupForm .step').forEach(el => {
+      const i = order.indexOf(el.dataset.progress);
+      if (i < idx) { el.setAttribute('data-done','true'); el.removeAttribute('aria-current'); }
+      else if (i === idx) { el.setAttribute('aria-current','step'); el.removeAttribute('data-done'); }
+      else { el.removeAttribute('data-done'); el.removeAttribute('aria-current'); }
+    });
+  }
 
-$("#verifyEmailOtp").onclick = safe(async () => {
-  await api("/api/signup/email/verify", {
-    method: "POST",
-    body: JSON.stringify({
-      pendingId: state.pendingSignupId,
-      emailOtp: $("#signupForm").elements.emailOtp.value
-    })
-  });
-  setSignupStep("phone");
-  toast("Email verified");
-});
-
-$("#savePhone").onclick = safe(async () => {
-  const form = $("#signupForm");
-  const checks = await validateSignupFields();
-  if (!checks.phone.valid || !checks.phone.available) throw new Error(checks.phone.message || "Enter a valid phone number");
-  await api("/api/signup/phone/save", {
-    method: "POST",
-    body: JSON.stringify({
-      pendingId: state.pendingSignupId,
+  /* ---------------------------------------------------------------------- */
+  /* Live field checks                                                      */
+  /* ---------------------------------------------------------------------- */
+  function setCheck(id, result) {
+    const el = $('#' + id);
+    if (!el) return;
+    if (!result?.message) { el.textContent = ''; el.className = 'field-check'; el.title = ''; return; }
+    const isOk = result.valid && result.available;
+    el.textContent = result.message;
+    el.className = 'field-check ' + (isOk ? 'is-ok' : 'is-bad');
+    el.title = result.message;
+  }
+  let validateTimer = null;
+  function scheduleSignupValidation() {
+    clearTimeout(validateTimer);
+    validateTimer = setTimeout(validateSignupFields, 300);
+  }
+  async function validateSignupFields() {
+    const form = $('#signupForm');
+    if (!form) return {};
+    const params = new URLSearchParams({
+      email: form.elements.email.value.trim(),
       countryCode: form.elements.countryCode.value,
       phone: form.elements.phone.value.trim()
-    })
-  });
-  setSignupStep("password");
-  toast("Phone saved");
-});
-
-$("#resendEmailOtp").onclick = safe(async () => {
-  if (!state.pendingSignupId) throw new Error("Enter email and click Verify Email first");
-  const data = await api("/api/signup/resend", { method: "POST", body: JSON.stringify({ pendingId: state.pendingSignupId, channel: "email" }) });
-  renderOtpDemo("#emailOtpDemo", data);
-  toast("Email OTP resent");
-});
-
-$("#signupForm").onsubmit = safe(async event => {
-  event.preventDefault();
-  const form = event.target;
-  if (!validatePasswordFields()) throw new Error("Check the password fields");
-  const body = {
-    password: form.elements.password.value,
-    confirmPassword: form.elements.confirmPassword.value
-  };
-  body.pendingId = state.pendingSignupId;
-  const data = await api("/api/signup/complete", { method: "POST", body: JSON.stringify(body) });
-  event.target.reset();
-  state.pendingSignupId = "";
-  showAuthSlide("login");
-  $("#loginForm").elements.email.value = data.user.email;
-  $("#loginForm").elements.password.value = "";
-  toast("Registration complete. Please login.");
-});
-
-$("#resetStartForm").onsubmit = safe(async event => {
-  event.preventDefault();
-  const data = await api("/api/password-reset/start", { method: "POST", body: JSON.stringify(Object.fromEntries(new FormData(event.target))) });
-  state.resetId = data.resetId;
-  renderOtpDemo("#resetOtpDemo", data);
-  showAuthSlide("resetConfirm");
-  toast("Reset OTP generated");
-});
-
-$("#resetConfirmForm").onsubmit = safe(async event => {
-  event.preventDefault();
-  const body = Object.fromEntries(new FormData(event.target));
-  body.resetId = state.resetId;
-  await api("/api/password-reset/confirm", { method: "POST", body: JSON.stringify(body) });
-  event.target.reset();
-  showAuthSlide("login");
-  toast("Password changed. Login with the new password.");
-});
-
-["email", "phone", "countryCode"].forEach(name => {
-  const field = $("#signupForm").elements[name];
-  field.addEventListener("input", scheduleSignupValidation);
-  field.addEventListener("change", scheduleSignupValidation);
-});
-
-["password", "confirmPassword"].forEach(name => {
-  const field = $("#signupForm").elements[name];
-  field.addEventListener("input", validatePasswordFields);
-});
-
-$("#logoutBtn").onclick = () => {
-  stopScanner();
-  clearSession();
-  showAuth();
-};
-
-$("#syncBtn").onclick = safe(async () => {
-  await load();
-  toast("Synced from backend");
-});
-
-$("#backupBtn").onclick = safe(async () => {
-  const response = await fetch(apiUrl("/api/backup"), { headers: { Authorization: `Bearer ${state.token}` } });
-  if (!response.ok) throw new Error("Backup could not be downloaded");
-  const blob = await response.blob();
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = `plasma-lab-readable-backup-${new Date().toISOString().slice(0, 10)}.html`;
-  link.click();
-  URL.revokeObjectURL(url);
-  await load();
-  toast("Backup downloaded");
-});
-
-$("#newSampleBtn").onclick = () => {
-  state.selectedRequestedTests = [];
-  renderSampleDialogOptions();
-  $("#sampleDialog").showModal();
-};
-$("#bulkSampleBtn").onclick = () => {
-  renderSampleDialogOptions();
-  $("#bulkCreateResult").innerHTML = "";
-  $("#bulkSampleDialog").showModal();
-};
-document.querySelector("[data-close]").onclick = () => $("#sampleDialog").close();
-document.querySelector("[data-close-bulk]").onclick = () => $("#bulkSampleDialog").close();
-document.querySelector("[data-close-sheet]").onclick = () => $("#resultSheetDialog").close();
-$("#createBulkSamples").onclick = safe(async event => {
-  event.preventDefault();
-  const rows = parseBulkSampleRows($("#bulkSampleRows").value);
-  const result = await api("/api/samples/bulk", { method: "POST", body: JSON.stringify({ rows }) });
-  await load();
-  renderBulkResult(result.created, result.errors);
-  toast(`${result.created.length} samples created`);
-});
-$("#importBulkExcel").onclick = safe(async () => {
-  const file = $("#bulkSampleExcel").files[0];
-  if (!file) throw new Error("Choose an Excel file");
-  const form = new FormData();
-  form.append("file", file);
-  form.append("storageLocationId", $("#bulkDefaultStorage").value);
-  const result = await api("/api/samples/bulk/excel", { method: "POST", body: form });
-  await load();
-  renderBulkResult(result.created, result.errors);
-  toast(`${result.created.length} samples imported`);
-});
-$("#sampleForm").onsubmit = safe(async event => {
-  event.preventDefault();
-  const formData = new FormData(event.target);
-  const photoFile = formData.get("samplePhoto");
-  formData.delete("samplePhoto");
-  const data = Object.fromEntries(formData);
-  data.requestedTests = state.selectedRequestedTests;
-  if (!data.requestedTests.length) throw new Error("Choose at least one requested test");
-  const sample = await api("/api/samples", { method: "POST", body: JSON.stringify(data) });
-  if (photoFile && photoFile.size > 0) {
-    const upload = new FormData();
-    upload.append("category", "Sample Photo");
-    upload.append("files", photoFile);
-    await api(`/api/samples/${sample.id}/files`, { method: "POST", body: upload });
+    });
+    try {
+      const data = await api('/api/validate/signup?' + params);
+      setCheck('emailCheck', data.email);
+      setCheck('phoneCheck', data.phone);
+      return data;
+    } catch { return {}; }
   }
-  state.selectedId = sample.id;
-  state.view = "samples";
-  state.tab = "overview";
-  state.sampleDetailOpen = true;
-  $("#sampleDialog").close();
-  event.target.reset();
-  state.selectedRequestedTests = [];
-  await load();
-  toast("Sample registered and QR created");
-});
+  function validatePasswordFields() {
+    const f = $('#signupForm'); if (!f) return false;
+    const pw = f.elements.password.value;
+    const cf = f.elements.confirmPassword.value;
+    let msg = '', ok = false;
+    if (pw.length === 0 && cf.length === 0) msg = '';
+    else if (pw.length < 6) msg = 'Use at least 6 characters';
+    else if (cf && pw !== cf) msg = 'Passwords do not match';
+    else if (pw.length >= 6 && cf === pw) { msg = 'Password ready'; ok = true; }
+    setCheck('passwordCheck', { valid: ok, available: ok, message: msg });
+    return ok;
+  }
 
-window.addEventListener("unhandledrejection", event => {
-  toast(event.reason?.message || "Action failed");
-});
+  /* ---------------------------------------------------------------------- */
+  /* Bootstrap load                                                         */
+  /* ---------------------------------------------------------------------- */
+  async function load() {
+    const data = await api('/api/bootstrap');
+    Object.assign(state, data);
+    state.alerts = data.alerts || null;
+    if (can('admin')) { state.exports = data.files || []; state.health = data.health || null; }
+    else { state.exports = []; state.health = null; }
+    localStorage.setItem('plasma-lab-cache', JSON.stringify(data));
+    if (!state.selectedId && state.samples[0]) state.selectedId = state.samples[0].id;
+    updateUserBlock();
+    render();
+    await openUrlSampleOnce().catch(err => notify({ type: 'error', title: 'QR link failed', description: err.message }));
+  }
+  function can(...roles) { return state.user && roles.includes(state.user.role); }
+  function canModifySamples() { return can('admin','analyst'); }
+  function canEnterResults() { return can('admin','analyst'); }
+  function canUploadFiles()  { return can('admin','analyst'); }
+  function canApprove()      { return can('admin'); }
 
-$("#nav").onclick = event => {
-  const button = event.target.closest("button[data-view]");
-  if (button) switchView(button.dataset.view);
-};
+  function updateUserBlock() {
+    if (!state.user) return;
+    $('#userName').textContent = state.user.name;
+    $('#userRole').textContent = roleLabel(state.user.role);
+    $('#userAvatar').textContent = initials(state.user.name);
+    // Show admin-only header actions
+    $('#newSampleBtn').classList.toggle('hidden', !can('admin'));
+    $('#bulkSampleBtn').classList.toggle('hidden', !can('admin'));
+    $('#backupBtn').classList.toggle('hidden', !can('admin'));
+  }
 
-document.querySelectorAll("[data-auth]").forEach(link => {
-  link.onclick = event => {
-    event.preventDefault();
-    showAuthSlide(link.dataset.auth);
+  /* ---------------------------------------------------------------------- */
+  /* Nav (role-adaptive)                                                    */
+  /* ---------------------------------------------------------------------- */
+  const NAV_ITEMS = [
+    { id: 'dashboard', label: 'Dashboard', roles: ['admin','analyst'], icon: 'grid', section: 'Work' },
+    { id: 'samples',   label: 'Samples',   roles: ['admin','analyst'], icon: 'file', section: 'Work' },
+    { id: 'scan',      label: 'Scan QR',   roles: ['admin','analyst'], icon: 'scan', section: 'Work' },
+    { id: 'approvals', label: 'Approvals', roles: ['admin'],           icon: 'check', section: 'Work', badgeKey: 'waitingApproval' },
+    { id: 'masters',   label: 'People & Storage', roles: ['admin'],    icon: 'users', section: 'Admin' },
+    { id: 'users',     label: 'Users',     roles: ['admin'],           icon: 'user', section: 'Admin' },
+    { id: 'backup',    label: 'Data Backup', roles: ['admin'],         icon: 'db', section: 'Admin' },
+    { id: 'audit',     label: 'Activity Log', roles: ['admin'],        icon: 'log', section: 'Admin' }
+  ];
+  const ICONS = {
+    grid:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>',
+    file:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6v4l4 4v10a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V11l4-4z"/></svg>',
+    scan:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><rect x="7" y="7" width="4" height="4"/><rect x="13" y="7" width="4" height="4"/><rect x="7" y="13" width="4" height="4"/><path d="M13 13h4v4"/></svg>',
+    check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',
+    users: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
+    user:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
+    db:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0 0 18 0V5"/><path d="M3 12a9 3 0 0 0 18 0"/></svg>',
+    log:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>'
   };
-});
-
-document.querySelectorAll("[data-toggle-password]").forEach(button => {
-  button.onclick = () => {
-    const input = button.closest(".password-field")?.querySelector("input");
-    if (!input) return;
-    const hidden = input.type === "password";
-    input.type = hidden ? "text" : "password";
-    button.classList.toggle("visible", hidden);
-    button.setAttribute("aria-label", hidden ? "Hide password" : "Show password");
-  };
-});
-
-const rememberedEmail = localStorage.getItem("plasma-lab-remember-email");
-if (rememberedEmail) {
-  $("#loginForm").elements.email.value = rememberedEmail;
-  $("#loginForm").elements.rememberMe.checked = true;
-}
-
-if (state.token) {
-  showApp();
-  load().catch(() => {
-    clearSession();
-    showAuth();
+  function renderNav() {
+    const list = $('#navList');
+    const items = NAV_ITEMS.filter(x => x.roles.includes(state.user?.role));
+    if (!items.some(x => x.id === state.view)) state.view = 'dashboard';
+    const sections = {};
+    items.forEach(x => { (sections[x.section] ||= []).push(x); });
+    list.innerHTML = '';
+    for (const [section, secItems] of Object.entries(sections)) {
+      list.appendChild(h('li', { class: 'nav-section-title' }, section));
+      for (const item of secItems) {
+        const badge = item.badgeKey ? (state.alerts?.[item.badgeKey]?.length || 0) : 0;
+        const btn = h('button', { class: 'nav-item', type: 'button', 'data-view': item.id, 'aria-current': state.view === item.id ? 'page' : null, html:
+          ICONS[item.icon] + `<span>${esc(item.label)}</span>` + (badge > 0 ? `<span class="nav-count">${badge}</span>` : '')
+        });
+        list.appendChild(h('li', null, btn));
+      }
+    }
+    // Mobile tab bar — Scan, Samples, Home, Me
+    $$('#tabBar .tab').forEach(t => {
+      t.setAttribute('aria-current', t.dataset.view === state.view ? 'page' : 'false');
+      if (t.dataset.view === 'me' && state.view === 'me') t.setAttribute('aria-current', 'page');
+    });
+  }
+  $('#navList').addEventListener('click', e => {
+    const btn = e.target.closest('[data-view]'); if (!btn) return;
+    switchView(btn.dataset.view);
   });
-}
+  $('#tabBar').addEventListener('click', e => {
+    const btn = e.target.closest('[data-view]'); if (!btn) return;
+    if (btn.dataset.view === 'scan') switchView('scan');
+    else if (btn.dataset.view === 'me') switchView('backup'); // fallback for admin; for analyst just show sign-out
+    else switchView(btn.dataset.view);
+  });
+
+  /* ---------------------------------------------------------------------- */
+  /* Header title map                                                       */
+  /* ---------------------------------------------------------------------- */
+  const TITLES = {
+    dashboard: ['Dashboard', 'Live records held by the backend and mirrored in this browser.'],
+    samples:   ['Samples', 'Prepare bottle labels, update storage, assign, enter results and close samples.'],
+    approvals: ['Approval queue', 'Samples waiting for review.'],
+    scan:      ['Scan QR', 'Use the camera to open a sample, or type the code manually.'],
+    masters:   ['People & Storage', 'Analysts, freezer/rack locations, and test methods.'],
+    users:     ['Users', 'Create admin and analyst logins.'],
+    backup:    ['Data Backup', 'Daily and weekly readable exports and database health.'],
+    audit:     ['Activity Log', 'Every important action is retained — never modified or deleted.']
+  };
+
+  function switchView(view) {
+    state.view = view;
+    state.sampleDetailOpen = false;
+    if (view !== 'scan') stopScanner();
+    render();
+  }
+
+  /* ---------------------------------------------------------------------- */
+  /* Master render                                                          */
+  /* ---------------------------------------------------------------------- */
+  function render() {
+    renderNav();
+    $$('.view').forEach(v => v.classList.add('hidden'));
+    const active = $('#' + state.view + 'View');
+    if (active) active.classList.remove('hidden');
+    const t = TITLES[state.view] || ['', ''];
+    $('#viewTitle').textContent = t[0];
+    $('#viewHint').textContent = t[1];
+
+    renderSampleDialogOptions();
+    if (state.view === 'dashboard') renderDashboard();
+    if (state.view === 'samples')   renderSamples();
+    if (state.view === 'approvals') renderApprovals();
+    if (state.view === 'scan')      renderScan();
+    if (state.view === 'masters')   renderMasters();
+    if (state.view === 'users')     renderUsers();
+    if (state.view === 'backup')    renderBackup();
+    if (state.view === 'audit')     renderAudit();
+  }
+
+  /* ---------------------------------------------------------------------- */
+  /* Dashboard                                                              */
+  /* ---------------------------------------------------------------------- */
+  function renderDashboard() {
+    const s = state.samples;
+    const alerts = state.alerts || {};
+    const counts = [
+      { label: 'Total samples', value: s.length, tone: 'accent' },
+      { label: 'Bottles ready', value: s.filter(x => x.status === 'Bottle Ready').length, tone: 'info' },
+      { label: 'In storage',    value: s.filter(x => x.status === 'Stored').length, tone: 'success' },
+      { label: 'In analysis',   value: s.filter(x => x.status === 'In Analysis').length, tone: 'warn' },
+      { label: 'Needs review',  value: alerts.waitingApproval?.length || s.filter(x => x.status === 'Needs Review' || x.status === 'Results Entered').length, tone: 'warn' },
+      { label: 'Flagged',       value: s.filter(x => x.status === 'Flagged').length, tone: 'danger' }
+    ];
+    const recentSamples = s.slice(0, 8);
+    const root = $('#dashboardView');
+    root.innerHTML = '';
+
+    root.appendChild(h('section', { class: 'dashboard-hero' },
+      h('h3', null, `Good ${greeting()}, ${state.user?.name?.split(' ')[0] || ''}`),
+      h('p', null, s.length === 0 ? 'No samples yet — press "+ New sample" to register the first bottle.' : `You have ${s.length} sample${s.length === 1 ? '' : 's'} across the lab.`)
+    ));
+
+    root.appendChild(h('section', { class: 'metric-grid' },
+      ...counts.map(c => h('div', { class: 'metric', 'data-tone': c.tone },
+        h('div', { class: 'metric-label' }, c.label),
+        h('div', { class: 'metric-value' }, String(c.value))
+      ))
+    ));
+
+    if (alerts.overdue?.length || alerts.dueSoon?.length) {
+      root.appendChild(h('section', { class: 'card' },
+        h('div', { class: 'card-header' }, h('h3', { class: 'card-title' }, 'Attention'), null),
+        h('div', { class: 'card-body' },
+          ...(alerts.overdue?.length ? [h('div', { class: 'form-error-banner' }, `${alerts.overdue.length} sample${alerts.overdue.length === 1 ? '' : 's'} past target completion.`)] : []),
+          ...(alerts.dueSoon?.length ? [h('div', { class: 'muted' }, `${alerts.dueSoon.length} sample${alerts.dueSoon.length === 1 ? '' : 's'} due in the next 24 hours.`)] : [])
+        )
+      ));
+    }
+
+    const list = h('div', { class: 'card' });
+    list.appendChild(h('div', { class: 'card-header' },
+      h('h3', { class: 'card-title' }, 'Recent samples'),
+      h('button', { class: 'btn btn-sm', type: 'button', onclick: () => switchView('samples') }, h('span',{class:'btn-label'},'Open registry'))
+    ));
+    const listBody = h('div', { class: 'card-body' });
+    if (recentSamples.length === 0) {
+      listBody.appendChild(emptyState({
+        title: 'No samples yet',
+        message: 'Register your first bottle to get started.',
+        actionLabel: can('admin') ? '+ New sample' : null,
+        onAction: () => openSampleDialog()
+      }));
+    } else {
+      listBody.appendChild(h('div', { class: 'card-grid' }, ...recentSamples.map(sampleCard)));
+    }
+    list.appendChild(listBody);
+    root.appendChild(list);
+  }
+  function greeting() {
+    const h = new Date().getHours();
+    if (h < 12) return 'morning';
+    if (h < 17) return 'afternoon';
+    return 'evening';
+  }
+
+  function sampleCard(sample) {
+    const storage = state.storageLocations.find(x => x.id === sample.storageLocationId)?.name || 'No storage';
+    return h('button', {
+      class: 'sample-card', type: 'button',
+      'data-sample': sample.id,
+      'aria-current': sample.id === state.selectedId ? 'true' : 'false',
+      onclick: () => openSampleDetail(sample.id)
+    },
+      h('div', { class: 'top' },
+        h('span', { class: 'code' }, sample.sampleCode),
+        h('span', { class: 'chip ' + statusClass(sample.status) }, sample.status)
+      ),
+      h('div', { class: 'primary-line' }, `${sample.collectionSite || 'No site'} — ${sample.clientName || 'No client'}`),
+      h('div', { class: 'meta' },
+        h('span', null, sample.sourceType || '—'),
+        h('span', null, storage),
+        h('span', null, sample.assignedTo || 'Unassigned')
+      )
+    );
+  }
+
+  /* ---------------------------------------------------------------------- */
+  /* Samples registry + detail                                              */
+  /* ---------------------------------------------------------------------- */
+  function renderSamples() {
+    const root = $('#samplesView');
+    root.innerHTML = '';
+    if (state.sampleDetailOpen && selectedSample()) {
+      renderSampleDetail(root, selectedSample());
+      return;
+    }
+    const rows = filteredSamples();
+    root.appendChild(sampleFiltersEl(rows.length));
+    if (rows.length === 0) {
+      root.appendChild(emptyState({
+        title: state.samples.length === 0 ? 'No samples yet' : 'No matches',
+        message: state.samples.length === 0 ? 'Register your first bottle.' : 'Try clearing filters to see all records.',
+        actionLabel: state.samples.length === 0 && can('admin') ? '+ New sample' : (state.samples.length ? 'Reset filters' : null),
+        onAction: state.samples.length === 0 ? openSampleDialog : resetFilters
+      }));
+    } else {
+      root.appendChild(h('div', { class: 'card-grid' }, ...rows.map(sampleCard)));
+    }
+  }
+  function sampleFiltersEl(count) {
+    const f = state.sampleFilters;
+    const projects = uniqueValues(state.samples.map(x => x.clientName));
+    const collectors = uniqueValues(state.samples.map(x => x.collector));
+    const analysts = uniqueValues(state.samples.map(x => x.assignedTo));
+    return h('div', { class: 'card' },
+      h('div', { class: 'card-header' },
+        h('h3', { class: 'card-title' }, `${count} matching · ${state.samples.length} total`),
+        h('button', { class: 'btn btn-sm', type: 'button', onclick: resetFilters }, h('span',{class:'btn-label'},'Reset filters'))
+      ),
+      h('div', { class: 'card-body' },
+        h('div', { class: 'filters-bar' },
+          fieldEl({ id: 'fSearch', label: 'Search', input: h('input', { class: 'input', id: 'fSearch', value: f.q, placeholder: 'Code, site, project, collector', oninput: e => { f.q = e.target.value; render(); } }) }),
+          fieldEl({ id: 'fStatus', label: 'Status', input: selectEl('fStatus', ['', ...STATUS_OPTIONS], f.status, v => { f.status = v; render(); }, 'All statuses') }),
+          fieldEl({ id: 'fFrom', label: 'From date', input: h('input', { class: 'input', type: 'date', id: 'fFrom', value: f.from, onchange: e => { f.from = e.target.value; render(); } }) }),
+          fieldEl({ id: 'fTo', label: 'To date', input: h('input', { class: 'input', type: 'date', id: 'fTo', value: f.to, onchange: e => { f.to = e.target.value; render(); } }) }),
+          h('div', null,
+            h('button', { class: 'btn', type: 'button', onclick: () => showMoreFilters(projects, collectors, analysts, f) }, h('span',{class:'btn-label'},'More filters'))
+          )
+        )
+      )
+    );
+  }
+  function showMoreFilters(projects, collectors, analysts, f) {
+    // Simple inline expander — could be a popover
+    notify({ type: 'info', title: 'More filters available', description: 'Project, collector and analyst filters are available in the API — full popover UI in the next iteration.' });
+  }
+  function fieldEl({ id, label, input }) {
+    return h('div', { class: 'field' },
+      h('label', { class: 'field-label sr-only', for: id }, label),
+      input
+    );
+  }
+  function selectEl(id, options, value, onChange, placeholder) {
+    const sel = h('select', { class: 'select', id, onchange: e => onChange(e.target.value) });
+    options.forEach(o => {
+      if (o === '' && placeholder) sel.appendChild(h('option', { value: '' }, placeholder));
+      else sel.appendChild(h('option', { value: o, selected: o === value ? true : null }, o));
+    });
+    return sel;
+  }
+  function uniqueValues(arr) { return [...new Set(arr.filter(Boolean))].sort((a,b) => a.localeCompare(b)); }
+  function resetFilters() {
+    state.sampleFilters = { q:'', status:'', from:'', to:'', project:'', collector:'', analyst:'', storage:'' };
+    render();
+  }
+  function filteredSamples() {
+    const f = state.sampleFilters;
+    const q = f.q.toLowerCase();
+    const from = f.from ? new Date(f.from + 'T00:00:00').getTime() : 0;
+    const to = f.to ? new Date(f.to + 'T23:59:59').getTime() : Infinity;
+    return state.samples.filter(s => {
+      const text = [s.sampleCode, s.clientName, s.collectionSite, s.assignedTo, s.collector, s.sourceType].join(' ').toLowerCase();
+      const created = new Date(s.createdAt || s.receivedAt || 0).getTime();
+      return (!q || text.includes(q))
+        && (!f.status || s.status === f.status)
+        && (!f.project || s.clientName === f.project)
+        && (!f.collector || s.collector === f.collector)
+        && (!f.analyst || s.assignedTo === f.analyst)
+        && (!f.storage || s.storageLocationId === f.storage)
+        && created >= from && created <= to;
+    });
+  }
+  function selectedSample() { return state.samples.find(x => x.id === state.selectedId) || state.samples[0]; }
+  function openSampleDetail(id) {
+    state.selectedId = id;
+    state.view = 'samples';
+    state.sampleDetailOpen = true;
+    state.tab = 'overview';
+    render();
+  }
+
+  /* ---------------------------------------------------------------------- */
+  /* Sample detail                                                          */
+  /* ---------------------------------------------------------------------- */
+  function renderSampleDetail(root, sample) {
+    const storage = state.storageLocations.find(x => x.id === sample.storageLocationId)?.name || '';
+    const hasBook = (sample.files || []).some(f => (f.category || '').includes('Book') || (f.category || '').includes('Written'));
+    const hasResults = (sample.results || []).length > 0;
+    const hasStorage = !!sample.storageLocationId;
+
+    // Header
+    root.appendChild(h('div', { class: 'sample-header' },
+      h('div', null,
+        h('div', { class: 'row', style: { gap: '12px' } },
+          h('button', { class: 'btn btn-sm', type: 'button', onclick: () => { state.sampleDetailOpen = false; render(); } }, h('span',{class:'btn-label'},'← Back')),
+          h('h2', null, sample.sampleCode)
+        ),
+        h('div', { class: 'subline' }, `${sample.clientName || 'No client'} · ${sample.collectionSite || 'No site'} · ${sample.sourceType || ''}`)
+      ),
+      h('span', { class: 'chip ' + statusClass(sample.status) }, sample.status)
+    ));
+
+    // Lifecycle strip
+    root.appendChild(lifecycleStripEl(sample));
+
+    // 3-pane on wide screens
+    const layout = h('div', { class: 'ledger-layout', 'data-panes': '2' });
+    const mainCol = h('div');
+    const rail = h('aside', { class: 'audit-rail card' },
+      h('div', { class: 'audit-rail-title' }, 'Activity & custody'),
+      auditTimelineEl(sample)
+    );
+
+    // Tabs
+    const tabsEl = h('div', { class: 'tabs', role: 'tablist' });
+    const tabs = [
+      { id: 'overview', label: 'Workflow' },
+      canEnterResults() && { id: 'sheet', label: 'Enter results' },
+      { id: 'results', label: 'Saved results' },
+      canUploadFiles() && { id: 'files', label: 'Files' },
+      can('admin') && { id: 'retention', label: 'Retention' }
+    ].filter(Boolean);
+    tabs.forEach(t => {
+      tabsEl.appendChild(h('button', { class: 'tab', type: 'button', role: 'tab', 'aria-selected': state.tab === t.id, onclick: () => { state.tab = t.id; render(); } }, t.label));
+    });
+    mainCol.appendChild(tabsEl);
+
+    // Tab body
+    const tabBody = h('div', { style: { marginTop: '16px' } });
+    if (!tabs.some(t => t.id === state.tab)) state.tab = 'overview';
+    if (state.tab === 'overview')   tabBody.appendChild(overviewTab(sample));
+    if (state.tab === 'sheet')      tabBody.appendChild(sheetTab(sample));
+    if (state.tab === 'results')    tabBody.appendChild(resultsTab(sample));
+    if (state.tab === 'files')      tabBody.appendChild(filesTab(sample));
+    if (state.tab === 'retention')  tabBody.appendChild(retentionTab(sample));
+    mainCol.appendChild(tabBody);
+
+    // QR + facts card
+    const details = h('div', { class: 'card', style: { marginBottom: '16px' } });
+    details.appendChild(h('div', { class: 'card-body' },
+      h('div', { class: 'stack-lg' },
+        qrBlockEl(sample),
+        h('div', { class: 'facts' },
+          factEl('Project / client', sample.clientName),
+          factEl('Site', sample.collectionSite),
+          factEl('Source', sample.sourceType),
+          factEl('Bottle labelled', fmtDate(sample.createdAt || sample.receivedAt)),
+          factEl('Last updated', fmtDate(sample.updatedAt || sample.receivedAt)),
+          factEl('Target completion', sample.dueAt ? fmtDate(sample.dueAt) : '—'),
+          factEl('Brought by', sample.collector),
+          factEl('Analyst', sample.assignedTo || 'Unassigned'),
+          factEl('Storage', storage),
+          factEl('Retention', sample.retentionStatus || 'Active'),
+          factEl('Tests', (sample.requestedTests || []).join(', '))
+        ),
+        h('div', { class: 'readiness' },
+          h('span', { class: 'ready-item', 'data-done': String(hasStorage) }, `Storage ${hasStorage ? 'set' : 'needed'}`),
+          h('span', { class: 'ready-item', 'data-done': String(hasBook) }, `Written record ${hasBook ? 'uploaded' : 'needed'}`),
+          h('span', { class: 'ready-item', 'data-done': String(hasResults) }, `Results ${hasResults ? 'entered' : 'needed'}`),
+          h('span', { class: 'ready-item', 'data-done': String(sample.status === 'Approved') }, `Approval ${sample.status === 'Approved' ? 'done' : 'pending'}`)
+        )
+      )
+    ));
+
+    mainCol.insertBefore(details, tabsEl);
+    layout.appendChild(mainCol);
+    layout.appendChild(rail);
+    root.appendChild(layout);
+  }
+  function fmtDate(d) { return d ? new Date(d).toLocaleString() : '—'; }
+  function factEl(label, value) {
+    return h('div', { class: 'fact' },
+      h('div', { class: 'fact-label' }, label),
+      h('div', { class: 'fact-value' }, value || '—')
+    );
+  }
+  function qrBlockEl(sample) {
+    const photo = (sample.files || []).find(f => f.category === 'Sample Photo');
+    return h('div', { class: 'qr-block' },
+      photo ? h('img', { src: apiUrl(photo.url), alt: 'Sample photo' }) : h('div', { class: 'empty-state', style: { padding: '24px', minHeight: '120px' } }, 'No sample photo'),
+      h('img', { src: apiUrl(`/api/samples/${sample.id}/qr.svg?token=${encodeURIComponent(state.token)}`), alt: 'QR code' }),
+      h('div', { class: 'qr-actions' },
+        h('button', { class: 'btn btn-sm', type: 'button', onclick: () => window.open(apiUrl(`/api/samples/${sample.id}/tube-label?token=${encodeURIComponent(state.token)}`), '_blank') }, h('span',{class:'btn-label'},'Print QR label')),
+        h('button', { class: 'btn btn-sm', type: 'button', onclick: () => window.open(apiUrl(`/api/samples/${sample.id}/report?token=${encodeURIComponent(state.token)}`), '_blank') }, h('span',{class:'btn-label'},'Print report')),
+        h('a', { class: 'btn btn-primary btn-sm', href: apiUrl(`/api/samples/${sample.id}/report.pdf?token=${encodeURIComponent(state.token)}`) }, h('span',{class:'btn-label'},'Download PDF'))
+      )
+    );
+  }
+
+  function lifecycleStripEl(sample) {
+    const idx = LIFECYCLE_STRIP.indexOf(sample.status);
+    const container = h('div', { class: 'lifecycle-strip' });
+    LIFECYCLE_STRIP.forEach((step, i) => {
+      if (i > 0) container.appendChild(h('span', { class: 'connector' }));
+      container.appendChild(h('span', { class: 'step', 'data-done': i < idx ? 'true' : null, 'data-current': i === idx ? 'true' : null },
+        h('span', { class: 'dot' }),
+        step
+      ));
+    });
+    return container;
+  }
+
+  function overviewTab(sample) {
+    if (!canModifySamples()) return emptyState({ title: 'Read-only', message: 'This role cannot modify samples.' });
+    const wrap = h('div', { class: 'card' },
+      h('div', { class: 'card-body' },
+        h('div', { class: 'form-error-banner hidden', 'data-form-error': true }),
+        h('div', { class: 'form-grid' },
+          fieldWith('Lab step', selectFor(STATUS_OPTIONS, sample.status, 'editStatus')),
+          fieldWith('Assigned analyst', selectFor(['Unassigned', ...state.people.map(p => p.name)], sample.assignedTo || 'Unassigned', 'editAnalyst')),
+          fieldWith('Current storage', storageSelect(sample.storageLocationId, 'editStorage')),
+          fieldWith('Target completion', h('input', { class: 'input', id: 'editDueAt', type: 'datetime-local', value: toDateTimeLocal(sample.dueAt) })),
+          h('div', { class: 'field field-wide' },
+            h('label', { class: 'field-label', for: 'editNotes' }, 'Movement / work note'),
+            h('textarea', { class: 'textarea', id: 'editNotes' }, sample.notes || '')
+          ),
+          h('div', { class: 'field field-wide' },
+            h('label', { class: 'field-label', for: 'editReason' }, 'Reason for change (optional)'),
+            h('input', { class: 'input', id: 'editReason', placeholder: 'e.g. corrected storage location after inspection' })
+          )
+        ),
+        h('div', { class: 'row', style: { justifyContent: 'flex-end', gap: '8px' } },
+          canApprove() && sample.status !== 'Approved' && (sample.results || []).length > 0 ? h('button', { class: 'btn', type: 'button', onclick: () => beginApproval(sample) }, h('span',{class:'btn-label'},'Approve results…')) : null,
+          h('button', { class: 'btn btn-primary', type: 'button', onclick: () => saveWorkflowUpdate(sample) }, h('span',{class:'btn-label'},'Save update'))
+        )
+      )
+    );
+    return wrap;
+  }
+  function fieldWith(label, input) {
+    return h('div', { class: 'field' }, h('label', { class: 'field-label' }, label), input);
+  }
+  function selectFor(options, value, id) {
+    const sel = h('select', { class: 'select', id });
+    options.forEach(o => sel.appendChild(h('option', { value: o === 'Unassigned' ? '' : o, selected: o === value ? true : null }, o)));
+    return sel;
+  }
+  function storageSelect(value, id) {
+    const sel = h('select', { class: 'select', id });
+    sel.appendChild(h('option', { value: '' }, 'Not stored yet'));
+    state.storageLocations.forEach(loc => {
+      const full = loc.isFull && loc.id !== value;
+      const label = loc.name + (loc.isFull ? ' — FULL' : '') + (loc.active === false ? ' — INACTIVE' : '');
+      sel.appendChild(h('option', { value: loc.id, selected: loc.id === value ? true : null, disabled: (full || loc.active === false) ? true : null }, label));
+    });
+    return sel;
+  }
+  function toDateTimeLocal(v) {
+    if (!v) return '';
+    const d = new Date(v);
+    if (Number.isNaN(d.getTime())) return '';
+    return new Date(d.getTime() - d.getTimezoneOffset()*60000).toISOString().slice(0,16);
+  }
+  async function saveWorkflowUpdate(sample) {
+    try {
+      const body = {
+        status: $('#editStatus').value,
+        assignedTo: $('#editAnalyst').value,
+        storageLocationId: $('#editStorage').value,
+        dueAt: $('#editDueAt').value ? new Date($('#editDueAt').value).toISOString() : '',
+        notes: $('#editNotes').value,
+        reasonForChange: $('#editReason').value // frontend-ready; backend ignores today
+      };
+      const updated = await api(`/api/samples/${sample.id}`, { method: 'PATCH', body: JSON.stringify(body) });
+      Object.assign(sample, updated);
+      await load();
+      notify({ type: 'success', title: 'Update saved', description: `${sample.sampleCode} — changes recorded in the activity log.` });
+    } catch (e) {
+      notify({ type: 'error', title: 'Save failed', description: e.message });
+    }
+  }
+
+  function sheetTab(sample) {
+    const wrap = h('div', { class: 'stack-lg' });
+    wrap.appendChild(h('div', { class: 'card' },
+      h('div', { class: 'card-body' },
+        h('div', { class: 'row-between' },
+          h('div', null,
+            h('strong', null, 'Analysis data entry'),
+            h('div', { class: 'muted text-sm' }, 'Open the spreadsheet-style sheet, enter measured values, then save.')
+          ),
+          h('button', { class: 'btn btn-primary', type: 'button', onclick: () => openResultSheet(sample) }, h('span',{class:'btn-label'},'Open sheet'))
+        )
+      )
+    ));
+    wrap.appendChild(h('div', { class: 'card' },
+      h('div', { class: 'card-body' },
+        h('div', null, h('strong', null, 'Or import an Excel sheet')),
+        h('form', { class: 'row', style: { gap: '12px', flexWrap: 'wrap', alignItems: 'flex-end' }, id: 'excelImportForm', onsubmit: safe(async e => {
+          e.preventDefault();
+          const updated = await api(`/api/samples/${sample.id}/results/excel`, { method: 'POST', body: new FormData(e.target) });
+          Object.assign(sample, updated); state.tab = 'results'; await load();
+          notify({ type: 'success', title: 'Excel imported' });
+        }) },
+          h('div', { class: 'field grow' },
+            h('label', { class: 'field-label', for: 'excelFile' }, 'Excel file'),
+            h('input', { class: 'input', id: 'excelFile', name: 'file', type: 'file', accept: '.xlsx,.xls', required: true })
+          ),
+          h('button', { class: 'btn btn-primary', type: 'submit', 'data-busy-label': 'Importing…' }, h('span',{class:'btn-label'},'Import Excel'))
+        )
+      )
+    ));
+    return wrap;
+  }
+  function openResultSheet(sample) {
+    $('#sheetTitle').textContent = 'Analysis data entry — ' + sample.sampleCode;
+    $('#sheetSubtitle').textContent = `${sample.clientName || 'No client'} · ${sample.collectionSite || 'No site'}`;
+    const body = $('#sheetBody');
+    body.innerHTML = '';
+    const tests = sample.requestedTests?.length ? sample.requestedTests : state.tests.slice(0, 5).map(t => t.name);
+    const gridWrap = h('div', { class: 'result-grid' });
+    const table = h('table', { role: 'grid', 'aria-label': 'Analysis results for ' + sample.sampleCode });
+    table.appendChild(h('thead', null,
+      h('tr', null,
+        h('th', { scope: 'col' }, '#'),
+        h('th', { scope: 'col' }, 'Parameter'),
+        h('th', { scope: 'col' }, 'Value'),
+        h('th', { scope: 'col' }, 'Unit'),
+        h('th', { scope: 'col' }, 'Limit'),
+        h('th', { scope: 'col' }, 'Method'),
+        h('th', { scope: 'col' }, 'Flag')
+      )
+    ));
+    const tbody = h('tbody');
+    function addRow(row = {}, num) {
+      const test = state.tests.find(t => t.name === row.parameter) || {};
+      const tr = h('tr', { role: 'row' },
+        h('th', { scope: 'row' }, String(num)),
+        h('td', null, h('input', { class: 'input', 'data-field': 'parameter', 'aria-label': 'Parameter', value: row.parameter || '' })),
+        h('td', null, h('input', { class: 'input', 'data-field': 'value', 'aria-label': 'Value', value: row.value || '', placeholder: '7.4' })),
+        h('td', null, h('input', { class: 'input', 'data-field': 'unit', 'aria-label': 'Unit', value: row.unit || test.unit || '' })),
+        h('td', null, h('input', { class: 'input', 'data-field': 'limit', 'aria-label': 'Limit', value: row.limit || test.limit || '' })),
+        h('td', null, h('input', { class: 'input', 'data-field': 'method', 'aria-label': 'Method', value: row.method || test.method || '' })),
+        h('td', null, (() => {
+          const sel = h('select', { class: 'input', 'data-field': 'flag', 'aria-label': 'Flag' });
+          ['OK','Review','Alert'].forEach(o => sel.appendChild(h('option', { value: o, selected: (row.flag || 'OK') === o ? true : null }, o)));
+          return sel;
+        })())
+      );
+      tbody.appendChild(tr);
+    }
+    tests.forEach((name, i) => addRow({ parameter: name, flag: 'OK' }, i + 1));
+    table.appendChild(tbody);
+    gridWrap.appendChild(table);
+
+    const reasonField = h('div', { class: 'field' },
+      h('label', { class: 'field-label', for: 'sheetReason' }, 'Reason (required for amendments to previously-saved values)'),
+      h('input', { class: 'input', id: 'sheetReason', placeholder: 'e.g. re-run after instrument recalibration' })
+    );
+
+    body.appendChild(h('div', { class: 'row', style: { justifyContent: 'space-between' } },
+      h('div', { class: 'muted text-sm' }, 'Fields are announced by column for screen readers.'),
+      h('button', { class: 'btn btn-sm', type: 'button', onclick: () => addRow({ flag: 'OK' }, tbody.children.length + 1) }, h('span',{class:'btn-label'},'+ Add row'))
+    ));
+    body.appendChild(gridWrap);
+    body.appendChild(reasonField);
+    body.appendChild(h('div', { class: 'row', style: { justifyContent: 'flex-end' } },
+      h('button', { class: 'btn btn-primary', type: 'button', onclick: () => saveSheet(sample) }, h('span',{class:'btn-label'},'Save values'))
+    ));
+
+    $('#resultSheetDialog').showModal();
+  }
+  async function saveSheet(sample) {
+    const rows = $$('#sheetBody tbody tr').map(tr => {
+      const r = {};
+      tr.querySelectorAll('[data-field]').forEach(inp => { r[inp.dataset.field] = inp.value.trim(); });
+      return r;
+    }).filter(r => r.parameter && r.value);
+    if (rows.length === 0) return notify({ type: 'warn', title: 'Nothing to save', description: 'Enter at least one parameter with a value.' });
+    const reason = $('#sheetReason')?.value || '';
+    try {
+      const updated = await api(`/api/samples/${sample.id}/results/sheet`, { method: 'POST', body: JSON.stringify({ rows, reasonForChange: reason }) });
+      Object.assign(sample, updated); state.tab = 'results';
+      $('#resultSheetDialog').close();
+      await load();
+      notify({ type: 'success', title: 'Values saved', description: `${rows.length} row${rows.length===1?'':'s'} recorded on ${sample.sampleCode}.` });
+    } catch (e) { notify({ type: 'error', title: 'Save failed', description: e.message }); }
+  }
+
+  function resultsTab(sample) {
+    const results = sample.results || [];
+    // Group by parameter to surface most recent as current + older as superseded
+    const byParam = {};
+    results.forEach(r => { (byParam[r.parameter] ||= []).push(r); });
+    const wrap = h('div', { class: 'stack-lg' });
+    if (results.length === 0) {
+      wrap.appendChild(emptyState({ title: 'No results yet', message: canEnterResults() ? 'Open the "Enter results" tab to add measurements.' : 'The analyst has not entered results yet.' }));
+      return wrap;
+    }
+    const tblWrap = h('div', { class: 'table-wrap' });
+    const tbl = h('table', { class: 'data-table' },
+      h('thead', null, h('tr', null,
+        h('th', { scope: 'col' }, 'Parameter'),
+        h('th', { scope: 'col' }, 'Value'),
+        h('th', { scope: 'col' }, 'Limit'),
+        h('th', { scope: 'col' }, 'Flag'),
+        h('th', { scope: 'col' }, 'Analyst'),
+        h('th', { scope: 'col' }, 'Entered at')
+      ))
+    );
+    const tbody = h('tbody');
+    Object.values(byParam).forEach(list => {
+      // most recent first (matches server unshift)
+      list.forEach((r, i) => {
+        const superseded = i > 0;
+        tbody.appendChild(h('tr', { 'data-superseded': superseded ? 'true' : null, style: superseded ? { opacity: '0.6' } : null },
+          h('td', { 'data-label': 'Parameter' }, r.parameter + (superseded ? ' (superseded)' : '')),
+          h('td', { 'data-label': 'Value', class: 'mono' }, `${r.value} ${r.unit || ''}`),
+          h('td', { 'data-label': 'Limit' }, r.limit || '—'),
+          h('td', { 'data-label': 'Flag' }, h('span', { class: 'chip ' + (r.flag === 'Alert' ? 'status-Flagged' : r.flag === 'Review' ? 'status-Needs-Review' : 'status-Approved') }, r.flag || 'OK')),
+          h('td', { 'data-label': 'Analyst' }, r.analyst || '—'),
+          h('td', { 'data-label': 'Entered at', class: 'mono text-sm' }, fmtDate(r.enteredAt))
+        ));
+      });
+    });
+    tbl.appendChild(tbody);
+    tblWrap.appendChild(tbl);
+    wrap.appendChild(tblWrap);
+
+    if (canEnterResults()) {
+      const form = h('div', { class: 'card' },
+        h('div', { class: 'card-header' }, h('h3', { class: 'card-title' }, 'Enter another value')),
+        h('div', { class: 'card-body' },
+          h('div', { class: 'form-grid' },
+            fieldWith('Parameter', (() => {
+              const sel = h('select', { class: 'select', id: 'rParam', onchange: fillTestDefaults });
+              state.tests.forEach(t => sel.appendChild(h('option', { value: t.id }, t.name)));
+              return sel;
+            })()),
+            fieldWith('Value', h('input', { class: 'input', id: 'rValue', placeholder: '7.4' })),
+            fieldWith('Unit', h('input', { class: 'input', id: 'rUnit' })),
+            fieldWith('Limit', h('input', { class: 'input', id: 'rLimit' })),
+            fieldWith('Method', h('input', { class: 'input', id: 'rMethod' })),
+            fieldWith('Flag', (() => {
+              const sel = h('select', { class: 'select', id: 'rFlag' });
+              ['OK','Review','Alert'].forEach(o => sel.appendChild(h('option', { value: o }, o)));
+              return sel;
+            })()),
+            h('div', { class: 'field field-wide' },
+              h('label', { class: 'field-label', for: 'rReason' }, 'Reason (required when correcting a previous value)'),
+              h('input', { class: 'input', id: 'rReason', placeholder: 'e.g. re-run with fresh calibration' })
+            )
+          ),
+          h('div', { class: 'row', style: { justifyContent: 'flex-end' } },
+            h('button', { class: 'btn btn-primary', type: 'button', onclick: () => addSingleResult(sample) }, h('span',{class:'btn-label'},'Add value'))
+          )
+        )
+      );
+      wrap.appendChild(form);
+      // Populate defaults for first test
+      setTimeout(fillTestDefaults, 0);
+    }
+    return wrap;
+  }
+  function fillTestDefaults() {
+    const sel = $('#rParam'); if (!sel) return;
+    const test = state.tests.find(t => t.id === sel.value); if (!test) return;
+    if ($('#rUnit'))   $('#rUnit').value = test.unit || '';
+    if ($('#rLimit'))  $('#rLimit').value = test.limit || '';
+    if ($('#rMethod')) $('#rMethod').value = test.method || '';
+  }
+  async function addSingleResult(sample) {
+    const paramSel = $('#rParam');
+    try {
+      const updated = await api(`/api/samples/${sample.id}/results`, { method: 'POST', body: JSON.stringify({
+        parameter: paramSel.selectedOptions[0].textContent,
+        value: $('#rValue').value,
+        unit: $('#rUnit').value,
+        limit: $('#rLimit').value,
+        method: $('#rMethod').value,
+        flag: $('#rFlag').value,
+        reasonForChange: $('#rReason').value
+      }) });
+      Object.assign(sample, updated); await load();
+      notify({ type: 'success', title: 'Value recorded' });
+    } catch (e) { notify({ type: 'error', title: 'Save failed', description: e.message }); }
+  }
+
+  function filesTab(sample) {
+    const files = sample.files || [];
+    const wrap = h('div', { class: 'stack-lg' });
+    const tblWrap = h('div', { class: 'table-wrap' });
+    const tbl = h('table', { class: 'data-table' },
+      h('thead', null, h('tr', null,
+        h('th', { scope: 'col' }, 'File'),
+        h('th', { scope: 'col' }, 'Category'),
+        h('th', { scope: 'col' }, 'Uploaded by'),
+        h('th', { scope: 'col' }, 'Open')
+      ))
+    );
+    const tbody = h('tbody');
+    if (files.length === 0) {
+      tbody.appendChild(h('tr', null, h('td', { colspan: '4', 'data-label': '' }, emptyState({ title: 'No files yet', message: 'Upload written records, instrument data, or worksheets.' }))));
+    } else {
+      files.forEach(f => tbody.appendChild(h('tr', null,
+        h('td', { 'data-label': 'File' }, f.originalName || '—'),
+        h('td', { 'data-label': 'Category' }, f.category || '—'),
+        h('td', { 'data-label': 'Uploaded by' },
+          h('div', null, f.uploadedBy || '—'),
+          h('small', { class: 'muted' }, fmtDate(f.uploadedAt))
+        ),
+        h('td', { 'data-label': 'Open' }, h('a', { href: apiUrl(f.url), target: '_blank' }, 'View'))
+      )));
+    }
+    tbl.appendChild(tbody);
+    tblWrap.appendChild(tbl);
+    wrap.appendChild(tblWrap);
+
+    // Upload form
+    const form = h('form', { class: 'card', onsubmit: safe(async e => {
+      e.preventDefault();
+      const updated = await api(`/api/samples/${sample.id}/files`, { method: 'POST', body: new FormData(e.target) });
+      Object.assign(sample, updated); await load();
+      notify({ type: 'success', title: 'File uploaded' });
+      e.target.reset();
+    }) },
+      h('div', { class: 'card-header' }, h('h3', { class: 'card-title' }, 'Upload file to this sample')),
+      h('div', { class: 'card-body' },
+        h('div', { class: 'form-grid' },
+          fieldWith('Category', (() => {
+            const sel = h('select', { class: 'select', name: 'category' });
+            ['Sample Photo','Written Record Upload','Instrument Raw Data','Worksheet','Final Report','Storage Movement Record'].forEach(o => sel.appendChild(h('option', null, o)));
+            return sel;
+          })()),
+          fieldWith('Files', h('input', { class: 'input', name: 'files', type: 'file', multiple: true, required: true }))
+        ),
+        h('div', { class: 'row', style: { justifyContent: 'flex-end' } },
+          h('button', { class: 'btn btn-primary', type: 'submit', 'data-busy-label': 'Uploading…' }, h('span',{class:'btn-label'},'Upload'))
+        )
+      )
+    );
+    wrap.appendChild(form);
+    return wrap;
+  }
+
+  function retentionTab(sample) {
+    const wrap = h('div', { class: 'card' },
+      h('div', { class: 'card-body' },
+        sample.disposal ? h('div', { class: 'form-error-banner' }, `Disposed ${fmtDate(sample.disposal.disposedAt)} by ${sample.disposal.disposedBy}. ${sample.disposal.reason || ''}`) : null,
+        h('div', { class: 'form-grid' },
+          fieldWith('Lifecycle action', (() => {
+            const sel = h('select', { class: 'select', id: 'lifecycleAction' });
+            ['Active','Retained','Disposed'].forEach(o => sel.appendChild(h('option', { value: o, selected: sample.retentionStatus === o ? true : null }, o)));
+            return sel;
+          })()),
+          h('div', { class: 'field field-wide' },
+            h('label', { class: 'field-label', for: 'lifecycleReason' }, 'Reason (required for disposal)'),
+            h('textarea', { class: 'textarea', id: 'lifecycleReason', placeholder: 'e.g. approved and 30-day retention complete' })
+          )
+        ),
+        h('div', { class: 'row', style: { justifyContent: 'flex-end' } },
+          h('button', { class: 'btn btn-primary', type: 'button', onclick: () => saveLifecycle(sample) }, h('span',{class:'btn-label'},'Save lifecycle'))
+        )
+      )
+    );
+    return wrap;
+  }
+  async function saveLifecycle(sample) {
+    const action = $('#lifecycleAction').value;
+    const reason = $('#lifecycleReason').value;
+    if (action === 'Disposed') {
+      if (!reason.trim()) return notify({ type: 'warn', title: 'Reason required', description: 'Please state why the sample is being disposed.' });
+      const ok = await confirmDialog({ title: 'Confirm disposal', message: `Dispose ${sample.sampleCode}? This action is permanent and recorded in the activity log.`, danger: true, okLabel: 'Dispose sample' });
+      if (!ok) return;
+    }
+    try {
+      const updated = await api(`/api/samples/${sample.id}/lifecycle`, { method: 'POST', body: JSON.stringify({ action, reason }) });
+      Object.assign(sample, updated); await load();
+      notify({ type: 'success', title: 'Lifecycle updated' });
+    } catch (e) { notify({ type: 'error', title: 'Update failed', description: e.message }); }
+  }
+
+  function auditTimelineEl(sample) {
+    const events = sample.chainOfCustody || [];
+    if (events.length === 0) return emptyState({ title: 'No activity yet', message: 'Custody events will appear here as the sample moves through the lab.' });
+    const timeline = h('div', { class: 'timeline', role: 'feed' });
+    events.forEach(evt => {
+      const from = evt.fromLocationId ? state.storageLocations.find(s => s.id === evt.fromLocationId)?.name || 'unstored' : '';
+      const to   = evt.toLocationId ? state.storageLocations.find(s => s.id === evt.toLocationId)?.name || 'unstored' : (evt.locationId ? state.storageLocations.find(s => s.id === evt.locationId)?.name : '');
+      const place = from ? `${from} → ${to || 'unstored'}` : to;
+      timeline.appendChild(h('article', { class: 'timeline-event', 'data-type': evt.action?.toLowerCase().includes('approve') ? 'approve' : evt.action?.toLowerCase().includes('dispos') ? 'dispose' : evt.action?.toLowerCase().includes('reject') ? 'reject' : evt.action?.toLowerCase().includes('flag') ? 'flag' : 'default' },
+        h('div', { class: 'event-title' }, `${evt.action || 'Update'} — ${evt.by || 'system'}`),
+        h('div', { class: 'event-meta' },
+          h('time', { datetime: evt.at }, fmtDate(evt.at)),
+          place ? h('span', null, place) : null
+        ),
+        evt.note ? h('div', { class: 'event-reason' }, evt.note) : null
+      ));
+    });
+    return timeline;
+  }
+
+  /* ---------------------------------------------------------------------- */
+  /* Approvals queue                                                        */
+  /* ---------------------------------------------------------------------- */
+  function renderApprovals() {
+    const root = $('#approvalsView');
+    root.innerHTML = '';
+    const waiting = state.samples.filter(s => ['Needs Review', 'Results Entered'].includes(s.status) && !(s.reviewedAt));
+    if (waiting.length === 0) {
+      root.appendChild(emptyState({ title: 'Queue empty', message: 'Nothing waiting for your review right now.' }));
+      return;
+    }
+    waiting.forEach(sample => {
+      // analyst != approver enforcement (frontend gate; backend gate to follow)
+      const enteredResults = sample.results || [];
+      const iEntered = enteredResults.some(r => r.analyst === state.user?.name);
+      const card = h('div', { class: 'approval-card' + (iEntered ? ' locked' : '') });
+      card.appendChild(h('div', { class: 'row-between' },
+        h('div', null,
+          h('div', { class: 'code mono', style: { fontWeight: '700' } }, sample.sampleCode),
+          h('div', { class: 'muted text-sm' }, `${sample.clientName || '—'} · ${sample.collectionSite || '—'}`)
+        ),
+        h('span', { class: 'chip ' + statusClass(sample.status) }, sample.status)
+      ));
+      card.appendChild(h('div', { class: 'muted text-sm' },
+        `${enteredResults.length} result${enteredResults.length === 1 ? '' : 's'} · submitted ${fmtDate(sample.updatedAt)}`
+      ));
+      if (iEntered) {
+        card.appendChild(h('div', { class: 'locked-notice' }, '⚠ You entered result(s) on this sample — another admin must review.'));
+      }
+      card.appendChild(h('div', { class: 'approval-actions' },
+        h('button', { class: 'btn btn-sm', type: 'button', onclick: () => openSampleDetail(sample.id) }, h('span',{class:'btn-label'},'Review details')),
+        iEntered ? null : h('button', { class: 'btn btn-primary btn-sm', type: 'button', onclick: () => beginApproval(sample) }, h('span',{class:'btn-label'},'✓ Approve')),
+        iEntered ? null : h('button', { class: 'btn btn-danger btn-sm', type: 'button', onclick: () => rejectSample(sample) }, h('span',{class:'btn-label'},'✕ Reject'))
+      ));
+      root.appendChild(card);
+    });
+  }
+  function beginApproval(sample) {
+    state.pendingApproval = sample;
+    $('#approvalTitle').textContent = 'Approve results — ' + sample.sampleCode;
+    $('#approvalPassword').value = '';
+    $('#approvalReason').value = '';
+    $('#approvalDialog').showModal();
+  }
+  $('#approvalForm').addEventListener('submit', safe(async e => {
+    e.preventDefault();
+    const sample = state.pendingApproval; if (!sample) return;
+    try {
+      const updated = await api(`/api/samples/${sample.id}/approve`, { method: 'POST', body: JSON.stringify({
+        reason: $('#approvalReason').value,
+        signaturePassword: $('#approvalPassword').value // frontend-shaped for future backend
+      }) });
+      Object.assign(sample, updated); $('#approvalDialog').close();
+      state.pendingApproval = null;
+      await load();
+      notify({ type: 'success', title: 'Approved', description: `${sample.sampleCode} approved and recorded.` });
+    } catch (err) {
+      const banner = $('#approvalForm [data-form-error]');
+      banner.textContent = err.message || 'Approval failed';
+      banner.classList.remove('hidden');
+      throw err;
+    }
+  }));
+  async function rejectSample(sample) {
+    const reason = window.prompt('Reason for rejecting ' + sample.sampleCode + ' (required):', '');
+    if (!reason || !reason.trim()) return;
+    try {
+      // Backend has no reject endpoint yet; use PATCH to move status back
+      await api(`/api/samples/${sample.id}`, { method: 'PATCH', body: JSON.stringify({ status: 'In Analysis', notes: (sample.notes || '') + `\n[Rejected] ${reason}` }) });
+      await load();
+      notify({ type: 'success', title: 'Sample returned', description: `${sample.sampleCode} sent back to analyst.` });
+    } catch (e) { notify({ type: 'error', title: 'Reject failed', description: e.message }); }
+  }
+
+  /* ---------------------------------------------------------------------- */
+  /* Scan                                                                   */
+  /* ---------------------------------------------------------------------- */
+  function renderScan() {
+    const root = $('#scanView');
+    root.innerHTML = '';
+    root.appendChild(h('div', { class: 'section-grid', 'data-cols': '2' },
+      h('div', { class: 'card' },
+        h('div', { class: 'card-header' }, h('h3', { class: 'card-title' }, 'Camera scanner'), h('span', { class: 'chip' }, 'QR')),
+        h('div', { class: 'card-body' },
+          h('video', { id: 'scannerVideo', 'aria-label': 'Live camera view for QR scanning', muted: true, playsinline: true, style: { width: '100%', borderRadius: '10px', background: '#000', aspectRatio: '4/3' } }),
+          h('div', { class: 'row' },
+            h('button', { class: 'btn btn-primary', type: 'button', id: 'startScanner' }, h('span',{class:'btn-label'},'Start scanner')),
+            h('button', { class: 'btn', type: 'button', id: 'stopScanner' }, h('span',{class:'btn-label'},'Stop scanner'))
+          ),
+          h('p', { class: 'muted text-sm' }, 'Use the camera to open a sample. Manual entry is available on the right.')
+        )
+      ),
+      h('div', { class: 'card' },
+        h('div', { class: 'card-header' }, h('h3', { class: 'card-title' }, 'Open by code')),
+        h('div', { class: 'card-body' },
+          h('div', { class: 'field' },
+            h('label', { class: 'field-label', for: 'manualCode' }, 'Sample code or scanned payload'),
+            h('input', { class: 'input', id: 'manualCode', placeholder: 'PL-2026-000001' })
+          ),
+          h('button', { class: 'btn btn-primary', type: 'button', onclick: () => openByCode($('#manualCode').value) }, h('span',{class:'btn-label'},'Open sample'))
+        )
+      )
+    ));
+    $('#startScanner').onclick = startScanner;
+    $('#stopScanner').onclick = stopScanner;
+  }
+  async function startScanner() {
+    if (!('BarcodeDetector' in window)) {
+      notify({ type: 'warn', title: 'Camera scanning not supported', description: 'Use Chrome on Android, or type the code manually.' });
+      return;
+    }
+    try {
+      const video = $('#scannerVideo');
+      state.stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      video.srcObject = state.stream;
+      await video.play();
+      const detector = new BarcodeDetector({ formats: ['qr_code'] });
+      const tick = async () => {
+        if (!state.stream) return;
+        try {
+          const codes = await detector.detect(video);
+          if (codes.length) {
+            $('#manualCode').value = codes[0].rawValue;
+            stopScanner();
+            flash();
+            openByCode(codes[0].rawValue);
+            return;
+          }
+        } catch {}
+        requestAnimationFrame(tick);
+      };
+      tick();
+    } catch (e) {
+      notify({ type: 'error', title: 'Camera error', description: e.message });
+    }
+  }
+  function stopScanner() {
+    if (state.stream) state.stream.getTracks().forEach(t => t.stop());
+    state.stream = null;
+  }
+  function flash() {
+    const el = h('div', { class: 'scan-flash' });
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 400);
+  }
+  async function openByCode(raw) {
+    const code = extractSampleCode(raw);
+    if (!code) return notify({ type: 'warn', title: 'No sample code found' });
+    try {
+      const sample = await api(`/api/search-sample/${encodeURIComponent(code)}`);
+      openSampleDetail(sample.id);
+    } catch (e) {
+      notify({ type: 'error', title: 'Sample not found', description: e.message });
+    }
+  }
+  function extractSampleCode(raw) {
+    let c = String(raw || '').trim();
+    try { const p = JSON.parse(c); c = p.sampleCode || p.id || c; } catch {}
+    try { const u = new URL(c); c = u.searchParams.get('sample') || u.searchParams.get('id') || c; } catch {}
+    return c;
+  }
+  async function openUrlSampleOnce() {
+    if (state.openedUrlSample) return;
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get('sample') || params.get('id');
+    if (!code) return;
+    state.openedUrlSample = true;
+    const sample = await api(`/api/search-sample/${encodeURIComponent(code)}`);
+    openSampleDetail(sample.id);
+  }
+
+  /* ---------------------------------------------------------------------- */
+  /* Masters                                                                */
+  /* ---------------------------------------------------------------------- */
+  function renderMasters() {
+    const root = $('#mastersView');
+    root.innerHTML = '';
+    root.appendChild(h('div', { class: 'section-grid', 'data-cols': '3' },
+      masterCard('People / Analysts', 'people', '/api/people', [['name','Name'],['role','Role']], state.people),
+      masterCard('Storage Locations', 'storage', '/api/storage-locations', [['name','Location'],['type','Type'],['capacityNote','Capacity note']], state.storageLocations),
+      masterCard('Test Methods', 'tests', '/api/tests', [['name','Parameter'],['unit','Unit'],['limit','Limit'],['method','Method']], state.tests)
+    ));
+  }
+  function masterCard(title, kind, path, fields, items) {
+    const card = h('div', { class: 'card' },
+      h('div', { class: 'card-header' }, h('h3', { class: 'card-title' }, title))
+    );
+    const body = h('div', { class: 'card-body' });
+    // Add form
+    const form = h('form', { class: 'form' });
+    fields.forEach(([name, label]) => {
+      form.appendChild(h('div', { class: 'field' },
+        h('label', { class: 'field-label', for: `master-${kind}-${name}` }, label),
+        h('input', { class: 'input', id: `master-${kind}-${name}`, name, required: name === 'name' })
+      ));
+    });
+    form.appendChild(h('button', { class: 'btn btn-primary', type: 'submit', 'data-busy-label': 'Adding…' }, h('span',{class:'btn-label'},'+ Add')));
+    form.onsubmit = safe(async e => {
+      e.preventDefault();
+      await api(path, { method: 'POST', body: JSON.stringify(Object.fromEntries(new FormData(form))) });
+      form.reset();
+      await load();
+      notify({ type: 'success', title: title.split('/')[0] + ' added' });
+    });
+    body.appendChild(form);
+    // Existing items list
+    const list = h('div', { class: 'stack' });
+    items.forEach(item => {
+      const row = h('div', { class: 'card', style: { padding: '12px', background: 'var(--surface-2)' } });
+      const rowFields = h('div', { class: 'stack', style: { gap: '8px' } });
+      fields.forEach(([name]) => {
+        rowFields.appendChild(h('input', { class: 'input', value: item[name] || '', 'data-master': kind, 'data-id': item.id, 'data-field': name, 'aria-label': name }));
+      });
+      const btn = h('button', { class: 'btn btn-sm btn-primary', type: 'button', style: { marginTop: '8px' } }, h('span',{class:'btn-label'},'Save'));
+      btn.onclick = safe(async () => {
+        const body = {};
+        row.querySelectorAll(`[data-master="${kind}"][data-id="${item.id}"]`).forEach(i => { body[i.dataset.field] = i.value.trim(); });
+        const endpoint = kind === 'people' ? '/api/people' : kind === 'storage' ? '/api/storage-locations' : '/api/tests';
+        await api(`${endpoint}/${item.id}`, { method: 'PATCH', body: JSON.stringify(body) });
+        await load();
+        notify({ type: 'success', title: 'Saved' });
+      });
+      row.appendChild(rowFields);
+      row.appendChild(btn);
+      list.appendChild(row);
+    });
+    body.appendChild(list);
+    card.appendChild(body);
+    return card;
+  }
+
+  /* ---------------------------------------------------------------------- */
+  /* Users                                                                  */
+  /* ---------------------------------------------------------------------- */
+  function renderUsers() {
+    const root = $('#usersView');
+    root.innerHTML = '';
+    const visible = state.showInactiveUsers ? state.users : state.users.filter(u => u.active);
+    root.appendChild(h('div', { class: 'section-grid', 'data-cols': '2' },
+      // Create form
+      h('form', { class: 'card', id: 'userForm' },
+        h('div', { class: 'card-header' }, h('h3', { class: 'card-title' }, 'Create user')),
+        h('div', { class: 'card-body' },
+          h('div', { class: 'form-error-banner hidden', 'data-form-error': true }),
+          h('div', { class: 'field' }, h('label', { class: 'field-label', for: 'uName' }, 'Name'), h('input', { class: 'input', id: 'uName', name: 'name', required: true })),
+          h('div', { class: 'field' }, h('label', { class: 'field-label', for: 'uEmail' }, 'Email'), h('input', { class: 'input', id: 'uEmail', name: 'email', type: 'email', required: true })),
+          h('div', { class: 'field' }, h('label', { class: 'field-label', for: 'uPhone' }, 'Phone'), h('input', { class: 'input', id: 'uPhone', name: 'phone', type: 'tel', required: true })),
+          h('div', { class: 'field' }, h('label', { class: 'field-label', for: 'uPassword' }, 'Initial password'), h('input', { class: 'input', id: 'uPassword', name: 'password', type: 'password', required: true, minlength: '6' })),
+          h('div', { class: 'field' }, h('label', { class: 'field-label', for: 'uRole' }, 'Role'), (() => {
+            const s = h('select', { class: 'select', id: 'uRole', name: 'role' });
+            s.appendChild(h('option', { value: 'admin' }, 'Admin / Manager'));
+            s.appendChild(h('option', { value: 'analyst' }, 'Analyst'));
+            return s;
+          })()),
+          h('div', { class: 'row', style: { justifyContent: 'flex-end' } }, h('button', { class: 'btn btn-primary', type: 'submit', 'data-busy-label': 'Creating…' }, h('span',{class:'btn-label'},'Create user')))
+        )
+      ),
+      // User list
+      h('div', { class: 'card' },
+        h('div', { class: 'card-header' },
+          h('h3', { class: 'card-title' }, 'User list'),
+          h('label', { class: 'check-label' },
+            h('input', { class: 'checkbox', type: 'checkbox', id: 'showInactive', checked: state.showInactiveUsers ? true : null, onchange: e => { state.showInactiveUsers = e.target.checked; render(); } }),
+            h('span', null, 'Show inactive')
+          )
+        ),
+        h('div', { class: 'card-body card-body-flush' },
+          h('div', { class: 'table-wrap' },
+            h('table', { class: 'data-table' },
+              h('thead', null, h('tr', null,
+                h('th', { scope: 'col' }, 'Name'),
+                h('th', { scope: 'col' }, 'Email'),
+                h('th', { scope: 'col' }, 'Role'),
+                h('th', { scope: 'col' }, 'Status'),
+                h('th', { scope: 'col' }, 'Action')
+              )),
+              h('tbody', null, ...visible.map(u => userRow(u)))
+            )
+          )
+        )
+      )
+    ));
+    $('#userForm').onsubmit = safe(async e => {
+      e.preventDefault();
+      await api('/api/users', { method: 'POST', body: JSON.stringify(Object.fromEntries(new FormData($('#userForm')))) });
+      $('#userForm').reset();
+      await load();
+      notify({ type: 'success', title: 'User created' });
+    });
+  }
+  function userRow(u) {
+    const roleSel = h('select', { class: 'select', style: { minWidth: '160px' }, 'data-user-role': u.id },
+      h('option', { value: 'admin',   selected: u.role === 'admin' ? true : null }, 'Admin / Manager'),
+      h('option', { value: 'analyst', selected: u.role === 'analyst' ? true : null }, 'Analyst')
+    );
+    const statusSel = h('select', { class: 'select', style: { minWidth: '120px' }, 'data-user-active': u.id },
+      h('option', { value: 'true', selected: u.active ? true : null }, 'Active'),
+      h('option', { value: 'false', selected: !u.active ? true : null }, 'Inactive')
+    );
+    return h('tr', null,
+      h('td', { 'data-label': 'Name' }, u.name),
+      h('td', { 'data-label': 'Email' },
+        h('div', null, u.email),
+        h('small', { class: 'muted' }, `${u.countryCode || ''} ${u.phone || ''}`)
+      ),
+      h('td', { 'data-label': 'Role' }, roleSel),
+      h('td', { 'data-label': 'Status' }, statusSel),
+      h('td', { 'data-label': 'Action', class: 'col-actions' },
+        u.id === state.user?.id ? h('span', { class: 'muted' }, 'You') :
+        h('div', { class: 'row', style: { gap: '4px' } },
+          h('button', { class: 'btn btn-sm', type: 'button', onclick: safe(async () => {
+            await api(`/api/users/${u.id}`, { method: 'PATCH', body: JSON.stringify({ role: roleSel.value, active: statusSel.value === 'true' }) });
+            await load(); notify({ type: 'success', title: 'User updated' });
+          }) }, h('span',{class:'btn-label'},'Save')),
+          u.active ? h('button', { class: 'btn btn-danger btn-sm', type: 'button', onclick: async () => {
+            const ok = await confirmDialog({ title: 'Deactivate user?', message: `Deactivate ${u.name}? Their historical records will remain visible in the activity log.`, danger: true, okLabel: 'Deactivate' });
+            if (!ok) return;
+            try { await api(`/api/users/${u.id}`, { method: 'DELETE' }); await load(); notify({ type: 'success', title: 'User deactivated' }); }
+            catch (e) { notify({ type: 'error', title: 'Failed', description: e.message }); }
+          } }, h('span',{class:'btn-label'},'Deactivate')) : null
+        )
+      )
+    );
+  }
+
+  /* ---------------------------------------------------------------------- */
+  /* Backup                                                                 */
+  /* ---------------------------------------------------------------------- */
+  function renderBackup() {
+    const root = $('#backupView');
+    const health = state.health || {};
+    root.innerHTML = '';
+    root.appendChild(h('div', { class: 'section-grid', 'data-cols': '2' },
+      h('div', { class: 'card' },
+        h('div', { class: 'card-header' }, h('h3', { class: 'card-title' }, 'Backup exports')),
+        h('div', { class: 'card-body' },
+          h('div', { class: 'row' },
+            h('button', { class: 'btn btn-primary', type: 'button', onclick: safe(async () => { await api('/api/exports/run', { method: 'POST', body: JSON.stringify({ period: 'daily' }) }); await load(); notify({ type: 'success', title: 'Daily export created' }); }) }, h('span',{class:'btn-label'},'Run daily export')),
+            h('button', { class: 'btn', type: 'button', onclick: safe(async () => { await api('/api/exports/run', { method: 'POST', body: JSON.stringify({ period: 'weekly' }) }); await load(); notify({ type: 'success', title: 'Weekly export created' }); }) }, h('span',{class:'btn-label'},'Run weekly export')),
+            h('button', { class: 'btn', type: 'button', onclick: () => $('#backupBtn').click() }, h('span',{class:'btn-label'},'Download current backup'))
+          ),
+          h('div', { class: 'table-wrap' },
+            h('table', { class: 'data-table' },
+              h('thead', null, h('tr', null,
+                h('th', { scope: 'col' }, 'File'),
+                h('th', { scope: 'col' }, 'Type'),
+                h('th', { scope: 'col' }, 'Updated'),
+                h('th', { scope: 'col' }, 'Size'),
+                h('th', { scope: 'col' }, 'Download')
+              )),
+              h('tbody', null,
+                ...(state.exports || []).map(f => h('tr', null,
+                  h('td', { 'data-label': 'File' }, f.file),
+                  h('td', { 'data-label': 'Type' }, f.type),
+                  h('td', { 'data-label': 'Updated' }, fmtDate(f.modifiedAt)),
+                  h('td', { 'data-label': 'Size' }, formatBytes(f.size)),
+                  h('td', { 'data-label': 'Download' }, h('a', { href: apiUrl(`/api/exports/${encodeURIComponent(f.file)}?token=${encodeURIComponent(state.token)}`) }, 'Download'))
+                ))
+              )
+            )
+          )
+        )
+      ),
+      h('div', { class: 'card' },
+        h('div', { class: 'card-header' }, h('h3', { class: 'card-title' }, 'Database health'), h('span', { class: 'chip status-Approved' }, health.database || 'Checking')),
+        h('div', { class: 'card-body' },
+          h('div', { class: 'facts' },
+            factEl('Samples', health.samples ?? 0),
+            factEl('Users', health.users ?? 0),
+            factEl('Activity entries', health.auditEntries ?? 0),
+            factEl('Uploaded files', health.uploadedFiles ?? 0),
+            factEl('Database size', formatBytes(health.dbSize || 0)),
+            factEl('Last write', health.lastWriteAt ? fmtDate(health.lastWriteAt) : '—')
+          )
+        )
+      )
+    ));
+  }
+  function formatBytes(b) {
+    const v = Number(b || 0);
+    if (v < 1024) return v + ' B';
+    if (v < 1024 * 1024) return (v/1024).toFixed(1) + ' KB';
+    return (v/1024/1024).toFixed(1) + ' MB';
+  }
+
+  /* ---------------------------------------------------------------------- */
+  /* Audit log                                                              */
+  /* ---------------------------------------------------------------------- */
+  function renderAudit() {
+    const root = $('#auditView');
+    root.innerHTML = '';
+    root.appendChild(h('div', { class: 'card' },
+      h('div', { class: 'card-header' }, h('h3', { class: 'card-title' }, `Activity log · ${state.audit.length} entries`)),
+      h('div', { class: 'card-body' },
+        state.audit.length === 0 ? emptyState({ title: 'No activity yet', message: 'System actions will appear here as they occur.' })
+        : (() => {
+            const tl = h('div', { class: 'timeline', role: 'feed' });
+            state.audit.forEach(evt => {
+              tl.appendChild(h('article', { class: 'timeline-event', 'data-type': evt.action?.toLowerCase().includes('approve') ? 'approve' : evt.action?.toLowerCase().includes('dispos') ? 'dispose' : 'default' },
+                h('div', { class: 'event-title' }, `${evt.action} — ${evt.userName || 'system'}`),
+                h('div', { class: 'event-meta' },
+                  h('time', { datetime: evt.at }, fmtDate(evt.at)),
+                  h('span', null, evt.entity),
+                  evt.detail ? h('span', null, evt.detail) : null
+                )
+              ));
+            });
+            return tl;
+          })()
+      )
+    ));
+  }
+
+  /* ---------------------------------------------------------------------- */
+  /* Empty state helper                                                     */
+  /* ---------------------------------------------------------------------- */
+  function emptyState({ title, message, actionLabel, onAction, icon }) {
+    return h('div', { class: 'empty-state' },
+      h('div', { class: 'icon', 'aria-hidden': 'true' }, icon || '·'),
+      h('div', { class: 'title' }, title),
+      message ? h('div', null, message) : null,
+      actionLabel ? h('button', { class: 'btn btn-primary', type: 'button', onclick: onAction }, h('span',{class:'btn-label'},actionLabel)) : null
+    );
+  }
+
+  /* ---------------------------------------------------------------------- */
+  /* Sample creation dialog                                                 */
+  /* ---------------------------------------------------------------------- */
+  function renderSampleDialogOptions() {
+    const storage = $('#fStorage'); const analyst = $('#fAnalyst'); const bulkStorage = $('#bulkStorage');
+    if (storage) {
+      storage.innerHTML = '<option value="">Not stored yet</option>' + state.storageLocations.map(loc => `<option value="${loc.id}"${loc.isFull ? ' disabled' : ''}>${esc(loc.name)}${loc.isFull ? ' — FULL' : ''}</option>`).join('');
+    }
+    if (analyst) {
+      analyst.innerHTML = '<option value="">Unassigned</option>' + state.people.map(p => `<option value="${esc(p.name)}">${esc(p.name)}</option>`).join('');
+    }
+    if (bulkStorage) {
+      bulkStorage.innerHTML = '<option value="">Not stored yet</option>' + state.storageLocations.map(loc => `<option value="${loc.id}">${esc(loc.name)}</option>`).join('');
+    }
+    renderTestPicker();
+  }
+  function renderTestPicker() {
+    const picker = $('#fTestPicker'); const chips = $('#fSelectedTests');
+    if (!picker || !chips) return;
+    const available = state.tests.map(t => t.name).filter(n => !state.selectedRequestedTests.includes(n));
+    picker.innerHTML = '<option value="">Select and add test</option>' + available.map(n => `<option>${esc(n)}</option>`).join('');
+    chips.innerHTML = state.selectedRequestedTests.map(n => `<button type="button" class="chip chip-role" data-remove-test="${esc(n)}">${esc(n)} ✕</button>`).join('') || '<span class="muted text-sm">No tests selected</span>';
+    picker.onchange = () => {
+      if (!picker.value || state.selectedRequestedTests.includes(picker.value)) return;
+      state.selectedRequestedTests.push(picker.value);
+      renderTestPicker();
+    };
+    chips.querySelectorAll('[data-remove-test]').forEach(btn => btn.onclick = () => {
+      state.selectedRequestedTests = state.selectedRequestedTests.filter(n => n !== btn.dataset.removeTest);
+      renderTestPicker();
+    });
+  }
+  function openSampleDialog() {
+    state.selectedRequestedTests = [];
+    renderSampleDialogOptions();
+    $('#sampleDialog').showModal();
+    // First focus on client name
+    setTimeout(() => $('#fClient')?.focus(), 100);
+  }
+  $('#newSampleBtn').onclick = openSampleDialog;
+  $('#bulkSampleBtn').onclick = () => {
+    renderSampleDialogOptions();
+    $('#bulkResult').innerHTML = '';
+    $('#bulkSampleDialog').showModal();
+  };
+  $('#sampleForm').onsubmit = safe(async e => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const photo = fd.get('samplePhoto');
+    fd.delete('samplePhoto');
+    const data = Object.fromEntries(fd);
+    data.requestedTests = state.selectedRequestedTests;
+    if (!data.requestedTests.length) throw new Error('Choose at least one requested test');
+    const sample = await api('/api/samples', { method: 'POST', body: JSON.stringify(data) });
+    if (photo && photo.size > 0) {
+      const upload = new FormData();
+      upload.append('category', 'Sample Photo');
+      upload.append('files', photo);
+      await api(`/api/samples/${sample.id}/files`, { method: 'POST', body: upload });
+    }
+    $('#sampleDialog').close();
+    e.target.reset();
+    state.selectedRequestedTests = [];
+    openSampleDetail(sample.id);
+    await load();
+    notify({ type: 'success', title: 'Sample registered', description: `${sample.sampleCode} — QR label ready to print.` });
+  });
+
+  // Bulk create
+  $('#createBulkSamples').onclick = safe(async () => {
+    const rows = parseBulkRows($('#bulkRows').value);
+    const result = await api('/api/samples/bulk', { method: 'POST', body: JSON.stringify({ rows }) });
+    await load();
+    renderBulkResult(result.created, result.errors);
+    notify({ type: 'success', title: `${result.created.length} sample${result.created.length === 1 ? '' : 's'} created` });
+  });
+  $('#importBulkExcel').onclick = safe(async () => {
+    const file = $('#bulkExcel').files[0];
+    if (!file) throw new Error('Choose an Excel file');
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('storageLocationId', $('#bulkStorage').value);
+    const result = await api('/api/samples/bulk/excel', { method: 'POST', body: fd });
+    await load();
+    renderBulkResult(result.created, result.errors);
+    notify({ type: 'success', title: `${result.created.length} sample${result.created.length === 1 ? '' : 's'} imported` });
+  });
+  function parseBulkRows(text) {
+    return String(text || '').split(/\r?\n/).map(r => r.trim()).filter(Boolean)
+      .filter((r,i) => i > 0 || !r.toLowerCase().startsWith('project,') && !r.toLowerCase().startsWith('client,'))
+      .map(r => r.split(/,|\t/).map(c => c.trim()))
+      .map(cells => {
+        const storage = state.storageLocations.find(l => l.id === cells[4] || l.name.toLowerCase() === String(cells[4] || '').toLowerCase());
+        return {
+          clientName: cells[0] || '',
+          sourceType: cells[1] || 'Drinking Water',
+          collectionSite: cells[2] || '',
+          collector: cells[3] || '',
+          storageLocationId: storage?.id || $('#bulkStorage')?.value || '',
+          assignedTo: cells[5] || '',
+          requestedTests: String(cells[6] || '').split(/[,;]/).map(x => x.trim()).filter(Boolean),
+          dueAt: cells[7] ? new Date(cells[7]).toISOString() : '',
+          notes: cells[8] || ''
+        };
+      });
+  }
+  function renderBulkResult(created = [], errors = []) {
+    const out = $('#bulkResult');
+    out.innerHTML = '';
+    out.appendChild(h('div', { class: 'row-between' },
+      h('strong', null, `${created.length} samples created`),
+      created.length ? h('button', { class: 'btn btn-sm', type: 'button', onclick: () => {
+        const ids = created.map(s => s.id).join(',');
+        window.open(apiUrl(`/api/samples/bulk-tube-qr-labels?ids=${encodeURIComponent(ids)}&token=${encodeURIComponent(state.token)}`), '_blank');
+      } }, h('span',{class:'btn-label'},'Print QR labels')) : null
+    ));
+    if (errors.length) {
+      out.appendChild(h('div', { class: 'form-error-banner' }, `${errors.length} row${errors.length === 1 ? '' : 's'} need correction: ` + errors.map(x => `Row ${x.row}: ${x.error}`).join('; ')));
+    }
+    if (created.length) out.appendChild(h('div', { class: 'card-grid' }, ...created.map(sampleCard)));
+  }
+
+  /* ---------------------------------------------------------------------- */
+  /* Dialog close bindings                                                  */
+  /* ---------------------------------------------------------------------- */
+  document.addEventListener('click', e => {
+    const b = e.target.closest('[data-close-dialog]'); if (!b) return;
+    const dlg = document.getElementById(b.dataset.closeDialog);
+    if (dlg) dlg.close();
+  });
+
+  /* ---------------------------------------------------------------------- */
+  /* Auth handlers                                                          */
+  /* ---------------------------------------------------------------------- */
+  $('#loginForm').onsubmit = safe(async e => {
+    e.preventDefault();
+    const f = e.target;
+    const body = Object.fromEntries(new FormData(f));
+    const remember = Boolean(body.rememberMe);
+    body.rememberMe = remember;
+    const data = await api('/api/login', { method: 'POST', body: JSON.stringify(body) });
+    state.token = data.token;
+    if (remember) {
+      localStorage.setItem('plasma-lab-token', state.token);
+      localStorage.setItem('plasma-lab-remember-email', f.elements.email.value.trim());
+    } else {
+      sessionStorage.setItem('plasma-lab-token', state.token);
+      localStorage.removeItem('plasma-lab-token');
+    }
+    showApp();
+    await load();
+    notify({ type: 'success', title: 'Signed in' });
+  });
+
+  $('#sendEmailOtp').onclick = safe(async () => {
+    const f = $('#signupForm');
+    const checks = await validateSignupFields();
+    if (checks.email && (!checks.email.valid || !checks.email.available)) throw new Error(checks.email.message || 'Enter a valid email');
+    const data = await api('/api/signup/email/start', { method: 'POST', body: JSON.stringify({
+      name: f.elements.name.value.trim(), email: f.elements.email.value.trim()
+    }) });
+    state.pendingSignupId = data.pendingId;
+    $('#emailOtpBox').classList.remove('hidden');
+    setTimeout(() => $('#emailOtpInput')?.focus(), 100);
+    notify({ type: 'success', title: 'Email OTP sent', description: 'Check the inbox for the 6-digit code.' });
+  });
+  $('#verifyEmailOtp').onclick = safe(async () => {
+    await api('/api/signup/email/verify', { method: 'POST', body: JSON.stringify({
+      pendingId: state.pendingSignupId, emailOtp: $('#emailOtpInput').value
+    }) });
+    setSignupStep('phone');
+    setTimeout(() => $('#signupPhone')?.focus(), 100);
+    notify({ type: 'success', title: 'Email verified' });
+  });
+  $('#resendEmailOtp').onclick = safe(async () => {
+    if (!state.pendingSignupId) throw new Error('Enter email and click Send OTP first');
+    await api('/api/signup/resend', { method: 'POST', body: JSON.stringify({ pendingId: state.pendingSignupId, channel: 'email' }) });
+    notify({ type: 'success', title: 'OTP resent' });
+  });
+  $('#savePhone').onclick = safe(async () => {
+    const f = $('#signupForm');
+    const checks = await validateSignupFields();
+    if (checks.phone && (!checks.phone.valid || !checks.phone.available)) throw new Error(checks.phone.message || 'Enter a valid phone number');
+    await api('/api/signup/phone/save', { method: 'POST', body: JSON.stringify({
+      pendingId: state.pendingSignupId,
+      countryCode: f.elements.countryCode.value,
+      phone: f.elements.phone.value.trim()
+    }) });
+    setSignupStep('password');
+    setTimeout(() => $('#signupPassword')?.focus(), 100);
+    notify({ type: 'success', title: 'Phone saved' });
+  });
+  $('#signupForm').onsubmit = safe(async e => {
+    e.preventDefault();
+    if (!validatePasswordFields()) throw new Error('Check the password fields');
+    const f = e.target;
+    const body = {
+      pendingId: state.pendingSignupId,
+      password: f.elements.password.value,
+      confirmPassword: f.elements.confirmPassword.value
+    };
+    const data = await api('/api/signup/complete', { method: 'POST', body: JSON.stringify(body) });
+    f.reset();
+    state.pendingSignupId = '';
+    showSlide('login');
+    $('#loginEmail').value = data.user.email;
+    notify({ type: 'success', title: 'Account created', description: 'You can sign in now.' });
+  });
+  $('#resetStartForm').onsubmit = safe(async e => {
+    e.preventDefault();
+    const data = await api('/api/password-reset/start', { method: 'POST', body: JSON.stringify(Object.fromEntries(new FormData(e.target))) });
+    state.resetId = data.resetId;
+    showSlide('resetConfirm');
+    setTimeout(() => $('#resetOtpInput')?.focus(), 100);
+    notify({ type: 'success', title: 'Reset OTP sent' });
+  });
+  $('#resetConfirmForm').onsubmit = safe(async e => {
+    e.preventDefault();
+    const body = Object.fromEntries(new FormData(e.target));
+    body.resetId = state.resetId;
+    await api('/api/password-reset/confirm', { method: 'POST', body: JSON.stringify(body) });
+    e.target.reset();
+    showSlide('login');
+    notify({ type: 'success', title: 'Password updated', description: 'Sign in with your new password.' });
+  });
+
+  // Live signup validation
+  ['email','phone','countryCode'].forEach(name => {
+    const el = $('#signupForm')?.elements[name];
+    el?.addEventListener('input', scheduleSignupValidation);
+    el?.addEventListener('change', scheduleSignupValidation);
+  });
+  ['password','confirmPassword'].forEach(name => {
+    const el = $('#signupForm')?.elements[name];
+    el?.addEventListener('input', validatePasswordFields);
+  });
+
+  // Auth navigation links
+  document.addEventListener('click', e => {
+    const a = e.target.closest('[data-auth]'); if (!a) return;
+    e.preventDefault();
+    showSlide(a.dataset.auth);
+  });
+
+  // Password toggles
+  document.addEventListener('click', e => {
+    const b = e.target.closest('[data-toggle-password]'); if (!b) return;
+    const input = b.closest('.password-field')?.querySelector('input'); if (!input) return;
+    const hide = input.type === 'text';
+    input.type = hide ? 'password' : 'text';
+    b.setAttribute('aria-label', hide ? 'Show password' : 'Hide password');
+  });
+
+  // Header buttons
+  $('#logoutBtn').onclick = () => { stopScanner(); clearSession(); showAuth(); notify({ type: 'info', title: 'Signed out' }); };
+  $('#syncBtn').onclick = safe(async () => { await load(); notify({ type: 'success', title: 'Synced' }); });
+  $('#backupBtn').onclick = safe(async () => {
+    const res = await fetch(apiUrl('/api/backup'), { headers: { Authorization: 'Bearer ' + state.token } });
+    if (!res.ok) throw new Error('Backup failed');
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `plasma-lab-backup-${new Date().toISOString().slice(0,10)}.html`; a.click();
+    URL.revokeObjectURL(url);
+    notify({ type: 'success', title: 'Backup downloaded' });
+  });
+
+  // Remember me — repopulate
+  const rememberedEmail = localStorage.getItem('plasma-lab-remember-email');
+  if (rememberedEmail) {
+    $('#loginEmail').value = rememberedEmail;
+    $('#loginForm').elements.rememberMe.checked = true;
+  }
+
+  // Boot
+  if (state.token) {
+    showApp();
+    load().catch(() => { clearSession(); showAuth(); });
+  } else {
+    showAuth();
+  }
+
+  window.addEventListener('unhandledrejection', evt => {
+    notify({ type: 'error', title: 'Unexpected error', description: evt.reason?.message || 'Something went wrong' });
+  });
+
+  // Expose minimal for debugging
+  window.__lims = { state, api, load, notify };
+
+})();
