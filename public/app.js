@@ -1055,7 +1055,7 @@
       ),
       h('div', { class: 'field' },
         h('label', { class: 'field-label', for: 'sheetLogPage' }, 'Log book page (optional)'),
-        h('input', { class: 'input', id: 'sheetLogPage', placeholder: 'e.g. 142', 'aria-describedby': 'sheetLogPageHelp' }),
+        h('input', { class: 'input', id: 'sheetLogPage', 'aria-describedby': 'sheetLogPageHelp' }),
         h('div', { id: 'sheetLogPageHelp', class: 'muted text-xs', style: { marginTop: '4px' } }, 'Page number in the paper bench log book where raw readings were recorded. Leave blank if you don\'t keep one.')
       )
     );
@@ -1127,17 +1127,17 @@
       msgEl.className = 'derived msg-cell ' + cls;
     }
     function addRow(row = {}, num) {
-      const numInp = (field, placeholder = '') => h('input', {
+      const numInp = (field) => h('input', {
         class: 'input mono', type: 'text', inputmode: 'decimal',
-        'data-field': field, 'aria-label': field, placeholder,
+        'data-field': field, 'aria-label': field,
         value: row[field] || ''
       });
       const tr = h('tr', { role: 'row' },
         h('th', { scope: 'row' }, String(num)),
         h('td', { class: 'param-cell' }, h('input', { class: 'input param-input', 'data-field': 'parameter', 'aria-label': 'Parameter', value: row.parameter || '' })),
         h('td', null, h('input', { class: 'input', 'data-field': 'unit', 'aria-label': 'Unit', value: row.unit || '' })),
-        h('td', null, h('input', { class: 'input mono', 'data-field': 'std', 'aria-label': 'Standard limit', title: 'Regulatory limit for OK/ALERT check. Leave blank if not applicable.', value: row.std || '', placeholder: 'limit' })),
-        h('td', null, numInp('r1', '7.4')),
+        h('td', null, h('input', { class: 'input mono', 'data-field': 'std', 'aria-label': 'Standard limit', title: 'Regulatory limit for OK/ALERT check. Leave blank if not applicable.', value: row.std || '' })),
+        h('td', null, numInp('r1')),
         h('td', null, numInp('r2')),
         h('td', null, numInp('r3')),
         h('td', { class: 'derived mono', 'data-derived': 'avg' }, '—'),
