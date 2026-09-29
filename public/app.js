@@ -1085,6 +1085,24 @@
     if (Number.isNaN(d.getTime())) return '';
     return new Date(d.getTime() - d.getTimezoneOffset()*60000).toISOString().slice(0,16);
   }
+  async function moveStorage(sample) {
+    const nextId = $('#moveStorage').value;
+    const reason = $('#moveStorageReason')?.value || '';
+    if (nextId === (sample.storageLocationId || '')) {
+      return notify({ type: 'warn', title: 'No change', description: 'Sample is already in that storage.' });
+    }
+    try {
+      const updated = await api(`/api/samples/${sample.id}/storage`, {
+        method: 'POST',
+        body: JSON.stringify({ storageLocationId: nextId, reason })
+      });
+      Object.assign(sample, updated);
+      await load();
+      notify({ type: 'success', title: 'Storage updated', description: `${sample.sampleCode} moved. Recorded in the activity log.` });
+    } catch (e) {
+      notify({ type: 'error', title: 'Move failed', description: e.message });
+    }
+  }
   async function saveWorkflowUpdate(sample) {
     try {
       const body = {
@@ -1977,10 +1995,255 @@
     if (!code) return notify({ type: 'warn', title: 'No sample code found' });
     try {
       const sample = await api(`/api/search-sample/${encodeURIComponent(code)}`);
-      openSampleDetail(sample.id);
+      // Route through the smart action panel so the scan opens the step
+      // the sample is actually on, instead of a wall of tabs.
+      showScanQuickAction(sample);
     } catch (e) {
       notify({ type: 'error', title: 'Sample not found', description: e.message });
     }
+  }
+  // After a scan, look at the sample's current lifecycle step and offer the
+  // one obvious next action for it — mirroring the lab's real cycle:
+  // Bottle Ready → collect · Sample Collected → store/hand off ·
+  // Stored/Assigned → start analysis · In Analysis → enter replicates ·
+  // Needs Review → approve · Approved → dispose.
+  function showScanQuickAction(sample) {
+    const dlg = ensureScanQuickDialog();
+    const body = dlg.querySelector('[data-body]');
+    body.innerHTML = '';
+    // Header: sample identity so the person confirms they scanned the right one
+    body.appendChild(h('div', { class: 'scan-quick-head' },
+      h('div', { class: 'scan-quick-code mono' }, sample.sampleCode),
+      h('div', { class: 'scan-quick-sub' }, `${sample.clientName || '—'} · ${sample.collectionSite || '—'}`),
+      h('div', null, h('span', { class: 'chip ' + statusClass(sample.status) }, sample.status))
+    ));
+    // Actions for this step (returns array of {label, primary?, onclick})
+    const actions = quickActionsFor(sample);
+    const list = h('div', { class: 'scan-quick-actions' });
+    actions.forEach(a => {
+      list.appendChild(h('button', {
+        class: 'btn ' + (a.primary ? 'btn-primary' : ''),
+        type: 'button',
+        onclick: async () => { await a.onclick(); dlg.close(); }
+      }, h('span', { class: 'btn-label' }, a.label)));
+    });
+    if (actions.length === 0) {
+      list.appendChild(h('div', { class: 'muted text-sm' }, `Status "${sample.status}" — no quick action available. Open full detail below.`));
+    }
+    body.appendChild(list);
+    // Always let the person fall through to the full sample view
+    body.appendChild(h('div', { class: 'row', style: { justifyContent: 'space-between', marginTop: '16px' } },
+      h('button', { class: 'btn btn-ghost', type: 'button', onclick: () => dlg.close() }, h('span',{class:'btn-label'},'Cancel')),
+      h('button', { class: 'btn', type: 'button', onclick: () => { dlg.close(); openSampleDetail(sample.id); } }, h('span',{class:'btn-label'},'Open full detail →'))
+    ));
+    dlg.showModal();
+  }
+  function ensureScanQuickDialog() {
+    let dlg = document.getElementById('scanQuickDialog');
+    if (dlg) return dlg;
+    dlg = h('dialog', { id: 'scanQuickDialog', class: 'dialog', 'aria-labelledby': 'scanQuickTitle' },
+      h('div', { class: 'dialog-inner' },
+        h('div', { class: 'dialog-header' },
+          h('h2', { class: 'dialog-title', id: 'scanQuickTitle' }, 'Sample scanned — next step'),
+          h('button', { class: 'btn btn-ghost btn-icon', type: 'button', 'aria-label': 'Close', onclick: () => dlg.close() },
+            h('span', null, '✕'))
+        ),
+        h('div', { class: 'dialog-body', 'data-body': true })
+      )
+    );
+    document.body.appendChild(dlg);
+    return dlg;
+  }
+  function quickActionsFor(sample) {
+    const isAdmin = can('admin');
+    const mine = state.user?.name;
+    const isMine = sample.assignedTo === mine;
+    const actions = [];
+    switch (sample.status) {
+      case 'Bottle Ready':
+        // In the field — collector marks the sample collected with photo + GPS.
+        actions.push({
+          label: '✓ Mark collected + take photo', primary: true,
+          onclick: () => scanQuickMarkCollected(sample)
+        });
+        break;
+      case 'Sample Collected':
+        // Arrived at lab. Collector's job ends here — log the bottle into
+        // storage. Admin will assign analysts as a separate step.
+        actions.push({
+          label: '❄ Log into storage', primary: true,
+          onclick: () => scanQuickPickStorage(sample)
+        });
+        break;
+      case 'Stored':
+        if (isAdmin && !sample.assignedTo) actions.push({
+          label: '→ Assign to analyst', primary: true,
+          onclick: () => openSampleDetail(sample.id)
+        });
+        if (isMine || isAdmin) actions.push({
+          label: '▶ Start analysis (open sheet)', primary: !isAdmin,
+          onclick: () => { openSampleDetail(sample.id); state.tab = 'sheet'; setTimeout(() => openResultSheet(sample), 150); }
+        });
+        actions.push({
+          label: '↔ Move to different storage',
+          onclick: () => { openSampleDetail(sample.id); }
+        });
+        break;
+      case 'Assigned':
+      case 'In Analysis':
+      case 'Results Entered':
+        if (isMine || isAdmin) actions.push({
+          label: '📋 Enter my replicates', primary: true,
+          onclick: () => { openSampleDetail(sample.id); state.tab = 'sheet'; setTimeout(() => openResultSheet(sample), 150); }
+        });
+        actions.push({
+          label: '↔ Move to different storage',
+          onclick: () => { openSampleDetail(sample.id); }
+        });
+        break;
+      case 'Needs Review':
+        if (isAdmin) {
+          actions.push({ label: '✓ Approve results', primary: true, onclick: () => { openSampleDetail(sample.id); setTimeout(() => beginApproval(sample), 150); } });
+          actions.push({ label: '↩ Send back to analyst', onclick: () => rejectSample(sample) });
+        }
+        break;
+      case 'Approved':
+        if (isAdmin) actions.push({
+          label: '🗑 Mark disposed', primary: true,
+          onclick: () => scanQuickDispose(sample)
+        });
+        break;
+      case 'Flagged':
+        actions.push({ label: '📋 Re-analyze (open sheet)', primary: true, onclick: () => { openSampleDetail(sample.id); state.tab = 'sheet'; setTimeout(() => openResultSheet(sample), 150); } });
+        break;
+      case 'Disposed':
+        // Terminal — no action, just view
+        break;
+    }
+    return actions;
+  }
+  async function scanQuickMarkCollected(sample) {
+    // Collector at field: capture GPS first (proves they're on-site), then
+    // ask them to confirm/type the site name, then take the bottle photo.
+    // GPS is stored on the sample as ground truth against the typed site.
+    const dlg = ensureScanQuickDialog();
+    const body = dlg.querySelector('[data-body]');
+    body.innerHTML = '';
+    body.appendChild(h('div', { class: 'scan-quick-head' },
+      h('div', { class: 'scan-quick-code mono' }, sample.sampleCode),
+      h('div', { class: 'scan-quick-sub' }, 'Confirm site + take bottle photo')
+    ));
+    // Site name — pre-fill from what admin typed (may be blank / placeholder)
+    const siteInput = h('input', { class: 'input', id: 'collectSite', value: sample.collectionSite || '', list: 'siteList', autocomplete: 'off' });
+    // Reuse the site datalist populated by renderSampleDialogOptions if it's there
+    body.appendChild(h('div', { class: 'field' },
+      h('label', { class: 'field-label', for: 'collectSite' }, 'Sampling site (confirm or update)'),
+      siteInput,
+      h('div', { class: 'muted text-xs', style: { marginTop: '4px' } }, 'GPS from your phone will be recorded — verifies you were physically at this site.')
+    ));
+    // GPS status live-updating
+    const gpsStatus = h('div', { class: 'muted text-sm', style: { padding: '10px', background: 'var(--surface-2)', borderRadius: 'var(--r-sm)', marginBottom: '12px' } }, 'Fetching GPS…');
+    body.appendChild(gpsStatus);
+    let lat = '', lng = '', accuracy = '';
+    if ('geolocation' in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        pos => {
+          lat = pos.coords.latitude.toFixed(6);
+          lng = pos.coords.longitude.toFixed(6);
+          accuracy = Math.round(pos.coords.accuracy);
+          gpsStatus.textContent = `📍 GPS: ${lat}, ${lng}  (±${accuracy}m)`;
+        },
+        err => { gpsStatus.textContent = `⚠ GPS unavailable — ${err.message}. Sample will still record without coordinates.`; },
+        { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 }
+      );
+    } else {
+      gpsStatus.textContent = '⚠ GPS not supported on this browser.';
+    }
+    // Photo picker — hidden, triggered by button
+    const photoInput = h('input', { type: 'file', accept: 'image/*', capture: 'environment', style: { display: 'none' }, id: 'collectPhoto' });
+    body.appendChild(photoInput);
+    // Confirm-and-save button
+    body.appendChild(h('div', { class: 'row', style: { justifyContent: 'space-between', gap: '8px' } },
+      h('button', { class: 'btn btn-ghost', type: 'button', onclick: () => dlg.close() }, h('span',{class:'btn-label'},'Cancel')),
+      h('button', {
+        class: 'btn btn-primary', type: 'button', id: 'collectConfirmBtn',
+        onclick: () => photoInput.click()
+      }, h('span',{class:'btn-label'},'📷 Take bottle photo'))
+    ));
+    // When photo is taken, upload photo + patch sample with site + GPS + status
+    photoInput.onchange = async () => {
+      const file = photoInput.files?.[0];
+      if (!file) return;
+      const site = (siteInput.value || '').trim();
+      if (!site) {
+        notify({ type: 'warn', title: 'Site required', description: 'Type or confirm the sampling site before uploading.' });
+        return;
+      }
+      const btn = document.getElementById('collectConfirmBtn');
+      if (btn) { btn.disabled = true; btn.querySelector('.btn-label').textContent = 'Saving…'; }
+      const takenAt = new Date().toISOString();
+      try {
+        // 1. Upload photo (with GPS + timestamp as file metadata)
+        const fd = new FormData();
+        fd.append('category', 'Sample Photo');
+        fd.append('files', file);
+        if (lat) fd.append('lat', lat);
+        if (lng) fd.append('lng', lng);
+        fd.append('takenAt', takenAt);
+        await api(`/api/samples/${sample.id}/files`, { method: 'POST', body: fd });
+        // 2. POST /collect — dedicated collector endpoint. Sets site,
+        //    GPS ground truth, collectedAt, and advances status. Works for
+        //    the named collector even when they're not the assigned analyst.
+        const collectBody = { collectionSite: site, collectedAt: takenAt };
+        if (lat) collectBody.collectionLat = lat;
+        if (lng) collectBody.collectionLng = lng;
+        await api(`/api/samples/${sample.id}/collect`, { method: 'POST', body: JSON.stringify(collectBody) });
+        await load();
+        dlg.close();
+        notify({
+          type: 'success',
+          title: 'Sample collected',
+          description: `${sample.sampleCode} at ${site}${lat ? ` · GPS ${lat}, ${lng}` : ''}`
+        });
+      } catch (e) {
+        notify({ type: 'error', title: 'Could not save', description: e.message });
+        if (btn) { btn.disabled = false; btn.querySelector('.btn-label').textContent = '📷 Take bottle photo'; }
+      }
+    };
+    dlg.showModal();
+  }
+  function scanQuickPickStorage(sample) {
+    // Open a compact storage picker
+    const dlg = ensureScanQuickDialog();
+    const body = dlg.querySelector('[data-body]');
+    body.innerHTML = '';
+    body.appendChild(h('div', { class: 'scan-quick-head' },
+      h('div', { class: 'scan-quick-code mono' }, sample.sampleCode),
+      h('div', { class: 'scan-quick-sub' }, 'Pick a storage location')
+    ));
+    const sel = storageSelect(sample.storageLocationId, 'scanQuickStorage');
+    body.appendChild(h('div', { class: 'field' }, sel));
+    body.appendChild(h('div', { class: 'row', style: { justifyContent: 'flex-end' } },
+      h('button', { class: 'btn btn-primary', type: 'button', onclick: async () => {
+        try {
+          const storageLocationId = sel.value;
+          await api(`/api/samples/${sample.id}/storage`, { method: 'POST', body: JSON.stringify({ storageLocationId, reason: 'Log into storage after arrival' }) });
+          await api(`/api/samples/${sample.id}`, { method: 'PATCH', body: JSON.stringify({ status: 'Stored' }) });
+          await load();
+          dlg.close();
+          notify({ type: 'success', title: 'Stored', description: `${sample.sampleCode} logged in.` });
+        } catch (e) { notify({ type: 'error', title: 'Save failed', description: e.message }); }
+      } }, h('span',{class:'btn-label'},'Save'))
+    ));
+    dlg.showModal();
+  }
+  async function scanQuickDispose(sample) {
+    if (!confirm(`Mark ${sample.sampleCode} as disposed? This records the disposal in the audit log.`)) return;
+    try {
+      await api(`/api/samples/${sample.id}/lifecycle`, { method: 'POST', body: JSON.stringify({ action: 'Dispose', reason: 'Post-approval disposal — QR scan' }) });
+      await load();
+      notify({ type: 'success', title: 'Disposed', description: sample.sampleCode });
+    } catch (e) { notify({ type: 'error', title: 'Dispose failed', description: e.message }); }
   }
   function extractSampleCode(raw) {
     let c = String(raw || '').trim();

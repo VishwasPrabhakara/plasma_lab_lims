@@ -1016,6 +1016,43 @@ app.patch("/api/samples/:id", auth, requireRole("admin", "analyst"), (req, res) 
   res.json(sample);
 });
 
+// Collect — the field-scan flow the collector uses at the sampling site.
+// Records: the confirmed site name (they may have typed it in the field),
+// the moment the sample was actually collected, and the GPS ground-truth.
+// Advances status to "Sample Collected". Deliberately gated on whether the
+// caller is the named collector for this sample (or admin) — the collector
+// won't yet be the assignedTo analyst, so canWorkOnSample would refuse.
+app.post("/api/samples/:id/collect", auth, requireRole("admin", "analyst"), (req, res) => {
+  const db = req.db;
+  const sample = db.samples.find(item => item.id === req.params.id);
+  if (!sample) return res.status(404).json({ error: "Sample not found" });
+  const isAdmin = req.user.role === "admin";
+  if (!isAdmin && sample.collector !== req.user.name) {
+    return res.status(403).json({ error: "Only the assigned collector or an admin can mark this sample collected" });
+  }
+  if (sample.status !== "Bottle Ready" && sample.status !== "Sample Collected") {
+    return res.status(400).json({ error: `Cannot mark collected — sample is on step "${sample.status}"` });
+  }
+  const site = String(req.body.collectionSite || "").trim();
+  if (!site) return res.status(400).json({ error: "Sampling site required" });
+  sample.collectionSite = site;
+  sample.status = "Sample Collected";
+  sample.workflowStage = "Sample Collected";
+  if (req.body.collectedAt) sample.collectedAt = req.body.collectedAt;
+  if (req.body.collectionLat) sample.collectionLat = String(req.body.collectionLat);
+  if (req.body.collectionLng) sample.collectionLng = String(req.body.collectionLng);
+  sample.updatedAt = now();
+  const locNote = sample.collectionLat && sample.collectionLng ? ` @ ${sample.collectionLat},${sample.collectionLng}` : "";
+  sample.chainOfCustody.unshift({
+    at: now(), by: req.user.name,
+    action: `Sample collected at ${site}${locNote}`,
+    locationId: sample.storageLocationId || ""
+  });
+  addAudit(db, req.user, "Sample collected", "sample", sample.id, `${sample.sampleCode}: site=${site}${locNote}`);
+  writeDb(db);
+  res.json(sample);
+});
+
 // Storage move — deliberately open to ANY analyst regardless of who the
 // sample is assigned to. Physical storage is a lab-logistics concern: someone
 // arriving with a new batch may need to relocate an existing sample to make
@@ -1033,17 +1070,26 @@ app.post("/api/samples/:id/storage", auth, requireRole("admin", "analyst"), (req
     return res.status(400).json({ error: "Sample is already in that storage" });
   }
   sample.storageLocationId = nextStorageId;
+  // Auto-advance the lifecycle when the collector logs a just-collected
+  // sample into a freezer: Sample Collected → Stored. Any other status
+  // transition (e.g. moving an already-Stored sample to another freezer)
+  // leaves status unchanged — it's just a physical relocation.
+  const isFirstStore = sample.status === "Sample Collected" && nextStorageId;
+  if (isFirstStore) {
+    sample.status = "Stored";
+    sample.workflowStage = "Stored";
+  }
   sample.chainOfCustody.unshift({
     at: now(),
     by: req.user.name,
-    action: "Storage moved",
+    action: isFirstStore ? "Logged into storage" : "Storage moved",
     fromLocationId: previousStorageId,
     toLocationId: nextStorageId,
     locationId: nextStorageId,
     note: req.body.reason || req.body.note || ""
   });
   sample.updatedAt = now();
-  addAudit(db, req.user, "Storage moved", "sample", sample.id, `${sample.sampleCode}: ${previousStorageId || "unstored"} -> ${nextStorageId || "unstored"}${req.body.reason ? ` (${req.body.reason})` : ""}`);
+  addAudit(db, req.user, isFirstStore ? "Sample stored" : "Storage moved", "sample", sample.id, `${sample.sampleCode}: ${previousStorageId || "unstored"} -> ${nextStorageId || "unstored"}${req.body.reason ? ` (${req.body.reason})` : ""}`);
   writeDb(db);
   res.json(sample);
 });
