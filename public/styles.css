@@ -1730,6 +1730,59 @@ dialog.dialog::backdrop {
 .result-grid .input:hover { border-color: var(--border); }
 .result-grid .input:focus-visible { border-color: var(--border-focus); background: var(--surface); }
 
+/* --- Replicate-based sheet (mirrors the lab's Excel workbook) --- */
+.sheet-header-controls {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--s-3);
+  padding: var(--s-3);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  margin-bottom: var(--s-3);
+}
+.sheet-legend {
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+  padding: var(--s-2) var(--s-3);
+  background: var(--accent-soft);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--r-sm);
+  margin-bottom: var(--s-3);
+}
+.sheet-legend strong { color: var(--text); }
+.replicate-grid table { min-width: 1080px; }
+.replicate-grid th.rep-group {
+  text-align: center;
+  background: color-mix(in oklab, var(--accent) 8%, var(--surface-2));
+  color: var(--accent);
+  font-weight: var(--fw-b);
+}
+.replicate-grid th.derived,
+.replicate-grid td.derived {
+  background: color-mix(in oklab, var(--accent) 4%, var(--surface));
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  text-align: right;
+  color: var(--text-muted);
+}
+.replicate-grid td.derived[data-derived="avg"],
+.replicate-grid td.derived[data-derived="stddev"] { color: var(--text); font-weight: var(--fw-m); }
+.replicate-grid td.msg-cell {
+  text-align: center;
+  font-weight: var(--fw-b);
+  font-family: var(--font-sans);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.04em;
+}
+.replicate-grid td.msg-ok { color: var(--ok, #1f6f4a); background: color-mix(in oklab, #1f6f4a 10%, var(--surface)); }
+.replicate-grid td.msg-alert { color: var(--danger, #c0392b); background: color-mix(in oklab, #c0392b 12%, var(--surface)); }
+.replicate-grid td.msg-none { color: var(--text-muted); }
+.replicate-grid td.row-actions { text-align: center; padding: 4px 6px; }
+.replicate-grid td.row-actions .btn { min-height: 28px; padding: 2px 8px; }
+.replicate-grid tbody tr:hover { background: color-mix(in oklab, var(--accent) 2%, var(--surface)); }
+.replicate-grid thead th { position: sticky; top: 0; z-index: 2; }
+
 /* Reason-for-change and signature blocks */
 .ceremony-block {
   padding: var(--s-4);
