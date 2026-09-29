@@ -48,53 +48,56 @@
   /* Standards left blank must be set per project per sample.               */
   /* ---------------------------------------------------------------------- */
   const PARAM = (name, unit = '', std = '', reps = 3) => ({ name, unit, std, reps });
+  // Units come from the workbook. Standards intentionally blank — the workbook
+  // leaves them blank too and the operator note says "Check standards wrt
+  // project requirements", i.e. the analyst types the correct limit per sample.
   const PROJECT_PANELS = {
     'Devanahalli': [
-      PARAM('pH','', '', 2), PARAM('BOD','mg/L','30',1), PARAM('COD','mg/L','250',3), PARAM('TSS','mg/L','100',3),
-      PARAM('TN','mg/L','10',3), PARAM('NH4-N','mg/L','5',3), PARAM('PO4-P','mg/L','1',3),
-      PARAM('Faecal Coliform','MPN/100mL','230',1), PARAM('Turbidity','NTU','5',2), PARAM('Fluoride','mg/L','1.5',2)
+      PARAM('pH',''), PARAM('BOD','mg/L'), PARAM('COD','mg/L'), PARAM('TSS','mg/L'),
+      PARAM('TN','mg/L'), PARAM('NH4-N','mg/L'), PARAM('PO4-P','mg/L'),
+      PARAM('Faecal Coliform','MPN/100mL'), PARAM('Turbidity','NTU'), PARAM('Fluoride','mg/L')
     ],
     'V Valley': [
-      PARAM('pH','','',2), PARAM('BOD','mg/L','30',1), PARAM('COD','mg/L','250',3), PARAM('TSS','mg/L','100',3),
-      PARAM('TN','mg/L','10',3), PARAM('NH4-N','mg/L','5',3), PARAM('PO4-P','mg/L','1',3),
-      PARAM('Faecal Coliform','MPN/100mL','230',1), PARAM('Hardness','mg/L','600',3), PARAM('Fluoride','mg/L','1.5',2)
+      PARAM('pH',''), PARAM('BOD','mg/L'), PARAM('COD','mg/L'), PARAM('TSS','mg/L'),
+      PARAM('TN','mg/L'), PARAM('NH4-N','mg/L'), PARAM('PO4-P','mg/L'),
+      PARAM('Faecal Coliform','MPN/100mL'), PARAM('Hardness','mg/L'), PARAM('Fluoride','mg/L')
     ],
     'HN Valley': [
-      PARAM('pH','','',2), PARAM('BOD','mg/L','30',1), PARAM('COD','mg/L','250',3), PARAM('TSS','mg/L','100',3),
-      PARAM('TN','mg/L','10',3), PARAM('NH4-N','mg/L','5',3), PARAM('PO4-P','mg/L','1',3),
-      PARAM('Faecal Coliform','MPN/100mL','230',1)
+      PARAM('pH',''), PARAM('BOD','mg/L'), PARAM('COD','mg/L'), PARAM('TSS','mg/L'),
+      PARAM('TN','mg/L'), PARAM('NH4-N','mg/L'), PARAM('PO4-P','mg/L'),
+      PARAM('Faecal Coliform','MPN/100mL')
     ],
     'KC Valley Water': [
-      PARAM('pH','','',2), PARAM('BOD','mg/L','30',1), PARAM('COD','mg/L','250',3), PARAM('TSS','mg/L','100',3),
-      PARAM('TN','mg/L','10',3), PARAM('NH4-N','mg/L','5',3), PARAM('PO4-P','mg/L','1',3),
-      PARAM('Faecal Coliform','MPN/100mL','230',1)
+      PARAM('pH',''), PARAM('BOD','mg/L'), PARAM('COD','mg/L'), PARAM('TSS','mg/L'),
+      PARAM('TN','mg/L'), PARAM('NH4-N','mg/L'), PARAM('PO4-P','mg/L'),
+      PARAM('Faecal Coliform','MPN/100mL')
     ],
     'KC Valley Soil': [
-      PARAM('pH','','',2), PARAM('EC','microS/cm','',3), PARAM('Sand','%','',3), PARAM('Clay','%','',3),
-      PARAM('Silt','%','',3), PARAM('Salinity','ppt','',3), PARAM('Organic Matter','%','',3),
-      PARAM('Nitrate','mg/kg','',3), PARAM('Avail Phosphorus','mg/kg','',3)
+      PARAM('pH',''), PARAM('EC','microS/cm'), PARAM('Sand','%'), PARAM('Clay','%'),
+      PARAM('Silt','%'), PARAM('Salinity','ppt'), PARAM('Organic Matter','%'),
+      PARAM('Nitrate','mg/kg'), PARAM('Avail Phosphorus','mg/kg')
     ],
     'Karwar Water': [
-      PARAM('pH','','',2), PARAM('Temp','°C','',1), PARAM('Turbidity','NTU','5',2),
-      PARAM('EC','microS/cm','',3), PARAM('TSS','mg/L','100',3), PARAM('Salinity','ppt','',3),
-      PARAM('DO','mg/L','4',1), PARAM('BOD','mg/L','30',1), PARAM('COD','mg/L','250',3),
-      PARAM('NO2-N','mg/L','',3), PARAM('NO3-N','mg/L','10',3), PARAM('Phosphate','mg/L','',3),
-      PARAM('Oil and Grease','mg/L','10',3)
+      PARAM('pH',''), PARAM('Temp','°C'), PARAM('Turbidity','NTU'),
+      PARAM('EC','microS/cm'), PARAM('TSS','mg/L'), PARAM('Salinity','ppt'),
+      PARAM('DO','mg/L'), PARAM('BOD','mg/L'), PARAM('COD','mg/L'),
+      PARAM('NO2-N','mg/L'), PARAM('NO3-N','mg/L'), PARAM('Phosphate','mg/L'),
+      PARAM('Oil and Grease','mg/L')
     ],
     'Karwar Soil': [
-      PARAM('pH','','',2), PARAM('Sand','%','',3), PARAM('Silt','%','',3), PARAM('Clay','%','',3),
-      PARAM('Organic Matter','%','',3), PARAM('Porosity','%','',3), PARAM('NO3-N','mg/kg','',3),
-      PARAM('PO4-P','mg/kg','',3), PARAM('K','mg/kg','',3), PARAM('Salinity','ppt','',3)
+      PARAM('pH',''), PARAM('Sand','%'), PARAM('Silt','%'), PARAM('Clay','%'),
+      PARAM('Organic Matter','%'), PARAM('Porosity','%'), PARAM('NO3-N','mg/kg'),
+      PARAM('PO4-P','mg/kg'), PARAM('K','mg/kg'), PARAM('Salinity','ppt')
     ],
     'L&T': [
-      PARAM('COD','mg/L','250',3), PARAM('BOD','mg/L','30',1), PARAM('TKN','mg/L','',3),
-      PARAM('PO4-P','mg/L','1',3), PARAM('NH3-N','mg/L','5',3), PARAM('TN','mg/L','10',3),
-      PARAM('NO3-N','mg/L','10',3), PARAM('NO2-N','mg/L','',3)
+      PARAM('COD','mg/L'), PARAM('BOD','mg/L'), PARAM('TKN','mg/L'),
+      PARAM('PO4-P','mg/L'), PARAM('NH3-N','mg/L'), PARAM('TN','mg/L'),
+      PARAM('NO3-N','mg/L'), PARAM('NO2-N','mg/L')
     ],
     'KAPL': [
-      PARAM('pH','','',2), PARAM('BOD','mg/L','30',1), PARAM('COD','mg/L','250',3), PARAM('TSS','mg/L','100',3),
-      PARAM('TN','mg/L','10',3), PARAM('NH4-N','mg/L','5',3), PARAM('PO4-P','mg/L','1',3),
-      PARAM('Faecal Coliform','MPN/100mL','230',1)
+      PARAM('pH',''), PARAM('BOD','mg/L'), PARAM('COD','mg/L'), PARAM('TSS','mg/L'),
+      PARAM('TN','mg/L'), PARAM('NH4-N','mg/L'), PARAM('PO4-P','mg/L'),
+      PARAM('Faecal Coliform','MPN/100mL')
     ]
   };
   // Given clientName / collectionSite, try to match a panel name (case-insensitive contains).
@@ -818,12 +821,13 @@
     if (state.tab === 'history')    tabBody.appendChild(h('div', { class: 'card' }, h('div', { class: 'card-body' }, auditTimelineEl(sample))));
     mainCol.appendChild(tabBody);
 
-    // QR + facts card — side-by-side on desktop, stacked on mobile
+    // QR + facts card — left column is the sample photo (full height),
+    // right column carries facts, readiness strip, then the QR + actions panel.
     const details = h('div', { class: 'card', style: { marginBottom: '16px' } });
     details.appendChild(h('div', { class: 'card-body' },
       h('div', { class: 'detail-body' },
-        qrBlockEl(sample),
-        h('div', { class: 'stack' },
+        samplePhotoCard(sample),
+        h('div', { class: 'stack detail-right' },
           h('div', { class: 'facts' },
             factEl('Project / client', sample.clientName),
             factEl('Site', sample.collectionSite),
@@ -842,7 +846,8 @@
             h('span', { class: 'ready-item', 'data-done': String(hasBook) }, `Written record ${hasBook ? 'uploaded' : 'needed'}`),
             h('span', { class: 'ready-item', 'data-done': String(hasResults) }, `Results ${hasResults ? 'entered' : 'needed'}`),
             h('span', { class: 'ready-item', 'data-done': String(sample.status === 'Approved') }, `Approval ${sample.status === 'Approved' ? 'done' : 'pending'}`)
-          )
+          ),
+          sampleQrPanel(sample)
         )
       )
     ));
@@ -859,25 +864,27 @@
       h('div', { class: 'fact-value' }, value || '—')
     );
   }
-  function qrBlockEl(sample) {
+  // Left column: sample photo, fills the full column height.
+  function samplePhotoCard(sample) {
     const photo = (sample.files || []).find(f => f.category === 'Sample Photo');
-    return h('div', { class: 'qr-block' },
-      // Primary visual: the sample photo (fills the block)
-      h('div', { class: 'photo-frame' },
-        photo
-          ? h('img', { class: 'sample-photo', src: apiUrl(photo.url), alt: 'Sample photo for ' + sample.sampleCode })
-          : h('div', { class: 'empty-photo' }, 'No sample photo attached')
-      ),
-      // Secondary: QR code + sample code caption underneath
-      h('div', { class: 'qr-below' },
+    return h('div', { class: 'sample-photo-card' },
+      photo
+        ? h('img', { class: 'sample-photo', src: apiUrl(photo.url), alt: 'Sample photo for ' + sample.sampleCode })
+        : h('div', { class: 'empty-photo' }, 'No sample photo attached')
+    );
+  }
+  // Right column, below the readiness strip: QR + code caption + print buttons.
+  function sampleQrPanel(sample) {
+    return h('div', { class: 'qr-panel' },
+      h('div', { class: 'qr-panel-main' },
         h('img', { class: 'qr-image', src: apiUrl(`/api/samples/${sample.id}/qr.svg?token=${encodeURIComponent(state.token)}`), alt: 'QR code for ' + sample.sampleCode }),
         h('div', { class: 'qr-caption' },
-          h('div', null, 'Sample code'),
-          h('strong', null, sample.sampleCode),
-          h('div', { style: { marginTop: '4px' } }, 'Scan to open on any device')
+          h('div', { class: 'qr-caption-label' }, 'Sample code'),
+          h('div', { class: 'qr-caption-code mono' }, sample.sampleCode),
+          h('div', { class: 'qr-caption-hint' }, 'Scan to open on any device')
         )
       ),
-      h('div', { class: 'qr-actions' },
+      h('div', { class: 'qr-panel-actions' },
         h('button', { class: 'btn btn-sm', type: 'button', onclick: () => window.open(apiUrl(`/api/samples/${sample.id}/tube-label?token=${encodeURIComponent(state.token)}`), '_blank') }, h('span',{class:'btn-label'},'Print QR label')),
         h('button', { class: 'btn btn-sm', type: 'button', onclick: () => window.open(apiUrl(`/api/samples/${sample.id}/report?token=${encodeURIComponent(state.token)}`), '_blank') }, h('span',{class:'btn-label'},'Print report')),
         h('a', { class: 'btn btn-primary btn-sm', href: apiUrl(`/api/samples/${sample.id}/report.pdf?token=${encodeURIComponent(state.token)}`) }, h('span',{class:'btn-label'},'Download PDF'))
