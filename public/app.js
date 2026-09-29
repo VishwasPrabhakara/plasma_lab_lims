@@ -1049,39 +1049,20 @@
 
     // Column-level analyst pickers — one per replicate column, applies to every parameter
     const columnAnalystRow = h('div', { class: 'rep-analyst-row' });
-    ['r1By','r2By','r3By'].forEach((id, i) => {
-      const label = 'R' + (i + 1);
-      const selWrap = h('div', { class: 'rep-analyst' },
-        h('label', { class: 'field-label', for: 'sheet' + id.toUpperCase() }, label + ' done by'),
-        (() => {
-          const sel = h('select', { class: 'select', id: 'sheet' + id.toUpperCase() });
-          sel.appendChild(h('option', { value: '' }, '— none —'));
-          analystOptions.forEach(a => sel.appendChild(h('option', { value: a, selected: (i === 0 && a === state.user?.name) ? true : null }, a)));
-          const initBadge = h('span', { class: 'analyst-initials', 'aria-live': 'polite' }, '');
-          const updateBadge = () => {
-            initBadge.textContent = sel.value ? initials(sel.value) : '';
-            // Also refresh every row's method-hint if we ever display it
-          };
-          sel.addEventListener('change', updateBadge);
-          setTimeout(updateBadge, 0);
-          selWrap._select = sel; selWrap._badge = initBadge;
-          selWrap.appendChild(sel);
-          selWrap.appendChild(initBadge);
-          return null; // append order is manual above
-        })()
-      );
-      // The IIFE returned null but appended sel+badge inside; adjust
-      const sel = h('select', { class: 'select', id: 'sheet' + id.toUpperCase() });
+    ['R1','R2','R3'].forEach((label, i) => {
+      const selId = 'sheet' + label + 'BY';
+      const sel = h('select', { class: 'select', id: selId, 'aria-label': label + ' analyst' });
       sel.appendChild(h('option', { value: '' }, '— none —'));
-      analystOptions.forEach(a => sel.appendChild(h('option', { value: a, selected: (i === 0 && a === state.user?.name) ? true : null }, a)));
+      analystOptions.forEach(a => sel.appendChild(h('option', {
+        value: a,
+        selected: (i === 0 && a === state.user?.name) ? true : null
+      }, a)));
       const badge = h('span', { class: 'analyst-initials', 'aria-live': 'polite' }, sel.value ? initials(sel.value) : '');
       sel.addEventListener('change', () => { badge.textContent = sel.value ? initials(sel.value) : ''; });
-      // Rebuild clean wrapper (drop the messy one above)
-      selWrap.innerHTML = '';
-      selWrap.appendChild(h('label', { class: 'field-label', for: 'sheet' + id.toUpperCase() }, label + ' done by'));
-      const inline = h('div', { class: 'row', style: { gap: '8px', alignItems: 'center' } }, sel, badge);
-      selWrap.appendChild(inline);
-      columnAnalystRow.appendChild(selWrap);
+      columnAnalystRow.appendChild(h('div', { class: 'rep-analyst' },
+        h('label', { class: 'field-label', for: selId }, label + ' done by'),
+        h('div', { class: 'row', style: { gap: '8px', alignItems: 'center' } }, sel, badge)
+      ));
     });
     body.appendChild(columnAnalystRow);
 
