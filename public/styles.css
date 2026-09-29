@@ -1759,7 +1759,48 @@ dialog.dialog::backdrop {
 .result-grid .input:hover { border-color: var(--border); }
 .result-grid .input:focus-visible { border-color: var(--border-focus); background: var(--surface); }
 
-/* --- Replicate-based sheet (mirrors the lab's Excel workbook) --- */
+/* --- Replicate-based sheet --- */
+.rep-analyst-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--s-3);
+  padding: var(--s-3);
+  background: color-mix(in oklab, var(--accent) 5%, var(--surface-2));
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  margin-bottom: var(--s-3);
+}
+.rep-analyst { display: flex; flex-direction: column; gap: 4px; }
+.rep-analyst .select { min-height: 36px; }
+.analyst-initials {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  padding: 4px 10px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-b);
+  color: var(--accent);
+  background: var(--surface);
+  border: 1px solid var(--accent);
+  border-radius: var(--r-sm);
+  letter-spacing: 0.05em;
+}
+.analyst-initials:empty { display: none; }
+.replicate-grid td.param-cell {
+  min-width: 140px;
+  max-width: 220px;
+}
+.replicate-grid .param-input {
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  min-height: 36px;
+  height: auto;
+  line-height: 1.35;
+}
+
 .sheet-header-controls {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));

@@ -1025,15 +1025,17 @@
       ),
       h('div', { class: 'field' },
         h('label', { class: 'field-label', for: 'sheetSampDate' }, 'Sampling date'),
-        h('input', { class: 'input', id: 'sheetSampDate', type: 'date', value: (sample.collectionDate || '').slice(0,10) })
+        h('input', { class: 'input', id: 'sheetSampDate', type: 'date', value: (sample.collectionDate || '').slice(0,10), readonly: true, 'aria-describedby': 'sheetSampDateHelp' }),
+        h('div', { id: 'sheetSampDateHelp', class: 'muted text-xs', style: { marginTop: '4px' } }, 'From sample registration — not editable here')
       ),
       h('div', { class: 'field' },
         h('label', { class: 'field-label', for: 'sheetAnaDate' }, 'Analysis date'),
         h('input', { class: 'input', id: 'sheetAnaDate', type: 'date', value: new Date().toISOString().slice(0,10) })
       ),
       h('div', { class: 'field' },
-        h('label', { class: 'field-label', for: 'sheetLogPage' }, 'Log book page'),
-        h('input', { class: 'input', id: 'sheetLogPage', placeholder: 'e.g. 142' })
+        h('label', { class: 'field-label', for: 'sheetLogPage' }, 'Log book page (optional)'),
+        h('input', { class: 'input', id: 'sheetLogPage', placeholder: 'e.g. 142', 'aria-describedby': 'sheetLogPageHelp' }),
+        h('div', { id: 'sheetLogPageHelp', class: 'muted text-xs', style: { marginTop: '4px' } }, 'Page number in the paper bench log book where raw readings were recorded. Leave blank if you don\'t keep one.')
       )
     );
     body.appendChild(headerControls);
@@ -1042,29 +1044,62 @@
     body.appendChild(h('div', { class: 'sheet-legend' },
       h('span', null, 'Enter 1–3 replicate readings per parameter. '),
       h('strong', null, 'Avg, StdDev, and OK/ALERT'),
-      h('span', null, ' compute automatically. Assign a different analyst per replicate when applicable — this mirrors the lab\'s Excel workbook.')
+      h('span', null, ' compute automatically. Set one analyst per replicate column (R1 / R2 / R3).')
     ));
+
+    // Column-level analyst pickers — one per replicate column, applies to every parameter
+    const columnAnalystRow = h('div', { class: 'rep-analyst-row' });
+    ['r1By','r2By','r3By'].forEach((id, i) => {
+      const label = 'R' + (i + 1);
+      const selWrap = h('div', { class: 'rep-analyst' },
+        h('label', { class: 'field-label', for: 'sheet' + id.toUpperCase() }, label + ' done by'),
+        (() => {
+          const sel = h('select', { class: 'select', id: 'sheet' + id.toUpperCase() });
+          sel.appendChild(h('option', { value: '' }, '— none —'));
+          analystOptions.forEach(a => sel.appendChild(h('option', { value: a, selected: (i === 0 && a === state.user?.name) ? true : null }, a)));
+          const initBadge = h('span', { class: 'analyst-initials', 'aria-live': 'polite' }, '');
+          const updateBadge = () => {
+            initBadge.textContent = sel.value ? initials(sel.value) : '';
+            // Also refresh every row's method-hint if we ever display it
+          };
+          sel.addEventListener('change', updateBadge);
+          setTimeout(updateBadge, 0);
+          selWrap._select = sel; selWrap._badge = initBadge;
+          selWrap.appendChild(sel);
+          selWrap.appendChild(initBadge);
+          return null; // append order is manual above
+        })()
+      );
+      // The IIFE returned null but appended sel+badge inside; adjust
+      const sel = h('select', { class: 'select', id: 'sheet' + id.toUpperCase() });
+      sel.appendChild(h('option', { value: '' }, '— none —'));
+      analystOptions.forEach(a => sel.appendChild(h('option', { value: a, selected: (i === 0 && a === state.user?.name) ? true : null }, a)));
+      const badge = h('span', { class: 'analyst-initials', 'aria-live': 'polite' }, sel.value ? initials(sel.value) : '');
+      sel.addEventListener('change', () => { badge.textContent = sel.value ? initials(sel.value) : ''; });
+      // Rebuild clean wrapper (drop the messy one above)
+      selWrap.innerHTML = '';
+      selWrap.appendChild(h('label', { class: 'field-label', for: 'sheet' + id.toUpperCase() }, label + ' done by'));
+      const inline = h('div', { class: 'row', style: { gap: '8px', alignItems: 'center' } }, sel, badge);
+      selWrap.appendChild(inline);
+      columnAnalystRow.appendChild(selWrap);
+    });
+    body.appendChild(columnAnalystRow);
 
     const gridWrap = h('div', { class: 'result-grid replicate-grid' });
     const table = h('table', { role: 'grid', 'aria-label': 'Analysis results for ' + sample.sampleCode });
     table.appendChild(h('thead', null,
       h('tr', null,
-        h('th', { scope: 'col', rowspan: 2 }, '#'),
-        h('th', { scope: 'col', rowspan: 2 }, 'Parameter'),
-        h('th', { scope: 'col', rowspan: 2 }, 'Unit'),
-        h('th', { scope: 'col', rowspan: 2 }, 'Std.'),
-        h('th', { scope: 'col', colspan: 2, class: 'rep-group' }, 'R1'),
-        h('th', { scope: 'col', colspan: 2, class: 'rep-group' }, 'R2'),
-        h('th', { scope: 'col', colspan: 2, class: 'rep-group' }, 'R3'),
-        h('th', { scope: 'col', rowspan: 2, class: 'derived' }, 'Avg'),
-        h('th', { scope: 'col', rowspan: 2, class: 'derived' }, 'StdDev'),
-        h('th', { scope: 'col', rowspan: 2, class: 'derived' }, 'Msg'),
-        h('th', { scope: 'col', rowspan: 2, 'aria-label': 'Row actions' }, '')
-      ),
-      h('tr', null,
-        h('th', { scope: 'col' }, 'Value'), h('th', { scope: 'col' }, 'By'),
-        h('th', { scope: 'col' }, 'Value'), h('th', { scope: 'col' }, 'By'),
-        h('th', { scope: 'col' }, 'Value'), h('th', { scope: 'col' }, 'By')
+        h('th', { scope: 'col' }, '#'),
+        h('th', { scope: 'col' }, 'Parameter'),
+        h('th', { scope: 'col' }, 'Unit'),
+        h('th', { scope: 'col' }, 'Std.'),
+        h('th', { scope: 'col', class: 'rep-group' }, 'R1'),
+        h('th', { scope: 'col', class: 'rep-group' }, 'R2'),
+        h('th', { scope: 'col', class: 'rep-group' }, 'R3'),
+        h('th', { scope: 'col', class: 'derived' }, 'Avg'),
+        h('th', { scope: 'col', class: 'derived' }, 'StdDev'),
+        h('th', { scope: 'col', class: 'derived' }, 'Msg'),
+        h('th', { scope: 'col', 'aria-label': 'Row actions' }, '')
       )
     ));
     const tbody = h('tbody');
@@ -1085,12 +1120,6 @@
       msgEl.className = 'derived msg-cell ' + (msg === 'ALERT' ? 'msg-alert' : msg === 'OK' ? 'msg-ok' : 'msg-none');
     }
     function addRow(row = {}, num) {
-      const analystSel = (val) => {
-        const sel = h('select', { class: 'input', 'data-field': `${val.field}`, 'aria-label': val.field + ' analyst' });
-        sel.appendChild(h('option', { value: '' }, '—'));
-        analystOptions.forEach(a => sel.appendChild(h('option', { value: a, selected: val.value === a ? true : null }, a)));
-        return sel;
-      };
       const numInp = (field, placeholder = '') => h('input', {
         class: 'input mono', type: 'text', inputmode: 'decimal',
         'data-field': field, 'aria-label': field, placeholder,
@@ -1098,15 +1127,12 @@
       });
       const tr = h('tr', { role: 'row' },
         h('th', { scope: 'row' }, String(num)),
-        h('td', null, h('input', { class: 'input', 'data-field': 'parameter', 'aria-label': 'Parameter', value: row.parameter || '' })),
+        h('td', { class: 'param-cell' }, h('input', { class: 'input param-input', 'data-field': 'parameter', 'aria-label': 'Parameter', value: row.parameter || '' })),
         h('td', null, h('input', { class: 'input', 'data-field': 'unit', 'aria-label': 'Unit', value: row.unit || '' })),
         h('td', null, h('input', { class: 'input mono', 'data-field': 'std', 'aria-label': 'Standard', value: row.std || '', placeholder: 'e.g. 30' })),
         h('td', null, numInp('r1', '7.4')),
-        h('td', null, analystSel({ field: 'r1By', value: row.r1By || (state.user?.name || '') })),
         h('td', null, numInp('r2')),
-        h('td', null, analystSel({ field: 'r2By', value: row.r2By || '' })),
         h('td', null, numInp('r3')),
-        h('td', null, analystSel({ field: 'r3By', value: row.r3By || '' })),
         h('td', { class: 'derived mono', 'data-derived': 'avg' }, '—'),
         h('td', { class: 'derived mono', 'data-derived': 'stddev' }, '—'),
         h('td', { class: 'derived msg-cell msg-none', 'data-derived': 'msg' }, '—'),
@@ -1137,17 +1163,19 @@
     // Initial population from guessed panel
     reloadPanel(guessed);
 
-    const reasonField = h('div', { class: 'field' },
-      h('label', { class: 'field-label', for: 'sheetReason' }, 'Reason (required for amendments to previously-saved values)'),
-      h('input', { class: 'input', id: 'sheetReason', placeholder: 'e.g. re-run after instrument recalibration' })
-    );
+    // Reason field only when there are already saved results being amended
+    const hasExistingResults = (sample.results?.length || 0) > 0;
+    const reasonField = hasExistingResults ? h('div', { class: 'field' },
+      h('label', { class: 'field-label', for: 'sheetReason' }, 'Reason for amendment (required — previous values exist)'),
+      h('input', { class: 'input', id: 'sheetReason', placeholder: 'e.g. re-run after instrument recalibration', required: true })
+    ) : null;
 
     body.appendChild(h('div', { class: 'row', style: { justifyContent: 'space-between', alignItems: 'center', marginTop: '8px' } },
       h('div', { class: 'muted text-sm' }, 'Live avg / stddev / OK-vs-standard follow the workbook formulas.'),
       h('button', { class: 'btn btn-sm', type: 'button', onclick: () => addRow({}, tbody.children.length + 1) }, h('span',{class:'btn-label'},'+ Add parameter'))
     ));
     body.appendChild(gridWrap);
-    body.appendChild(reasonField);
+    if (reasonField) body.appendChild(reasonField);
     body.appendChild(h('div', { class: 'row', style: { justifyContent: 'flex-end' } },
       h('button', { class: 'btn btn-primary', type: 'button', onclick: () => saveSheet(sample) }, h('span',{class:'btn-label'},'Save values'))
     ));
@@ -1182,18 +1210,19 @@
     setTimeout(() => body.querySelector('[data-field="r1"]')?.focus(), 150);
   }
   async function saveSheet(sample) {
+    // Column-level analysts (one per replicate column, applied to every parameter)
+    const r1By = $('#sheetR1BY')?.value || '';
+    const r2By = $('#sheetR2BY')?.value || '';
+    const r3By = $('#sheetR3BY')?.value || '';
     const trs = $$('#sheetBody tbody tr');
     const rows = trs.map(tr => {
       const r = {};
       tr.querySelectorAll('[data-field]').forEach(inp => { r[inp.dataset.field] = inp.value.trim(); });
       const { avg, stddev, msg } = computeRepStats([r.r1, r.r2, r.r3], r.std);
-      // Backward-compatible primary fields the existing backend understands.
-      // avg → value ; msg → flag ('OK' | 'Alert') ; std → limit.
-      // New replicate detail fields are additional; the server may store or ignore them.
       const analystInitials = [
-        r.r1 && r.r1By ? `R1-${initials(r.r1By)}` : null,
-        r.r2 && r.r2By ? `R2-${initials(r.r2By)}` : null,
-        r.r3 && r.r3By ? `R3-${initials(r.r3By)}` : null,
+        r.r1 && r1By ? `R1-${initials(r1By)}` : null,
+        r.r2 && r2By ? `R2-${initials(r2By)}` : null,
+        r.r3 && r3By ? `R3-${initials(r3By)}` : null,
       ].filter(Boolean).join(', ');
       return {
         parameter: r.parameter,
@@ -1203,9 +1232,9 @@
         method: analystInitials ? `Replicates: ${analystInitials}` : '',
         flag: msg === 'ALERT' ? 'Alert' : msg === 'OK' ? 'OK' : 'Review',
         replicates: [
-          { value: r.r1, analyst: r.r1By },
-          { value: r.r2, analyst: r.r2By },
-          { value: r.r3, analyst: r.r3By }
+          { value: r.r1, analyst: r1By },
+          { value: r.r2, analyst: r2By },
+          { value: r.r3, analyst: r3By }
         ].filter(x => x.value !== ''),
         avg: avg === '' ? null : Number(avg),
         stddev: stddev === '' ? null : Number(stddev),
