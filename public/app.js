@@ -1013,6 +1013,29 @@
 
   function overviewTab(sample) {
     if (!canModifySamples()) return emptyState({ title: 'Read-only', message: 'This role cannot modify samples.' });
+    // Analyst who isn't the assignee gets a read-only view — except for
+    // storage, which is a physical logistics concern (anyone might need to
+    // move a sample to make room for a new batch). That control stays live.
+    if (!canWorkOn(sample)) {
+      const who = sample.assignedTo ? `assigned to ${sample.assignedTo}` : 'not yet assigned';
+      const wrap = h('div', { class: 'card' }, h('div', { class: 'card-body' },
+        h('strong', null, 'Read-only view'),
+        h('div', { class: 'muted text-sm', style: { marginTop: '6px', marginBottom: '16px' } },
+          `This sample is ${who}. Ask an admin to reassign it to you to change status, dates, or enter results.`),
+        h('div', { class: 'field' },
+          h('label', { class: 'field-label', for: 'moveStorage' }, 'Move to different storage (allowed for any analyst)'),
+          storageSelect(sample.storageLocationId, 'moveStorage')
+        ),
+        h('div', { class: 'field' },
+          h('label', { class: 'field-label', for: 'moveStorageReason' }, 'Reason (optional)'),
+          h('input', { class: 'input', id: 'moveStorageReason', placeholder: 'e.g. freed the shelf for today\'s new batch' })
+        ),
+        h('div', { class: 'row', style: { justifyContent: 'flex-end' } },
+          h('button', { class: 'btn btn-primary', type: 'button', onclick: () => moveStorage(sample) }, h('span',{class:'btn-label'},'Move storage'))
+        )
+      ));
+      return wrap;
+    }
     const wrap = h('div', { class: 'card' },
       h('div', { class: 'card-body' },
         h('div', { class: 'form-error-banner hidden', 'data-form-error': true }),

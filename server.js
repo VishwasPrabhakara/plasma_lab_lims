@@ -1016,6 +1016,38 @@ app.patch("/api/samples/:id", auth, requireRole("admin", "analyst"), (req, res) 
   res.json(sample);
 });
 
+// Storage move — deliberately open to ANY analyst regardless of who the
+// sample is assigned to. Physical storage is a lab-logistics concern: someone
+// arriving with a new batch may need to relocate an existing sample to make
+// room. Full audit trail still captures who moved what and why.
+app.post("/api/samples/:id/storage", auth, requireRole("admin", "analyst"), (req, res) => {
+  const db = req.db;
+  const sample = db.samples.find(item => item.id === req.params.id);
+  if (!sample) return res.status(404).json({ error: "Sample not found" });
+  const previousStorageId = sample.storageLocationId || "";
+  const nextStorageId = req.body.storageLocationId || "";
+  if (nextStorageId && !storageIsAvailable(db, nextStorageId, previousStorageId)) {
+    return res.status(400).json({ error: "Selected storage is full or inactive" });
+  }
+  if (previousStorageId === nextStorageId) {
+    return res.status(400).json({ error: "Sample is already in that storage" });
+  }
+  sample.storageLocationId = nextStorageId;
+  sample.chainOfCustody.unshift({
+    at: now(),
+    by: req.user.name,
+    action: "Storage moved",
+    fromLocationId: previousStorageId,
+    toLocationId: nextStorageId,
+    locationId: nextStorageId,
+    note: req.body.reason || req.body.note || ""
+  });
+  sample.updatedAt = now();
+  addAudit(db, req.user, "Storage moved", "sample", sample.id, `${sample.sampleCode}: ${previousStorageId || "unstored"} -> ${nextStorageId || "unstored"}${req.body.reason ? ` (${req.body.reason})` : ""}`);
+  writeDb(db);
+  res.json(sample);
+});
+
 app.post("/api/samples/:id/results", auth, requireRole("admin", "analyst"), (req, res) => {
   const db = req.db;
   const sample = db.samples.find(item => item.id === req.params.id);
