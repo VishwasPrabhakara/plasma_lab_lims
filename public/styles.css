@@ -1905,6 +1905,22 @@ dialog.dialog::backdrop {
 .replicate-grid tbody tr:hover { background: color-mix(in oklab, var(--accent) 2%, var(--surface)); }
 .replicate-grid thead th { position: sticky; top: 0; z-index: 2; }
 
+/* --- Scan quick-action dialog --- */
+.scan-quick-head {
+  display: grid; gap: 4px;
+  padding: var(--s-3);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  margin-bottom: var(--s-3);
+}
+.scan-quick-code { font-size: 20px; font-weight: var(--fw-b); color: var(--text); letter-spacing: 0.02em; }
+.scan-quick-sub { color: var(--text-muted); font-size: var(--fs-sm); }
+.scan-quick-actions {
+  display: grid; gap: var(--s-2);
+}
+.scan-quick-actions .btn { padding: 14px 16px; font-size: 15px; justify-content: flex-start; text-align: left; }
+
 /* Reason-for-change and signature blocks */
 .ceremony-block {
   padding: var(--s-4);
