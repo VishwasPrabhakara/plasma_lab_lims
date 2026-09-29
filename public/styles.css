@@ -1593,7 +1593,7 @@ dialog.dialog::backdrop {
 
 .qr-block {
   display: grid;
-  gap: var(--s-2);
+  gap: var(--s-3);
   padding: var(--s-3);
   background: var(--surface-2);
   border: 1px solid var(--border);
@@ -1601,23 +1601,52 @@ dialog.dialog::backdrop {
   max-width: 260px;
   justify-self: start;
 }
+/* Sample photo — the primary visual, fills the block */
+.qr-block .photo-frame {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: var(--r-sm);
+  overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  display: grid;
+  place-items: center;
+}
 .qr-block img.sample-photo {
   width: 100%;
-  max-height: 160px;
+  height: 100%;
   object-fit: cover;
-  background: #fff;
-  border-radius: var(--r-sm);
+  display: block;
+}
+.qr-block .photo-frame .empty-photo {
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+  padding: var(--s-3);
+  text-align: center;
+}
+/* QR — now secondary, smaller, sits under the photo */
+.qr-block .qr-below {
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  gap: var(--s-2);
+  align-items: center;
+  padding-top: var(--s-2);
+  border-top: 1px solid var(--border);
 }
 .qr-block img.qr-image {
-  width: 180px;
-  height: 180px;
-  max-width: 100%;
-  align-self: center;
-  justify-self: center;
+  width: 96px;
+  height: 96px;
   background: #fff;
   border-radius: var(--r-sm);
-  padding: 6px;
+  padding: 4px;
+  border: 1px solid var(--border);
 }
+.qr-block .qr-caption {
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+  line-height: 1.35;
+}
+.qr-block .qr-caption strong { color: var(--text); font-family: var(--font-mono); }
 .qr-block .qr-actions { display: grid; gap: var(--s-2); }
 
 /* Sample detail: two-column layout for QR + facts on desktop */
@@ -1631,7 +1660,7 @@ dialog.dialog::backdrop {
 }
 @media (max-width: 640px) {
   .qr-block { max-width: 100%; justify-self: stretch; }
-  .qr-block img.qr-image { width: 160px; height: 160px; }
+  .qr-block img.qr-image { width: 88px; height: 88px; }
 }
 
 .facts {

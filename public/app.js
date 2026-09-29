@@ -862,8 +862,21 @@
   function qrBlockEl(sample) {
     const photo = (sample.files || []).find(f => f.category === 'Sample Photo');
     return h('div', { class: 'qr-block' },
-      photo ? h('img', { class: 'sample-photo', src: apiUrl(photo.url), alt: 'Sample photo' }) : h('div', { class: 'empty-state', style: { padding: '16px', minHeight: '110px', fontSize: '12px' } }, 'No sample photo'),
-      h('img', { class: 'qr-image', src: apiUrl(`/api/samples/${sample.id}/qr.svg?token=${encodeURIComponent(state.token)}`), alt: 'QR code' }),
+      // Primary visual: the sample photo (fills the block)
+      h('div', { class: 'photo-frame' },
+        photo
+          ? h('img', { class: 'sample-photo', src: apiUrl(photo.url), alt: 'Sample photo for ' + sample.sampleCode })
+          : h('div', { class: 'empty-photo' }, 'No sample photo attached')
+      ),
+      // Secondary: QR code + sample code caption underneath
+      h('div', { class: 'qr-below' },
+        h('img', { class: 'qr-image', src: apiUrl(`/api/samples/${sample.id}/qr.svg?token=${encodeURIComponent(state.token)}`), alt: 'QR code for ' + sample.sampleCode }),
+        h('div', { class: 'qr-caption' },
+          h('div', null, 'Sample code'),
+          h('strong', null, sample.sampleCode),
+          h('div', { style: { marginTop: '4px' } }, 'Scan to open on any device')
+        )
+      ),
       h('div', { class: 'qr-actions' },
         h('button', { class: 'btn btn-sm', type: 'button', onclick: () => window.open(apiUrl(`/api/samples/${sample.id}/tube-label?token=${encodeURIComponent(state.token)}`), '_blank') }, h('span',{class:'btn-label'},'Print QR label')),
         h('button', { class: 'btn btn-sm', type: 'button', onclick: () => window.open(apiUrl(`/api/samples/${sample.id}/report?token=${encodeURIComponent(state.token)}`), '_blank') }, h('span',{class:'btn-label'},'Print report')),
