@@ -1008,15 +1008,29 @@
     return wrap;
   }
   function openResultSheet(sample) {
-    $('#sheetTitle').textContent = 'Analysis data entry — ' + sample.sampleCode;
-    $('#sheetSubtitle').textContent = `${sample.clientName || 'No client'} · ${sample.collectionSite || 'No site'}`;
+    try {
+      _openResultSheet(sample);
+    } catch (err) {
+      console.error('openResultSheet failed:', err);
+      notify({ type: 'error', title: 'Could not open result sheet', description: err.message });
+    }
+  }
+  function _openResultSheet(sample) {
+    const titleEl = $('#sheetTitle');
+    const subtitleEl = $('#sheetSubtitle');
     const body = $('#sheetBody');
+    const dialog = $('#resultSheetDialog');
+    if (!body || !dialog) {
+      throw new Error('Result sheet dialog is missing from the page.');
+    }
+    if (titleEl) titleEl.textContent = 'Analysis data entry — ' + sample.sampleCode;
+    if (subtitleEl) subtitleEl.textContent = `${sample.clientName || 'No client'} · ${sample.collectionSite || 'No site'}`;
     body.innerHTML = '';
 
-    // Panel picker — mirrors the Excel workbook's project → parameter mapping.
+    // Panel picker — project → parameter mapping.
     const guessed = guessPanelName(sample);
     const panelNames = Object.keys(PROJECT_PANELS);
-    const analystOptions = state.people.map(p => p.name);
+    const analystOptions = (state.people || []).map(p => p.name).filter(Boolean);
 
     // Header controls: panel + sampling date + analysis date + log book page
     const headerControls = h('div', { class: 'sheet-header-controls' },
@@ -1168,7 +1182,7 @@
       h('button', { class: 'btn btn-primary', type: 'button', onclick: () => saveSheet(sample) }, h('span',{class:'btn-label'},'Save values'))
     ));
 
-    $('#resultSheetDialog').showModal();
+    dialog.showModal();
 
     // Arrow-key nav between cells: Up/Down/Left/Right + Enter
     const gridEl = gridWrap.querySelector('table');
