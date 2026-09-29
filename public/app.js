@@ -718,8 +718,22 @@
         onAction: state.samples.length === 0 ? openSampleDialog : resetFilters
       }));
     } else {
-      const grid = h('div', { class: 'card-grid' + (state.selectedSamples.size > 0 ? ' bulk-mode' : '') }, ...rows.map(s => sampleCard(s)));
+      // Pagination: render at most PAGE_SIZE cards at a time, with a "Show more"
+      // button below. Keeps the DOM small even with thousands of samples on the
+      // client, and avoids the browser stalling on large arrays.
+      const PAGE_SIZE = 60;
+      state.samplesShown = Math.min(state.samplesShown || PAGE_SIZE, rows.length);
+      const slice = rows.slice(0, state.samplesShown);
+      const grid = h('div', { class: 'card-grid' + (state.selectedSamples.size > 0 ? ' bulk-mode' : '') }, ...slice.map(s => sampleCard(s)));
       root.appendChild(grid);
+      if (rows.length > state.samplesShown) {
+        const remaining = rows.length - state.samplesShown;
+        const showN = Math.min(PAGE_SIZE, remaining);
+        root.appendChild(h('div', { class: 'row', style: { justifyContent: 'center', margin: '16px 0' } },
+          h('button', { class: 'btn', type: 'button', onclick: () => { state.samplesShown += showN; render(); } },
+            h('span', { class: 'btn-label' }, `Show ${showN} more (${remaining} remaining)`))
+        ));
+      }
     }
     const bar = renderBulkActionBar();
     if (bar) root.appendChild(bar);
@@ -736,7 +750,12 @@
       ),
       h('div', { class: 'card-body' },
         h('div', { class: 'filters-bar' },
-          fieldEl({ id: 'fSearch', label: 'Search', input: h('input', { class: 'input', id: 'fSearch', value: f.q, placeholder: 'Code, site, project, collector', oninput: e => { f.q = e.target.value; render(); } }) }),
+          fieldEl({ id: 'fSearch', label: 'Search', input: h('input', { class: 'input', id: 'fSearch', value: f.q, placeholder: 'Code, site, project, collector', oninput: e => {
+            f.q = e.target.value;
+            state.samplesShown = 0; // reset paging on new search
+            clearTimeout(state._searchTimer);
+            state._searchTimer = setTimeout(() => render(), 200);
+          } }) }),
           fieldEl({ id: 'fStatus', label: 'Status', input: selectEl('fStatus', ['', ...STATUS_OPTIONS], f.status, v => { f.status = v; render(); }, 'All statuses') }),
           fieldEl({ id: 'fFrom', label: 'From date', input: h('input', { class: 'input', type: 'date', id: 'fFrom', value: f.from, onchange: e => { f.from = e.target.value; render(); } }) }),
           fieldEl({ id: 'fTo', label: 'To date', input: h('input', { class: 'input', type: 'date', id: 'fTo', value: f.to, onchange: e => { f.to = e.target.value; render(); } }) }),
@@ -768,6 +787,7 @@
   function uniqueValues(arr) { return [...new Set(arr.filter(Boolean))].sort((a,b) => a.localeCompare(b)); }
   function resetFilters() {
     state.sampleFilters = { q:'', status:'', from:'', to:'', project:'', collector:'', analyst:'', storage:'' };
+    state.samplesShown = 0;
     render();
   }
   function filteredSamples() {
@@ -900,10 +920,60 @@
   // Left column: sample photo, fills the full column height.
   function samplePhotoCard(sample) {
     const photo = (sample.files || []).find(f => f.category === 'Sample Photo');
-    return h('div', { class: 'sample-photo-card' },
-      photo
-        ? h('img', { class: 'sample-photo', src: apiUrl(photo.url), alt: 'Sample photo for ' + sample.sampleCode })
-        : h('div', { class: 'empty-photo' }, 'No sample photo attached')
+    if (photo) {
+      return h('div', { class: 'sample-photo-card' },
+        h('img', { class: 'sample-photo', src: apiUrl(photo.url), alt: 'Sample photo for ' + sample.sampleCode })
+      );
+    }
+    // No photo — turn the card into an "Add photo" CTA that any role who can
+    // upload files can trigger. Captures GPS + timestamp the same way intake does.
+    const input = h('input', {
+      type: 'file', accept: 'image/*', capture: 'environment',
+      style: { display: 'none' }, id: 'lateSamplePhoto-' + sample.id
+    });
+    const status = h('div', { class: 'muted text-xs', style: { marginTop: '8px' } }, '');
+    input.onchange = safe(async () => {
+      const file = input.files?.[0];
+      if (!file) return;
+      status.textContent = 'Uploading photo…';
+      let lat = '', lng = '', accuracy = '';
+      if ('geolocation' in navigator) {
+        try {
+          const pos = await new Promise((res, rej) => navigator.geolocation.getCurrentPosition(res, rej, { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 }));
+          lat = pos.coords.latitude.toFixed(6);
+          lng = pos.coords.longitude.toFixed(6);
+          accuracy = Math.round(pos.coords.accuracy);
+        } catch (_) { /* silent — GPS is best-effort */ }
+      }
+      const fd = new FormData();
+      fd.append('category', 'Sample Photo');
+      fd.append('files', file);
+      if (lat) fd.append('lat', lat);
+      if (lng) fd.append('lng', lng);
+      const takenAt = new Date().toISOString();
+      fd.append('takenAt', takenAt);
+      try {
+        await api(`/api/samples/${sample.id}/files`, { method: 'POST', body: fd });
+        await load();
+        notify({
+          type: 'success',
+          title: 'Photo attached',
+          description: lat ? `Captured ${new Date(takenAt).toLocaleString()} · ${lat}, ${lng} (±${accuracy}m)` : `Captured ${new Date(takenAt).toLocaleString()}`
+        });
+      } catch (e) {
+        notify({ type: 'error', title: 'Photo upload failed', description: e.message });
+        status.textContent = '';
+      }
+    });
+    return h('div', { class: 'sample-photo-card empty-photo-card' },
+      h('div', { class: 'empty-photo-inner' },
+        h('div', { class: 'empty-photo-icon', 'aria-hidden': 'true' }, '📷'),
+        h('div', { class: 'empty-photo-title' }, 'No sample photo yet'),
+        h('div', { class: 'empty-photo-hint' }, 'Take one now — the app also captures the time and location.'),
+        h('button', { class: 'btn btn-primary btn-sm', type: 'button', onclick: () => input.click() }, h('span',{class:'btn-label'},'+ Add sample photo')),
+        input,
+        status
+      )
     );
   }
   // Right column, below the readiness strip: QR + code caption + print buttons.
@@ -1079,7 +1149,7 @@
       ),
       h('div', { class: 'field' },
         h('label', { class: 'field-label', for: 'sheetSampDate' }, 'Sampling date'),
-        h('input', { class: 'input', id: 'sheetSampDate', type: 'date', value: (sample.collectionDate || '').slice(0,10), readonly: true, 'aria-describedby': 'sheetSampDateHelp' }),
+        h('input', { class: 'input', id: 'sheetSampDate', type: 'date', value: ((sample.collectedAt || sample.receivedAt || sample.createdAt || '') + '').slice(0,10), readonly: true, 'aria-describedby': 'sheetSampDateHelp' }),
         h('div', { id: 'sheetSampDateHelp', class: 'muted text-xs', style: { marginTop: '4px' } }, 'From sample registration — not editable here')
       ),
       h('div', { class: 'field' },
@@ -1885,11 +1955,95 @@
   function renderMasters() {
     const root = $('#mastersView');
     root.innerHTML = '';
-    root.appendChild(h('div', { class: 'section-grid', 'data-cols': '3' },
+    root.appendChild(h('div', { class: 'section-grid', 'data-cols': '2' },
       masterCard('People / Analysts', 'people', '/api/people', [['name','Name'],['role','Role']], state.people),
       masterCard('Storage Locations', 'storage', '/api/storage-locations', [['name','Location'],['type','Type'],['capacityNote','Capacity note']], state.storageLocations),
-      masterCard('Test Methods', 'tests', '/api/tests', [['name','Parameter'],['unit','Unit'],['limit','Limit'],['method','Method']], state.tests)
+      masterCard('Test Methods', 'tests', '/api/tests', [['name','Parameter'],['unit','Unit'],['limit','Limit'],['method','Method']], state.tests),
+      projectPanelCard()
     ));
+  }
+
+  // Project → parameter-panel editor. Stored in localStorage (no backend), so an
+  // admin can add a new project or reshape an existing panel's parameters, units,
+  // and standards. Values entered here flow into the Result Sheet's panel picker.
+  function projectPanelCard() {
+    const card = h('div', { class: 'card' },
+      h('div', { class: 'card-header' },
+        h('h3', { class: 'card-title' }, 'Project Parameter Panels'),
+        h('div', { class: 'muted text-xs' }, 'Stored in your browser — one admin, one device for now.')
+      )
+    );
+    const body = h('div', { class: 'card-body' });
+
+    // Add / edit form
+    const form = h('form', { class: 'form' });
+    const nameInp = h('input', { class: 'input', id: 'panelName', name: 'name', required: true, autocomplete: 'off' });
+    const paramsTa = h('textarea', {
+      class: 'textarea', id: 'panelParams', name: 'params', rows: 8, style: { fontFamily: 'var(--font-mono)', fontSize: '13px' },
+      placeholder: 'One parameter per line — name, unit, standard\npH,,8\nBOD,mg/L,30\nCOD,mg/L,250\nTSS,mg/L,100'
+    });
+    form.appendChild(h('div', { class: 'field' },
+      h('label', { class: 'field-label', for: 'panelName' }, 'Project name'),
+      nameInp
+    ));
+    form.appendChild(h('div', { class: 'field' },
+      h('label', { class: 'field-label', for: 'panelParams' }, 'Parameters (CSV — one per line)'),
+      paramsTa,
+      h('div', { class: 'muted text-xs', style: { marginTop: '4px' } }, 'Format: parameter, unit, standard. Leave unit or standard blank if not applicable.')
+    ));
+    form.appendChild(h('button', { class: 'btn btn-primary', type: 'submit' }, h('span',{class:'btn-label'},'Save panel')));
+    form.onsubmit = safe(e => {
+      e.preventDefault();
+      const name = nameInp.value.trim();
+      if (!name) throw new Error('Project name is required.');
+      const params = paramsTa.value.split(/\r?\n/).map(line => line.trim()).filter(Boolean).map(line => {
+        const parts = line.split(',').map(p => p.trim());
+        return PARAM(parts[0] || '', parts[1] || '', parts[2] || '');
+      }).filter(p => p.name);
+      if (params.length === 0) throw new Error('Add at least one parameter.');
+      saveCustomPanel(name, params);
+      renderMasters();
+      notify({ type: 'success', title: 'Panel saved', description: `${name} — ${params.length} parameter${params.length===1?'':'s'}. Available in the Result Sheet panel picker now.` });
+    });
+    body.appendChild(form);
+
+    // Existing custom panels list (with edit-into-form + delete)
+    const custom = getCustomPanels();
+    const names = Object.keys(custom);
+    if (names.length > 0) {
+      body.appendChild(h('h4', { style: { marginTop: '16px', fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)' } }, 'Your custom panels'));
+      names.forEach(n => {
+        const params = custom[n];
+        body.appendChild(h('div', { class: 'card', style: { padding: '10px', background: 'var(--surface-2)', marginTop: '8px' } },
+          h('div', { class: 'row', style: { justifyContent: 'space-between', alignItems: 'center' } },
+            h('div', null,
+              h('strong', null, n),
+              h('span', { class: 'muted text-xs', style: { marginLeft: '8px' } }, `${params.length} parameter${params.length===1?'':'s'}`)
+            ),
+            h('div', { class: 'row', style: { gap: '8px' } },
+              h('button', { class: 'btn btn-sm', type: 'button', onclick: () => {
+                nameInp.value = n;
+                paramsTa.value = params.map(p => `${p.name},${p.unit || ''},${p.std || ''}`).join('\n');
+                nameInp.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              } }, h('span',{class:'btn-label'},'Edit')),
+              h('button', { class: 'btn btn-sm btn-ghost', type: 'button', onclick: () => {
+                if (!confirm(`Delete the "${n}" panel? This only removes your customization; if this was overriding a built-in panel, the built-in will return after page reload.`)) return;
+                deleteCustomPanel(n);
+                renderMasters();
+                notify({ type: 'success', title: 'Panel deleted', description: n });
+              } }, h('span',{class:'btn-label'},'Delete'))
+            )
+          )
+        ));
+      });
+    }
+    // Show all currently effective panels (defaults + custom) for reference
+    body.appendChild(h('h4', { style: { marginTop: '20px', fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)' } }, 'All available panels'));
+    body.appendChild(h('div', { class: 'muted text-xs' },
+      Object.keys(PROJECT_PANELS).sort().join(' · ') || 'None'
+    ));
+    card.appendChild(body);
+    return card;
   }
   function masterCard(title, kind, path, fields, items) {
     const card = h('div', { class: 'card' },
