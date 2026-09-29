@@ -1615,6 +1615,33 @@ dialog.dialog::backdrop {
   padding: var(--s-4);
   text-align: center;
 }
+.sample-photo-card.empty-photo-card {
+  background: color-mix(in oklab, var(--accent) 4%, var(--surface-2));
+  border-style: dashed;
+}
+.empty-photo-inner {
+  display: grid;
+  gap: var(--s-2);
+  place-items: center;
+  padding: var(--s-4);
+  text-align: center;
+}
+.empty-photo-icon {
+  font-size: 40px;
+  line-height: 1;
+  opacity: 0.6;
+}
+.empty-photo-title {
+  font-weight: var(--fw-b);
+  color: var(--text);
+  font-size: var(--fs-md);
+}
+.empty-photo-hint {
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+  max-width: 200px;
+  line-height: 1.4;
+}
 
 /* Right column: QR panel sits below the facts + readiness strip */
 .qr-panel {
