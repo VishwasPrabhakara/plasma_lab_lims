@@ -1591,76 +1591,94 @@ dialog.dialog::backdrop {
 .tabs .tab:hover { color: var(--text); }
 .tabs .tab[aria-selected="true"] { color: var(--accent); border-bottom-color: var(--accent); }
 
-.qr-block {
+/* Left column: sample photo card — fills the full column height */
+.sample-photo-card {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  min-height: 320px;
+  height: 100%;
+  align-self: stretch;
+}
+.sample-photo-card img.sample-photo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.sample-photo-card .empty-photo {
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+  padding: var(--s-4);
+  text-align: center;
+}
+
+/* Right column: QR panel sits below the facts + readiness strip */
+.qr-panel {
   display: grid;
   gap: var(--s-3);
   padding: var(--s-3);
   background: var(--surface-2);
   border: 1px solid var(--border);
   border-radius: var(--r-md);
-  max-width: 260px;
-  justify-self: start;
+  margin-top: var(--s-3);
 }
-/* Sample photo — the primary visual, fills the block */
-.qr-block .photo-frame {
-  width: 100%;
-  aspect-ratio: 1 / 1;
-  border-radius: var(--r-sm);
-  overflow: hidden;
-  background: var(--surface);
-  border: 1px solid var(--border);
+.qr-panel-main {
   display: grid;
-  place-items: center;
-}
-.qr-block img.sample-photo {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-.qr-block .photo-frame .empty-photo {
-  color: var(--text-muted);
-  font-size: var(--fs-xs);
-  padding: var(--s-3);
-  text-align: center;
-}
-/* QR — now secondary, smaller, sits under the photo */
-.qr-block .qr-below {
-  display: grid;
-  grid-template-columns: 96px 1fr;
-  gap: var(--s-2);
+  grid-template-columns: 128px 1fr auto;
+  gap: var(--s-3);
   align-items: center;
-  padding-top: var(--s-2);
-  border-top: 1px solid var(--border);
 }
-.qr-block img.qr-image {
-  width: 96px;
-  height: 96px;
+.qr-panel img.qr-image {
+  width: 128px;
+  height: 128px;
   background: #fff;
   border-radius: var(--r-sm);
-  padding: 4px;
+  padding: 6px;
   border: 1px solid var(--border);
 }
-.qr-block .qr-caption {
+.qr-panel .qr-caption { display: grid; gap: 2px; }
+.qr-panel .qr-caption-label {
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+.qr-panel .qr-caption-code {
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-b);
+  color: var(--text);
+}
+.qr-panel .qr-caption-hint {
   font-size: var(--fs-xs);
   color: var(--text-muted);
-  line-height: 1.35;
 }
-.qr-block .qr-caption strong { color: var(--text); font-family: var(--font-mono); }
-.qr-block .qr-actions { display: grid; gap: var(--s-2); }
+.qr-panel-actions {
+  display: flex;
+  gap: var(--s-2);
+  flex-wrap: wrap;
+}
+.qr-panel-actions .btn { flex: 1 1 auto; min-width: 140px; }
+@media (max-width: 640px) {
+  .qr-panel-main { grid-template-columns: 96px 1fr; }
+  .qr-panel img.qr-image { width: 96px; height: 96px; }
+  .sample-photo-card { min-height: 240px; }
+}
 
-/* Sample detail: two-column layout for QR + facts on desktop */
+/* Sample detail: photo (left) + facts+readiness+QR (right) */
 .detail-body {
   display: grid;
   grid-template-columns: 1fr;
   gap: var(--s-4);
 }
 @media (min-width: 720px) {
-  .detail-body { grid-template-columns: 260px 1fr; align-items: start; }
-}
-@media (max-width: 640px) {
-  .qr-block { max-width: 100%; justify-self: stretch; }
-  .qr-block img.qr-image { width: 88px; height: 88px; }
+  .detail-body { grid-template-columns: 280px 1fr; align-items: stretch; }
+  .detail-right { display: flex; flex-direction: column; gap: var(--s-3); }
+  /* Photo card stretches to match right column height automatically because
+     both children of the grid share row-height via align-items: stretch. */
 }
 
 .facts {
