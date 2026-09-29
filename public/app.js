@@ -1118,8 +1118,13 @@
       tr.querySelector('[data-derived="avg"]').textContent = avg === '' ? '—' : avg;
       tr.querySelector('[data-derived="stddev"]').textContent = stddev === '' ? '—' : stddev;
       const msgEl = tr.querySelector('[data-derived="msg"]');
-      msgEl.textContent = msg || '—';
-      msgEl.className = 'derived msg-cell ' + (msg === 'ALERT' ? 'msg-alert' : msg === 'OK' ? 'msg-ok' : 'msg-none');
+      // Cases: no readings → "—" · readings but no std → "set std" · readings + std → OK/ALERT
+      let text = '—', cls = 'msg-none';
+      if (msg === 'ALERT') { text = 'ALERT'; cls = 'msg-alert'; }
+      else if (msg === 'OK') { text = 'OK'; cls = 'msg-ok'; }
+      else if (avg !== '' && std === '') { text = 'set std'; cls = 'msg-hint'; }
+      msgEl.textContent = text;
+      msgEl.className = 'derived msg-cell ' + cls;
     }
     function addRow(row = {}, num) {
       const numInp = (field, placeholder = '') => h('input', {
@@ -1131,7 +1136,7 @@
         h('th', { scope: 'row' }, String(num)),
         h('td', { class: 'param-cell' }, h('input', { class: 'input param-input', 'data-field': 'parameter', 'aria-label': 'Parameter', value: row.parameter || '' })),
         h('td', null, h('input', { class: 'input', 'data-field': 'unit', 'aria-label': 'Unit', value: row.unit || '' })),
-        h('td', null, h('input', { class: 'input mono', 'data-field': 'std', 'aria-label': 'Standard', value: row.std || '', placeholder: 'e.g. 30' })),
+        h('td', null, h('input', { class: 'input mono', 'data-field': 'std', 'aria-label': 'Standard limit', title: 'Regulatory limit for OK/ALERT check. Leave blank if not applicable.', value: row.std || '', placeholder: 'limit' })),
         h('td', null, numInp('r1', '7.4')),
         h('td', null, numInp('r2')),
         h('td', null, numInp('r3')),

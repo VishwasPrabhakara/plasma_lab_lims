@@ -1866,6 +1866,13 @@ dialog.dialog::backdrop {
 .replicate-grid td.msg-ok { color: var(--ok, #1f6f4a); background: color-mix(in oklab, #1f6f4a 10%, var(--surface)); }
 .replicate-grid td.msg-alert { color: var(--danger, #c0392b); background: color-mix(in oklab, #c0392b 12%, var(--surface)); }
 .replicate-grid td.msg-none { color: var(--text-muted); }
+.replicate-grid td.msg-hint {
+  color: var(--text-muted);
+  font-style: italic;
+  font-weight: var(--fw-m);
+  text-transform: none;
+  letter-spacing: 0;
+}
 .replicate-grid td.row-actions { text-align: center; padding: 4px 6px; }
 .replicate-grid td.row-actions .btn { min-height: 28px; padding: 2px 8px; }
 .replicate-grid tbody tr:hover { background: color-mix(in oklab, var(--accent) 2%, var(--surface)); }
