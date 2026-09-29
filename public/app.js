@@ -100,6 +100,39 @@
       PARAM('Faecal Coliform','MPN/100mL')
     ]
   };
+  // Admin-defined panels persist in localStorage and override the hard defaults
+  // above. This lets an admin add a new project's panel, or change the parameters
+  // / units / standards for an existing one, without any backend deploy.
+  const CUSTOM_PANELS_KEY = 'plasma-lims-custom-panels';
+  function loadCustomPanels() {
+    try {
+      const raw = localStorage.getItem(CUSTOM_PANELS_KEY);
+      if (!raw) return;
+      const custom = JSON.parse(raw);
+      if (custom && typeof custom === 'object') Object.assign(PROJECT_PANELS, custom);
+    } catch (e) { console.warn('Custom panels could not be loaded:', e); }
+  }
+  function saveCustomPanel(name, params) {
+    const all = getCustomPanels();
+    all[name] = params;
+    localStorage.setItem(CUSTOM_PANELS_KEY, JSON.stringify(all));
+    Object.assign(PROJECT_PANELS, { [name]: params });
+  }
+  function deleteCustomPanel(name) {
+    const all = getCustomPanels();
+    delete all[name];
+    localStorage.setItem(CUSTOM_PANELS_KEY, JSON.stringify(all));
+    // Note: this does NOT remove the panel from PROJECT_PANELS in memory if it was
+    // one of the hard defaults. Admin overrides layer on top; deleting a custom
+    // override reverts to the default (which we don't rehydrate here — full reload
+    // is the guaranteed way to see the revert). Ok for a first version.
+  }
+  function getCustomPanels() {
+    try { return JSON.parse(localStorage.getItem(CUSTOM_PANELS_KEY) || '{}') || {}; }
+    catch { return {}; }
+  }
+  loadCustomPanels();
+
   // Given clientName / collectionSite, try to match a panel name (case-insensitive contains).
   function guessPanelName(sample) {
     const hay = ((sample?.clientName || '') + ' ' + (sample?.collectionSite || '')).toLowerCase();
@@ -1184,7 +1217,7 @@
     body.appendChild(gridWrap);
     if (reasonField) body.appendChild(reasonField);
     body.appendChild(h('div', { class: 'row', style: { justifyContent: 'flex-end' } },
-      h('button', { class: 'btn btn-primary', type: 'button', onclick: () => saveSheet(sample) }, h('span',{class:'btn-label'},'Save values'))
+      h('button', { class: 'btn btn-primary', type: 'button', id: 'sheetSaveBtn', 'data-busy-label': 'Saving…', onclick: e => saveSheet(sample, e.currentTarget) }, h('span',{class:'btn-label'},'Save values'))
     ));
 
     dialog.showModal();
@@ -1216,7 +1249,15 @@
     // Focus first replicate cell
     setTimeout(() => body.querySelector('[data-field="r1"]')?.focus(), 150);
   }
-  async function saveSheet(sample) {
+  async function saveSheet(sample, btn) {
+    // Guard against double-click / double-tap firing two POSTs.
+    if (btn && btn.dataset.busy === '1') return;
+    if (btn) {
+      btn.dataset.busy = '1';
+      btn.disabled = true;
+      const label = btn.querySelector('.btn-label');
+      if (label) { btn._origLabel = label.textContent; label.textContent = 'Saving…'; }
+    }
     // Column-level analysts (one per replicate column, applied to every parameter)
     const r1By = $('#sheetR1BY')?.value || '';
     const r2By = $('#sheetR2BY')?.value || '';
@@ -1248,7 +1289,10 @@
         msg
       };
     }).filter(r => r.parameter && r.value !== '');
-    if (rows.length === 0) return notify({ type: 'warn', title: 'Nothing to save', description: 'Enter at least one replicate value on any parameter.' });
+    if (rows.length === 0) {
+      if (btn) { btn.disabled = false; btn.dataset.busy = ''; const l = btn.querySelector('.btn-label'); if (l && btn._origLabel) l.textContent = btn._origLabel; }
+      return notify({ type: 'warn', title: 'Nothing to save', description: 'Enter at least one replicate value on any parameter.' });
+    }
     const reason = $('#sheetReason')?.value || '';
     const meta = {
       panel: $('#sheetPanel')?.value || '',
@@ -1270,7 +1314,11 @@
         title: alerts ? `${rows.length} saved · ${alerts} ALERT` : 'Values saved',
         description: `${rows.length} parameter${rows.length===1?'':'s'} recorded on ${sample.sampleCode}${alerts ? ` — ${alerts} exceeded standard(s).` : '.'}`
       });
-    } catch (e) { notify({ type: 'error', title: 'Save failed', description: e.message }); }
+    } catch (e) {
+      notify({ type: 'error', title: 'Save failed', description: e.message });
+    } finally {
+      if (btn) { btn.disabled = false; btn.dataset.busy = ''; const l = btn.querySelector('.btn-label'); if (l && btn._origLabel) l.textContent = btn._origLabel; }
+    }
   }
 
   function resultsTab(sample) {
@@ -2139,6 +2187,25 @@
     if (bulkStorage) {
       bulkStorage.innerHTML = '<option value="">Not stored yet</option>' + state.storageLocations.map(loc => `<option value="${loc.id}">${esc(loc.name)}</option>`).join('');
     }
+    // Datalists: known projects (from PROJECT_PANELS + past samples), sites, collectors
+    const projectList = $('#projectList');
+    if (projectList) {
+      const known = new Set([
+        ...Object.keys(PROJECT_PANELS),
+        ...state.samples.map(s => s.clientName).filter(Boolean)
+      ]);
+      projectList.innerHTML = [...known].sort().map(p => `<option value="${esc(p)}">`).join('');
+    }
+    const siteList = $('#siteList');
+    if (siteList) {
+      const knownSites = [...new Set(state.samples.map(s => s.collectionSite).filter(Boolean))].sort();
+      siteList.innerHTML = knownSites.map(s => `<option value="${esc(s)}">`).join('');
+    }
+    const collectorList = $('#collectorList');
+    if (collectorList) {
+      const knownCollectors = [...new Set(state.samples.map(s => s.collector).filter(Boolean))].sort();
+      collectorList.innerHTML = knownCollectors.map(c => `<option value="${esc(c)}">`).join('');
+    }
     renderTestPicker();
   }
   function renderTestPicker() {
@@ -2160,8 +2227,66 @@
   function openSampleDialog() {
     state.selectedRequestedTests = [];
     renderSampleDialogOptions();
+    // Reset the hidden geolocation / collection-time fields so a stale value
+    // from a previous open doesn't leak into the new sample.
+    ['#fCollectedAt', '#fLat', '#fLng'].forEach(id => { const el = $(id); if (el) el.value = ''; });
+    const photoHint = $('#fPhotoHint'); if (photoHint) photoHint.textContent = '';
+    const clientHint = $('#fClientHint'); if (clientHint) clientHint.textContent = '';
+
+    // When the project name matches a known panel, auto-populate the requested-
+    // test picker with that panel's parameters. Analyst can still edit before save.
+    const fClient = $('#fClient');
+    if (fClient) {
+      fClient.oninput = () => {
+        const name = fClient.value.trim();
+        const match = Object.keys(PROJECT_PANELS).find(k => k.toLowerCase() === name.toLowerCase());
+        if (match) {
+          const panelTests = PROJECT_PANELS[match].map(p => p.name);
+          // Only overwrite if the current set is empty OR came from a previous match
+          if (state.selectedRequestedTests.length === 0 || fClient._lastPanel) {
+            state.selectedRequestedTests = [...panelTests];
+            renderTestPicker();
+            fClient._lastPanel = match;
+          }
+          if (clientHint) clientHint.textContent = `Auto-loaded ${panelTests.length} tests from "${match}" panel — edit below if needed.`;
+        } else {
+          if (fClient._lastPanel) { state.selectedRequestedTests = []; renderTestPicker(); fClient._lastPanel = null; }
+          if (clientHint) clientHint.textContent = '';
+        }
+      };
+    }
+
+    // When the collector picks a photo, that IS the moment the sample was
+    // collected — auto-stamp the time and (if available) the GPS coordinates.
+    const fPhoto = $('#fPhoto');
+    if (fPhoto) {
+      fPhoto.onchange = () => {
+        if (!fPhoto.files || !fPhoto.files[0]) return;
+        const collectedAt = new Date().toISOString();
+        $('#fCollectedAt').value = collectedAt;
+        const hint = $('#fPhotoHint');
+        if (hint) hint.textContent = `Collected at ${new Date(collectedAt).toLocaleString()} — fetching GPS…`;
+        if (!('geolocation' in navigator)) {
+          if (hint) hint.textContent = `Collected at ${new Date(collectedAt).toLocaleString()} — GPS not available on this browser.`;
+          return;
+        }
+        navigator.geolocation.getCurrentPosition(
+          pos => {
+            const lat = pos.coords.latitude.toFixed(6);
+            const lng = pos.coords.longitude.toFixed(6);
+            $('#fLat').value = lat;
+            $('#fLng').value = lng;
+            if (hint) hint.textContent = `Collected at ${new Date(collectedAt).toLocaleString()} · ${lat}, ${lng} (±${Math.round(pos.coords.accuracy)}m)`;
+          },
+          err => {
+            if (hint) hint.textContent = `Collected at ${new Date(collectedAt).toLocaleString()} — GPS unavailable (${err.message}).`;
+          },
+          { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 }
+        );
+      };
+    }
+
     $('#sampleDialog').showModal();
-    // First focus on client name
     setTimeout(() => $('#fClient')?.focus(), 100);
   }
   $('#newSampleBtn').onclick = openSampleDialog;

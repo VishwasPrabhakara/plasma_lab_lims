@@ -357,7 +357,11 @@
       <div class="dialog-body">
         <div class="form-error-banner hidden" data-form-error></div>
         <div class="form-grid">
-          <div class="field"><label class="field-label" for="fClient">Project / client <span class="required">*</span></label><input class="input" id="fClient" name="clientName" required></div>
+          <div class="field"><label class="field-label" for="fClient">Project / client <span class="required">*</span></label>
+            <input class="input" id="fClient" name="clientName" list="projectList" autocomplete="off" required>
+            <datalist id="projectList"></datalist>
+            <div class="muted text-xs" id="fClientHint" style="margin-top:4px;"></div>
+          </div>
           <div class="field"><label class="field-label" for="fSource">Source type <span class="required">*</span></label>
             <select class="select" id="fSource" name="sourceType" required>
               <option>Drinking Water</option>
@@ -367,12 +371,28 @@
               <option>Industrial Effluent</option>
             </select>
           </div>
-          <div class="field"><label class="field-label" for="fSite">Sampling site <span class="required">*</span></label><input class="input" id="fSite" name="collectionSite" required></div>
-          <div class="field"><label class="field-label" for="fCollector">Brought by / collected by <span class="required">*</span></label><input class="input" id="fCollector" name="collector" required></div>
+          <div class="field"><label class="field-label" for="fSite">Sampling site <span class="required">*</span></label>
+            <input class="input" id="fSite" name="collectionSite" list="siteList" autocomplete="off" required>
+            <datalist id="siteList"></datalist>
+          </div>
+          <div class="field"><label class="field-label" for="fCollector">Brought by / collected by <span class="required">*</span></label>
+            <input class="input" id="fCollector" name="collector" list="collectorList" autocomplete="off" required>
+            <datalist id="collectorList"></datalist>
+          </div>
+          <div class="field"><label class="field-label" for="fPlanned">Planned sampling date</label>
+            <input class="input" id="fPlanned" name="plannedSamplingDate" type="date">
+            <div class="muted text-xs" style="margin-top:4px;">When the collector is going out to sample. Actual date + location fill in when the photo is uploaded.</div>
+          </div>
           <div class="field"><label class="field-label" for="fStorage">Initial storage</label><select class="select" id="fStorage" name="storageLocationId"></select></div>
           <div class="field"><label class="field-label" for="fAnalyst">Assign analyst</label><select class="select" id="fAnalyst" name="assignedTo"></select></div>
           <div class="field"><label class="field-label" for="fDue">Target completion</label><input class="input" id="fDue" name="dueAt" type="datetime-local"></div>
-          <div class="field"><label class="field-label" for="fPhoto">Sample photo</label><input class="input" id="fPhoto" name="samplePhoto" type="file" accept="image/*"></div>
+          <div class="field"><label class="field-label" for="fPhoto">Sample photo (auto-captures date + GPS)</label>
+            <input class="input" id="fPhoto" name="samplePhoto" type="file" accept="image/*" capture="environment">
+            <div class="muted text-xs" id="fPhotoHint" style="margin-top:4px;"></div>
+            <input type="hidden" id="fCollectedAt" name="collectedAt">
+            <input type="hidden" id="fLat" name="collectionLat">
+            <input type="hidden" id="fLng" name="collectionLng">
+          </div>
           <div class="field field-wide">
             <label class="field-label" for="fTestPicker">Add requested test</label>
             <select class="select" id="fTestPicker"></select>
