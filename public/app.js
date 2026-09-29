@@ -43,6 +43,89 @@
   const LIFECYCLE_STRIP = ['Bottle Ready','Sample Collected','Stored','Assigned','In Analysis','Needs Review','Approved'];
 
   /* ---------------------------------------------------------------------- */
+  /* Project parameter panels — mirrors the lab's Excel workbook            */
+  /* Each parameter row: [name, unit, standard, defaultReplicates]          */
+  /* Standards left blank must be set per project per sample.               */
+  /* ---------------------------------------------------------------------- */
+  const PARAM = (name, unit = '', std = '', reps = 3) => ({ name, unit, std, reps });
+  const PROJECT_PANELS = {
+    'Devanahalli': [
+      PARAM('pH','', '', 2), PARAM('BOD','mg/L','30',1), PARAM('COD','mg/L','250',3), PARAM('TSS','mg/L','100',3),
+      PARAM('TN','mg/L','10',3), PARAM('NH4-N','mg/L','5',3), PARAM('PO4-P','mg/L','1',3),
+      PARAM('Faecal Coliform','MPN/100mL','230',1), PARAM('Turbidity','NTU','5',2), PARAM('Fluoride','mg/L','1.5',2)
+    ],
+    'V Valley': [
+      PARAM('pH','','',2), PARAM('BOD','mg/L','30',1), PARAM('COD','mg/L','250',3), PARAM('TSS','mg/L','100',3),
+      PARAM('TN','mg/L','10',3), PARAM('NH4-N','mg/L','5',3), PARAM('PO4-P','mg/L','1',3),
+      PARAM('Faecal Coliform','MPN/100mL','230',1), PARAM('Hardness','mg/L','600',3), PARAM('Fluoride','mg/L','1.5',2)
+    ],
+    'HN Valley': [
+      PARAM('pH','','',2), PARAM('BOD','mg/L','30',1), PARAM('COD','mg/L','250',3), PARAM('TSS','mg/L','100',3),
+      PARAM('TN','mg/L','10',3), PARAM('NH4-N','mg/L','5',3), PARAM('PO4-P','mg/L','1',3),
+      PARAM('Faecal Coliform','MPN/100mL','230',1)
+    ],
+    'KC Valley Water': [
+      PARAM('pH','','',2), PARAM('BOD','mg/L','30',1), PARAM('COD','mg/L','250',3), PARAM('TSS','mg/L','100',3),
+      PARAM('TN','mg/L','10',3), PARAM('NH4-N','mg/L','5',3), PARAM('PO4-P','mg/L','1',3),
+      PARAM('Faecal Coliform','MPN/100mL','230',1)
+    ],
+    'KC Valley Soil': [
+      PARAM('pH','','',2), PARAM('EC','microS/cm','',3), PARAM('Sand','%','',3), PARAM('Clay','%','',3),
+      PARAM('Silt','%','',3), PARAM('Salinity','ppt','',3), PARAM('Organic Matter','%','',3),
+      PARAM('Nitrate','mg/kg','',3), PARAM('Avail Phosphorus','mg/kg','',3)
+    ],
+    'Karwar Water': [
+      PARAM('pH','','',2), PARAM('Temp','°C','',1), PARAM('Turbidity','NTU','5',2),
+      PARAM('EC','microS/cm','',3), PARAM('TSS','mg/L','100',3), PARAM('Salinity','ppt','',3),
+      PARAM('DO','mg/L','4',1), PARAM('BOD','mg/L','30',1), PARAM('COD','mg/L','250',3),
+      PARAM('NO2-N','mg/L','',3), PARAM('NO3-N','mg/L','10',3), PARAM('Phosphate','mg/L','',3),
+      PARAM('Oil and Grease','mg/L','10',3)
+    ],
+    'Karwar Soil': [
+      PARAM('pH','','',2), PARAM('Sand','%','',3), PARAM('Silt','%','',3), PARAM('Clay','%','',3),
+      PARAM('Organic Matter','%','',3), PARAM('Porosity','%','',3), PARAM('NO3-N','mg/kg','',3),
+      PARAM('PO4-P','mg/kg','',3), PARAM('K','mg/kg','',3), PARAM('Salinity','ppt','',3)
+    ],
+    'L&T': [
+      PARAM('COD','mg/L','250',3), PARAM('BOD','mg/L','30',1), PARAM('TKN','mg/L','',3),
+      PARAM('PO4-P','mg/L','1',3), PARAM('NH3-N','mg/L','5',3), PARAM('TN','mg/L','10',3),
+      PARAM('NO3-N','mg/L','10',3), PARAM('NO2-N','mg/L','',3)
+    ],
+    'KAPL': [
+      PARAM('pH','','',2), PARAM('BOD','mg/L','30',1), PARAM('COD','mg/L','250',3), PARAM('TSS','mg/L','100',3),
+      PARAM('TN','mg/L','10',3), PARAM('NH4-N','mg/L','5',3), PARAM('PO4-P','mg/L','1',3),
+      PARAM('Faecal Coliform','MPN/100mL','230',1)
+    ]
+  };
+  // Given clientName / collectionSite, try to match a panel name (case-insensitive contains).
+  function guessPanelName(sample) {
+    const hay = ((sample?.clientName || '') + ' ' + (sample?.collectionSite || '')).toLowerCase();
+    // Longest key first so "KC Valley Soil" beats "KC Valley Water".
+    const keys = Object.keys(PROJECT_PANELS).sort((a,b) => b.length - a.length);
+    return keys.find(k => hay.includes(k.toLowerCase())) || '';
+  }
+  // Live-compute avg / stddev / msg for a single parameter row.
+  function computeRepStats(vals, std) {
+    const nums = vals.map(v => v === '' || v == null ? null : Number(v)).filter(v => v !== null && !Number.isNaN(v));
+    if (nums.length === 0) return { avg: '', stddev: '', msg: '' };
+    const avg = nums.reduce((a,b) => a+b, 0) / nums.length;
+    let stddev = '';
+    if (nums.length > 1) {
+      const m = avg;
+      const variance = nums.reduce((a,b) => a + (b-m)*(b-m), 0) / (nums.length - 1);
+      stddev = Math.sqrt(variance);
+    }
+    const stdNum = std === '' || std == null ? null : Number(std);
+    let msg = '';
+    if (stdNum != null && !Number.isNaN(stdNum)) msg = avg < stdNum ? 'OK' : 'ALERT';
+    return {
+      avg: Number.isFinite(avg) ? Number(avg.toFixed(3)) : '',
+      stddev: stddev === '' ? '' : Number(stddev.toFixed(3)),
+      msg
+    };
+  }
+
+  /* ---------------------------------------------------------------------- */
   /* DOM helpers                                                            */
   /* ---------------------------------------------------------------------- */
   const $  = sel => document.querySelector(sel);
@@ -909,50 +992,146 @@
     $('#sheetSubtitle').textContent = `${sample.clientName || 'No client'} · ${sample.collectionSite || 'No site'}`;
     const body = $('#sheetBody');
     body.innerHTML = '';
-    const tests = sample.requestedTests?.length ? sample.requestedTests : state.tests.slice(0, 5).map(t => t.name);
-    const gridWrap = h('div', { class: 'result-grid' });
+
+    // Panel picker — mirrors the Excel workbook's project → parameter mapping.
+    const guessed = guessPanelName(sample);
+    const panelNames = Object.keys(PROJECT_PANELS);
+    const analystOptions = state.people.map(p => p.name);
+
+    // Header controls: panel + sampling date + analysis date + log book page
+    const headerControls = h('div', { class: 'sheet-header-controls' },
+      h('div', { class: 'field' },
+        h('label', { class: 'field-label', for: 'sheetPanel' }, 'Parameter panel'),
+        (() => {
+          const sel = h('select', { class: 'select', id: 'sheetPanel' });
+          sel.appendChild(h('option', { value: '' }, '— Custom / manual —'));
+          panelNames.forEach(n => sel.appendChild(h('option', { value: n, selected: n === guessed ? true : null }, n)));
+          sel.onchange = () => reloadPanel(sel.value);
+          return sel;
+        })()
+      ),
+      h('div', { class: 'field' },
+        h('label', { class: 'field-label', for: 'sheetSampDate' }, 'Sampling date'),
+        h('input', { class: 'input', id: 'sheetSampDate', type: 'date', value: (sample.collectionDate || '').slice(0,10) })
+      ),
+      h('div', { class: 'field' },
+        h('label', { class: 'field-label', for: 'sheetAnaDate' }, 'Analysis date'),
+        h('input', { class: 'input', id: 'sheetAnaDate', type: 'date', value: new Date().toISOString().slice(0,10) })
+      ),
+      h('div', { class: 'field' },
+        h('label', { class: 'field-label', for: 'sheetLogPage' }, 'Log book page'),
+        h('input', { class: 'input', id: 'sheetLogPage', placeholder: 'e.g. 142' })
+      )
+    );
+    body.appendChild(headerControls);
+
+    // Legend explaining the replicate layout
+    body.appendChild(h('div', { class: 'sheet-legend' },
+      h('span', null, 'Enter 1–3 replicate readings per parameter. '),
+      h('strong', null, 'Avg, StdDev, and OK/ALERT'),
+      h('span', null, ' compute automatically. Assign a different analyst per replicate when applicable — this mirrors the lab\'s Excel workbook.')
+    ));
+
+    const gridWrap = h('div', { class: 'result-grid replicate-grid' });
     const table = h('table', { role: 'grid', 'aria-label': 'Analysis results for ' + sample.sampleCode });
     table.appendChild(h('thead', null,
       h('tr', null,
-        h('th', { scope: 'col' }, '#'),
-        h('th', { scope: 'col' }, 'Parameter'),
-        h('th', { scope: 'col' }, 'Value'),
-        h('th', { scope: 'col' }, 'Unit'),
-        h('th', { scope: 'col' }, 'Limit'),
-        h('th', { scope: 'col' }, 'Method'),
-        h('th', { scope: 'col' }, 'Flag')
+        h('th', { scope: 'col', rowspan: 2 }, '#'),
+        h('th', { scope: 'col', rowspan: 2 }, 'Parameter'),
+        h('th', { scope: 'col', rowspan: 2 }, 'Unit'),
+        h('th', { scope: 'col', rowspan: 2 }, 'Std.'),
+        h('th', { scope: 'col', colspan: 2, class: 'rep-group' }, 'R1'),
+        h('th', { scope: 'col', colspan: 2, class: 'rep-group' }, 'R2'),
+        h('th', { scope: 'col', colspan: 2, class: 'rep-group' }, 'R3'),
+        h('th', { scope: 'col', rowspan: 2, class: 'derived' }, 'Avg'),
+        h('th', { scope: 'col', rowspan: 2, class: 'derived' }, 'StdDev'),
+        h('th', { scope: 'col', rowspan: 2, class: 'derived' }, 'Msg'),
+        h('th', { scope: 'col', rowspan: 2, 'aria-label': 'Row actions' }, '')
+      ),
+      h('tr', null,
+        h('th', { scope: 'col' }, 'Value'), h('th', { scope: 'col' }, 'By'),
+        h('th', { scope: 'col' }, 'Value'), h('th', { scope: 'col' }, 'By'),
+        h('th', { scope: 'col' }, 'Value'), h('th', { scope: 'col' }, 'By')
       )
     ));
     const tbody = h('tbody');
+    table.appendChild(tbody);
+    gridWrap.appendChild(table);
+
+    function renumber() {
+      [...tbody.children].forEach((tr, i) => { const n = tr.querySelector('th[scope="row"]'); if (n) n.textContent = String(i + 1); });
+    }
+    function recomputeRow(tr) {
+      const vals = ['r1','r2','r3'].map(k => tr.querySelector(`[data-field="${k}"]`).value.trim());
+      const std = tr.querySelector('[data-field="std"]').value.trim();
+      const { avg, stddev, msg } = computeRepStats(vals, std);
+      tr.querySelector('[data-derived="avg"]').textContent = avg === '' ? '—' : avg;
+      tr.querySelector('[data-derived="stddev"]').textContent = stddev === '' ? '—' : stddev;
+      const msgEl = tr.querySelector('[data-derived="msg"]');
+      msgEl.textContent = msg || '—';
+      msgEl.className = 'derived msg-cell ' + (msg === 'ALERT' ? 'msg-alert' : msg === 'OK' ? 'msg-ok' : 'msg-none');
+    }
     function addRow(row = {}, num) {
-      const test = state.tests.find(t => t.name === row.parameter) || {};
+      const analystSel = (val) => {
+        const sel = h('select', { class: 'input', 'data-field': `${val.field}`, 'aria-label': val.field + ' analyst' });
+        sel.appendChild(h('option', { value: '' }, '—'));
+        analystOptions.forEach(a => sel.appendChild(h('option', { value: a, selected: val.value === a ? true : null }, a)));
+        return sel;
+      };
+      const numInp = (field, placeholder = '') => h('input', {
+        class: 'input mono', type: 'text', inputmode: 'decimal',
+        'data-field': field, 'aria-label': field, placeholder,
+        value: row[field] || ''
+      });
       const tr = h('tr', { role: 'row' },
         h('th', { scope: 'row' }, String(num)),
         h('td', null, h('input', { class: 'input', 'data-field': 'parameter', 'aria-label': 'Parameter', value: row.parameter || '' })),
-        h('td', null, h('input', { class: 'input', 'data-field': 'value', 'aria-label': 'Value', value: row.value || '', placeholder: '7.4' })),
-        h('td', null, h('input', { class: 'input', 'data-field': 'unit', 'aria-label': 'Unit', value: row.unit || test.unit || '' })),
-        h('td', null, h('input', { class: 'input', 'data-field': 'limit', 'aria-label': 'Limit', value: row.limit || test.limit || '' })),
-        h('td', null, h('input', { class: 'input', 'data-field': 'method', 'aria-label': 'Method', value: row.method || test.method || '' })),
-        h('td', null, (() => {
-          const sel = h('select', { class: 'input', 'data-field': 'flag', 'aria-label': 'Flag' });
-          ['OK','Review','Alert'].forEach(o => sel.appendChild(h('option', { value: o, selected: (row.flag || 'OK') === o ? true : null }, o)));
-          return sel;
-        })())
+        h('td', null, h('input', { class: 'input', 'data-field': 'unit', 'aria-label': 'Unit', value: row.unit || '' })),
+        h('td', null, h('input', { class: 'input mono', 'data-field': 'std', 'aria-label': 'Standard', value: row.std || '', placeholder: 'e.g. 30' })),
+        h('td', null, numInp('r1', '7.4')),
+        h('td', null, analystSel({ field: 'r1By', value: row.r1By || (state.user?.name || '') })),
+        h('td', null, numInp('r2')),
+        h('td', null, analystSel({ field: 'r2By', value: row.r2By || '' })),
+        h('td', null, numInp('r3')),
+        h('td', null, analystSel({ field: 'r3By', value: row.r3By || '' })),
+        h('td', { class: 'derived mono', 'data-derived': 'avg' }, '—'),
+        h('td', { class: 'derived mono', 'data-derived': 'stddev' }, '—'),
+        h('td', { class: 'derived msg-cell msg-none', 'data-derived': 'msg' }, '—'),
+        h('td', { class: 'row-actions' },
+          h('button', { class: 'btn btn-ghost btn-sm', type: 'button', 'aria-label': 'Remove row', title: 'Remove row', onclick: () => { tr.remove(); renumber(); } }, '✕')
+        )
       );
+      // Recompute on any input change
+      tr.querySelectorAll('[data-field="r1"], [data-field="r2"], [data-field="r3"], [data-field="std"]')
+        .forEach(inp => inp.addEventListener('input', () => recomputeRow(tr)));
       tbody.appendChild(tr);
+      recomputeRow(tr);
+      return tr;
     }
-    tests.forEach((name, i) => addRow({ parameter: name, flag: 'OK' }, i + 1));
-    table.appendChild(tbody);
-    gridWrap.appendChild(table);
+    function reloadPanel(panelName) {
+      tbody.innerHTML = '';
+      if (panelName && PROJECT_PANELS[panelName]) {
+        PROJECT_PANELS[panelName].forEach((p, i) => addRow({ parameter: p.name, unit: p.unit, std: p.std }, i + 1));
+      } else {
+        // Fallback: use sample.requestedTests
+        const tests = sample.requestedTests?.length ? sample.requestedTests : state.tests.slice(0, 5).map(t => t.name);
+        tests.forEach((name, i) => {
+          const t = state.tests.find(x => x.name === name) || {};
+          addRow({ parameter: name, unit: t.unit || '', std: t.limit || '' }, i + 1);
+        });
+      }
+    }
+    // Initial population from guessed panel
+    reloadPanel(guessed);
 
     const reasonField = h('div', { class: 'field' },
       h('label', { class: 'field-label', for: 'sheetReason' }, 'Reason (required for amendments to previously-saved values)'),
       h('input', { class: 'input', id: 'sheetReason', placeholder: 'e.g. re-run after instrument recalibration' })
     );
 
-    body.appendChild(h('div', { class: 'row', style: { justifyContent: 'space-between' } },
-      h('div', { class: 'muted text-sm' }, 'Fields are announced by column for screen readers.'),
-      h('button', { class: 'btn btn-sm', type: 'button', onclick: () => addRow({ flag: 'OK' }, tbody.children.length + 1) }, h('span',{class:'btn-label'},'+ Add row'))
+    body.appendChild(h('div', { class: 'row', style: { justifyContent: 'space-between', alignItems: 'center', marginTop: '8px' } },
+      h('div', { class: 'muted text-sm' }, 'Live avg / stddev / OK-vs-standard follow the workbook formulas.'),
+      h('button', { class: 'btn btn-sm', type: 'button', onclick: () => addRow({}, tbody.children.length + 1) }, h('span',{class:'btn-label'},'+ Add parameter'))
     ));
     body.appendChild(gridWrap);
     body.appendChild(reasonField);
@@ -986,23 +1165,62 @@
       if (target) { e.preventDefault(); target.focus(); if (target.select) target.select(); }
     });
 
-    // Focus first cell for immediate typing
-    setTimeout(() => body.querySelector('[data-field="value"]')?.focus(), 150);
+    // Focus first replicate cell
+    setTimeout(() => body.querySelector('[data-field="r1"]')?.focus(), 150);
   }
   async function saveSheet(sample) {
-    const rows = $$('#sheetBody tbody tr').map(tr => {
+    const trs = $$('#sheetBody tbody tr');
+    const rows = trs.map(tr => {
       const r = {};
       tr.querySelectorAll('[data-field]').forEach(inp => { r[inp.dataset.field] = inp.value.trim(); });
-      return r;
-    }).filter(r => r.parameter && r.value);
-    if (rows.length === 0) return notify({ type: 'warn', title: 'Nothing to save', description: 'Enter at least one parameter with a value.' });
+      const { avg, stddev, msg } = computeRepStats([r.r1, r.r2, r.r3], r.std);
+      // Backward-compatible primary fields the existing backend understands.
+      // avg → value ; msg → flag ('OK' | 'Alert') ; std → limit.
+      // New replicate detail fields are additional; the server may store or ignore them.
+      const analystInitials = [
+        r.r1 && r.r1By ? `R1-${initials(r.r1By)}` : null,
+        r.r2 && r.r2By ? `R2-${initials(r.r2By)}` : null,
+        r.r3 && r.r3By ? `R3-${initials(r.r3By)}` : null,
+      ].filter(Boolean).join(', ');
+      return {
+        parameter: r.parameter,
+        value: avg === '' ? '' : String(avg),
+        unit: r.unit,
+        limit: r.std,
+        method: analystInitials ? `Replicates: ${analystInitials}` : '',
+        flag: msg === 'ALERT' ? 'Alert' : msg === 'OK' ? 'OK' : 'Review',
+        replicates: [
+          { value: r.r1, analyst: r.r1By },
+          { value: r.r2, analyst: r.r2By },
+          { value: r.r3, analyst: r.r3By }
+        ].filter(x => x.value !== ''),
+        avg: avg === '' ? null : Number(avg),
+        stddev: stddev === '' ? null : Number(stddev),
+        msg
+      };
+    }).filter(r => r.parameter && r.value !== '');
+    if (rows.length === 0) return notify({ type: 'warn', title: 'Nothing to save', description: 'Enter at least one replicate value on any parameter.' });
     const reason = $('#sheetReason')?.value || '';
+    const meta = {
+      panel: $('#sheetPanel')?.value || '',
+      samplingDate: $('#sheetSampDate')?.value || '',
+      analysisDate: $('#sheetAnaDate')?.value || '',
+      logBookPage: $('#sheetLogPage')?.value || ''
+    };
     try {
-      const updated = await api(`/api/samples/${sample.id}/results/sheet`, { method: 'POST', body: JSON.stringify({ rows, reasonForChange: reason }) });
+      const updated = await api(`/api/samples/${sample.id}/results/sheet`, {
+        method: 'POST',
+        body: JSON.stringify({ rows, reasonForChange: reason, meta })
+      });
       Object.assign(sample, updated); state.tab = 'results';
       $('#resultSheetDialog').close();
       await load();
-      notify({ type: 'success', title: 'Values saved', description: `${rows.length} row${rows.length===1?'':'s'} recorded on ${sample.sampleCode}.` });
+      const alerts = rows.filter(r => r.flag === 'Alert').length;
+      notify({
+        type: alerts ? 'warn' : 'success',
+        title: alerts ? `${rows.length} saved · ${alerts} ALERT` : 'Values saved',
+        description: `${rows.length} parameter${rows.length===1?'':'s'} recorded on ${sample.sampleCode}${alerts ? ` — ${alerts} exceeded standard(s).` : '.'}`
+      });
     } catch (e) { notify({ type: 'error', title: 'Save failed', description: e.message }); }
   }
 
