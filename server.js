@@ -415,7 +415,11 @@ function canReadSample(user, sample) {
 
 function canWorkOnSample(user, sample) {
   if (user.role === "admin") return true;
-  if (user.role === "analyst") return !sample.assignedTo || sample.assignedTo === user.name;
+  // Analysts can only work on samples explicitly assigned to them by name.
+  // Unassigned samples wait for admin to assign — analysts cannot pick them up
+  // on their own. This matches ISO 17025 chain-of-custody: every measurement
+  // must be traceable to a named responsible analyst set before work begins.
+  if (user.role === "analyst") return sample.assignedTo === user.name;
   return false;
 }
 

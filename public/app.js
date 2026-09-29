@@ -405,6 +405,14 @@
   function can(...roles) { return state.user && roles.includes(state.user.role); }
   function canModifySamples() { return can('admin','analyst'); }
   function canEnterResults() { return can('admin','analyst'); }
+  // Per-sample write gate: admins always, analysts only if the sample is
+  // explicitly assigned to them by name. Mirrors backend canWorkOnSample.
+  function canWorkOn(sample) {
+    if (!sample) return false;
+    if (can('admin')) return true;
+    if (can('analyst')) return sample.assignedTo && sample.assignedTo === state.user?.name;
+    return false;
+  }
   function canUploadFiles()  { return can('admin','analyst'); }
   function canApprove()      { return can('admin'); }
 
@@ -850,11 +858,13 @@
 
     // Tabs
     const tabsEl = h('div', { class: 'tabs', role: 'tablist' });
+    // Enter Results tab only appears when the current user is actually allowed
+    // to write to THIS sample — admins always, analysts only when assigned.
     const tabs = [
       { id: 'overview', label: 'Workflow' },
-      canEnterResults() && { id: 'sheet', label: 'Enter results' },
+      canWorkOn(sample) && { id: 'sheet', label: 'Enter results' },
       { id: 'results', label: 'Saved results' },
-      canUploadFiles() && { id: 'files', label: 'Files' },
+      canUploadFiles() && canWorkOn(sample) && { id: 'files', label: 'Files' },
       can('admin') && { id: 'retention', label: 'Retention' },
       { id: 'history', label: 'History' }
     ].filter(Boolean);
@@ -936,29 +946,22 @@
       const file = input.files?.[0];
       if (!file) return;
       status.textContent = 'Uploading photo…';
-      let lat = '', lng = '', accuracy = '';
-      if ('geolocation' in navigator) {
-        try {
-          const pos = await new Promise((res, rej) => navigator.geolocation.getCurrentPosition(res, rej, { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 }));
-          lat = pos.coords.latitude.toFixed(6);
-          lng = pos.coords.longitude.toFixed(6);
-          accuracy = Math.round(pos.coords.accuracy);
-        } catch (_) { /* silent — GPS is best-effort */ }
-      }
       const fd = new FormData();
       fd.append('category', 'Sample Photo');
       fd.append('files', file);
-      if (lat) fd.append('lat', lat);
-      if (lng) fd.append('lng', lng);
       const takenAt = new Date().toISOString();
       fd.append('takenAt', takenAt);
+      // NOTE: Deliberately not capturing GPS on the add-later flow. An analyst
+      // uploading from the lab would just capture lab coordinates, which is
+      // misleading. GPS is only captured on the intake New Sample form where
+      // the admin/collector is presumably at the actual sampling location.
       try {
         await api(`/api/samples/${sample.id}/files`, { method: 'POST', body: fd });
         await load();
         notify({
           type: 'success',
           title: 'Photo attached',
-          description: lat ? `Captured ${new Date(takenAt).toLocaleString()} · ${lat}, ${lng} (±${accuracy}m)` : `Captured ${new Date(takenAt).toLocaleString()}`
+          description: `Captured ${new Date(takenAt).toLocaleString()}`
         });
       } catch (e) {
         notify({ type: 'error', title: 'Photo upload failed', description: e.message });
@@ -969,7 +972,7 @@
       h('div', { class: 'empty-photo-inner' },
         h('div', { class: 'empty-photo-icon', 'aria-hidden': 'true' }, '📷'),
         h('div', { class: 'empty-photo-title' }, 'No sample photo yet'),
-        h('div', { class: 'empty-photo-hint' }, 'Take one now — the app also captures the time and location.'),
+        h('div', { class: 'empty-photo-hint' }, 'Take one now — the time is captured automatically.'),
         h('button', { class: 'btn btn-primary btn-sm', type: 'button', onclick: () => input.click() }, h('span',{class:'btn-label'},'+ Add sample photo')),
         input,
         status
@@ -1080,6 +1083,19 @@
 
   function sheetTab(sample) {
     const wrap = h('div', { class: 'stack-lg' });
+    // Belt-and-suspenders: if an analyst somehow lands here (e.g. tab was open
+    // in another window when assignment changed), show a hard banner instead
+    // of the entry UI. Backend will refuse anyway; this saves them the typing.
+    if (!canWorkOn(sample)) {
+      const who = sample.assignedTo ? `assigned to ${sample.assignedTo}` : 'not yet assigned';
+      wrap.appendChild(h('div', { class: 'card', style: { borderColor: 'var(--danger, #c0392b)' } },
+        h('div', { class: 'card-body' },
+          h('strong', null, 'You can\'t enter results for this sample.'),
+          h('div', { class: 'muted text-sm', style: { marginTop: '6px' } }, `This sample is ${who}. Ask an admin to reassign it to you if you need to work on it.`)
+        )
+      ));
+      return wrap;
+    }
     wrap.appendChild(h('div', { class: 'card' },
       h('div', { class: 'card-body' },
         h('div', { class: 'row-between' },
@@ -1359,9 +1375,19 @@
         msg
       };
     }).filter(r => r.parameter && r.value !== '');
+    // Guardrails: no rows to save, or nobody attributed for the R1 column
+    // (which is the workbook's minimum — every parameter has at least R1).
+    const releaseBtn = () => { if (btn) { btn.disabled = false; btn.dataset.busy = ''; const l = btn.querySelector('.btn-label'); if (l && btn._origLabel) l.textContent = btn._origLabel; } };
     if (rows.length === 0) {
-      if (btn) { btn.disabled = false; btn.dataset.busy = ''; const l = btn.querySelector('.btn-label'); if (l && btn._origLabel) l.textContent = btn._origLabel; }
+      releaseBtn();
       return notify({ type: 'warn', title: 'Nothing to save', description: 'Enter at least one replicate value on any parameter.' });
+    }
+    // If any row has an R1 value but no R1 analyst picked, refuse — ISO 17025
+    // needs every measurement attributed to a named analyst.
+    const anyR1Value = rows.some(r => r.replicates.some(x => x.value !== ''));
+    if (anyR1Value && !r1By) {
+      releaseBtn();
+      return notify({ type: 'warn', title: 'Analyst missing', description: 'Pick who did the R1 readings at the top of the sheet before saving.' });
     }
     const reason = $('#sheetReason')?.value || '';
     const meta = {
