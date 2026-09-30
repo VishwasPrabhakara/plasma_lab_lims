@@ -111,6 +111,12 @@ function normalizeDb(db) {
     sample.disposal ||= null;
     sample.active = sample.active !== false;
   });
+  // Backfill approvalStatus on existing users so pre-migration accounts
+  // don't get locked out. Anyone active without an explicit status was
+  // already usable, so mark them approved.
+  db.users.forEach(u => {
+    if (!u.approvalStatus) u.approvalStatus = u.active ? "approved" : "deactivated";
+  });
   return db;
 }
 
@@ -129,6 +135,9 @@ async function readDb(env) {
     passwordHash: await hashPassword("admin123"),
     role: "admin",
     active: true,
+    approvalStatus: "approved",
+    approvedAt: now(),
+    approvedBy: "system (seed)",
     createdAt: now()
   });
   addAudit(db, null, "Initialized online database", "system", "primary", "Seeded default admin");
@@ -170,6 +179,13 @@ function publicUser(user) {
     countryCode: user.countryCode || "",
     role: user.role,
     active: user.active,
+    approvalStatus: user.approvalStatus || (user.active ? "approved" : "deactivated"),
+    signedUpAt: user.signedUpAt || null,
+    approvedAt: user.approvedAt || null,
+    approvedBy: user.approvedBy || null,
+    rejectedAt: user.rejectedAt || null,
+    rejectedBy: user.rejectedBy || null,
+    rejectionReason: user.rejectionReason || null,
     createdAt: user.createdAt
   };
 }
@@ -236,14 +252,22 @@ function requireRole(user, ...roles) {
   if (!roles.includes(user.role)) throw Object.assign(new Error("Not allowed"), { status: 403 });
 }
 
+// Analysts can read (browse) any active sample — this is deliberate so they
+// can see the full lab queue for context. Write access is separate below.
 function canReadSample(user, sample) {
   if (user.role === "admin") return true;
   if (user.role === "analyst") return sample.active !== false;
   return false;
 }
 
+// Write access on a sample: admins always, analysts only when they ARE the
+// named assignee. Unassigned samples wait for admin to hand them out —
+// matches ISO 17025 chain-of-custody so every measurement is traceable to
+// a named responsible analyst.
 function canWorkOnSample(user, sample) {
-  return canReadSample(user, sample) && user.role !== "viewer";
+  if (user.role === "admin") return true;
+  if (user.role === "analyst") return sample.assignedTo === user.name;
+  return false;
 }
 
 function validEmail(email) {
@@ -351,6 +375,10 @@ function createSampleRecord(db, user, body) {
     assignedTo: body.assignedTo || "",
     requestedTests: Array.isArray(body.requestedTests) ? body.requestedTests : [],
     notes: body.notes || "",
+    plannedSamplingDate: body.plannedSamplingDate || "",
+    collectionLat: body.collectionLat || "",
+    collectionLng: body.collectionLng || "",
+    collectedAt: body.collectedAt || "",
     results: [],
     files: [],
     chainOfCustody: [{ at: now(), by: user.name, action: "Bottle labelled", locationId: body.storageLocationId || "" }],
@@ -431,10 +459,24 @@ async function handle(request, env, ctx) {
   if (method === "POST" && path.join("/") === "api/login") {
     const body = await bodyJson(request);
     const db = await readDb(env);
-    const user = db.users.find(item => item.email.toLowerCase() === String(body.email || "").toLowerCase() && item.active);
-    if (!user || !(await verifyPassword(body.password || "", user.passwordHash))) throw Object.assign(new Error("Invalid email or password"), { status: 401 });
-    const token = await signJwt({ id: user.id }, env.JWT_SECRET || "change-this-before-production", body.rememberMe ? 30 * 24 * 60 * 60 : 12 * 60 * 60);
-    return json({ token, user: publicUser(user) });
+    // Look up by email regardless of active state so we can tell the user
+    // exactly why login was refused (pending vs deactivated vs wrong pwd).
+    const anyUser = db.users.find(item => item.email.toLowerCase() === String(body.email || "").toLowerCase());
+    if (!anyUser || !(await verifyPassword(body.password || "", anyUser.passwordHash))) {
+      throw Object.assign(new Error("Invalid email or password"), { status: 401 });
+    }
+    if (anyUser.approvalStatus === "pending") {
+      throw Object.assign(new Error("Your account is awaiting admin approval. You'll be able to sign in once an admin approves it."), { status: 403, approvalStatus: "pending" });
+    }
+    if (anyUser.approvalStatus === "rejected") {
+      throw Object.assign(new Error("Your account request was declined. Contact the lab administrator."), { status: 403, approvalStatus: "rejected" });
+    }
+    if (!anyUser.active) {
+      throw Object.assign(new Error("This account is deactivated. Contact the lab administrator."), { status: 403, approvalStatus: "deactivated" });
+    }
+    const authedUser = anyUser;
+    const token = await signJwt({ id: authedUser.id }, env.JWT_SECRET || "change-this-before-production", body.rememberMe ? 30 * 24 * 60 * 60 : 12 * 60 * 60);
+    return json({ token, user: publicUser(authedUser) });
   }
 
   if (path.join("/") === "api/validate/signup") {
@@ -505,12 +547,39 @@ async function handle(request, env, ctx) {
         item.replacedAt = now();
         item.replacedByEmail = pending.email;
       });
-    const user = { id: crypto.randomUUID(), name: pending.name, email: pending.email, countryCode: pending.countryCode, phone: pending.phone, passwordHash: await hashPassword(body.password), role: "analyst", active: true, createdAt: now() };
+    // Sample data is sensitive — new signups start INACTIVE and pending
+    // admin approval. First-user-ever auto-approves as admin because there
+    // is nobody yet to approve.
+    const isFirstUser = db.users.length === 0;
+    const role = isFirstUser ? "admin" : "analyst";
+    const user = {
+      id: crypto.randomUUID(),
+      name: pending.name,
+      email: pending.email,
+      countryCode: pending.countryCode,
+      phone: pending.phone,
+      passwordHash: await hashPassword(body.password),
+      role,
+      active: isFirstUser,
+      approvalStatus: isFirstUser ? "approved" : "pending",
+      signedUpAt: now(),
+      approvedAt: isFirstUser ? now() : null,
+      approvedBy: isFirstUser ? "system (first user)" : null,
+      createdAt: now()
+    };
     db.users.push(user);
     db.pendingSignups = db.pendingSignups.filter(item => item.id !== pending.id);
-    addAudit(db, user, "Verified signup", "user", user.id, `${user.name} created a verified account`);
+    addAudit(db, user, isFirstUser ? "Verified signup (auto-approved as first user)" : "Signed up — awaiting approval", "user", user.id, `${user.name} · ${user.email}`);
     await writeDb(env, db);
-    return json({ user: publicUser(user) });
+    if (isFirstUser) {
+      const token = await signJwt({ id: user.id }, env.JWT_SECRET || "change-this-before-production", 12 * 60 * 60);
+      return json({ token, user: publicUser(user), approvalStatus: "approved" });
+    }
+    return json({
+      approvalStatus: "pending",
+      user: publicUser(user),
+      message: "Account created — awaiting admin approval before you can sign in."
+    });
   }
 
   if (method === "POST" && path.join("/") === "api/signup/resend") {
@@ -601,11 +670,48 @@ async function handle(request, env, ctx) {
     const body = await bodyJson(request);
     if (!["admin", "analyst"].includes(body.role)) throw Object.assign(new Error("Choose admin/manager or analyst"), { status: 400 });
     if (db.users.some(item => item.active && item.email.toLowerCase() === body.email.toLowerCase())) throw Object.assign(new Error("Email already exists"), { status: 409 });
-    const created = { id: crypto.randomUUID(), name: body.name, email: body.email, phone: body.phone || "", countryCode: body.countryCode || "", passwordHash: await hashPassword(body.password), role: body.role, active: true, createdAt: now() };
+    // Admin-created users are pre-approved (admin is vouching for them).
+    const created = { id: crypto.randomUUID(), name: body.name, email: body.email, phone: body.phone || "", countryCode: body.countryCode || "", passwordHash: await hashPassword(body.password), role: body.role, active: true, approvalStatus: "approved", approvedAt: now(), approvedBy: user.name, createdAt: now() };
     db.users.push(created);
     addAudit(db, user, "Created user", "user", created.id, `${created.name} added as ${created.role}`);
     await writeDb(env, db);
     return json(publicUser(created));
+  }
+
+  // Approve a pending signup — admin action.
+  if (method === "POST" && path[0] === "api" && path[1] === "users" && path[3] === "approve") {
+    requireRole(user, "admin");
+    const target = db.users.find(item => item.id === path[2]);
+    if (!target) throw Object.assign(new Error("User not found"), { status: 404 });
+    if (target.approvalStatus !== "pending") throw Object.assign(new Error(`Cannot approve — user status is "${target.approvalStatus || "approved"}"`), { status: 400 });
+    const body = await bodyJson(request);
+    const role = body.role && ["admin", "analyst"].includes(body.role) ? body.role : target.role;
+    target.role = role;
+    target.approvalStatus = "approved";
+    target.approvedAt = now();
+    target.approvedBy = user.name;
+    target.active = true;
+    addAudit(db, user, "Approved user", "user", target.id, `${target.name} approved as ${role}`);
+    await writeDb(env, db);
+    return json(publicUser(target));
+  }
+
+  // Reject a pending signup — admin action. Kept for audit rather than
+  // hard-deleted so the reason and who declined stays traceable.
+  if (method === "POST" && path[0] === "api" && path[1] === "users" && path[3] === "reject") {
+    requireRole(user, "admin");
+    const target = db.users.find(item => item.id === path[2]);
+    if (!target) throw Object.assign(new Error("User not found"), { status: 404 });
+    if (target.approvalStatus !== "pending") throw Object.assign(new Error(`Cannot reject — user status is "${target.approvalStatus || "approved"}"`), { status: 400 });
+    const body = await bodyJson(request);
+    target.approvalStatus = "rejected";
+    target.active = false;
+    target.rejectedAt = now();
+    target.rejectedBy = user.name;
+    target.rejectionReason = String(body.reason || "").slice(0, 500);
+    addAudit(db, user, "Rejected user signup", "user", target.id, `${target.name}${target.rejectionReason ? ` — ${target.rejectionReason}` : ""}`);
+    await writeDb(env, db);
+    return json(publicUser(target));
   }
 
   if (method === "PATCH" && path[0] === "api" && path[1] === "users") {
@@ -691,6 +797,76 @@ async function handle(request, env, ctx) {
 
   if (method === "POST" && path.join("/") === "api/samples/bulk/excel") throw Object.assign(new Error("Excel sample import is not migrated yet. Use pasted bulk rows online."), { status: 400 });
 
+  // Collect — the field-scan flow the collector uses at the sampling site.
+  // Records confirmed site, GPS ground truth, collectedAt. Gated on being
+  // the named collector or admin (analyst won't yet be assigned).
+  if (method === "POST" && path[0] === "api" && path[1] === "samples" && path[3] === "collect") {
+    const sample = db.samples.find(item => item.id === path[2]);
+    if (!sample) throw Object.assign(new Error("Sample not found"), { status: 404 });
+    const isAdmin = user.role === "admin";
+    if (!isAdmin && sample.collector !== user.name) {
+      throw Object.assign(new Error("Only the named collector or an admin can mark this sample collected"), { status: 403 });
+    }
+    if (sample.status !== "Bottle Ready" && sample.status !== "Sample Collected") {
+      throw Object.assign(new Error(`Cannot mark collected — sample is on step "${sample.status}"`), { status: 400 });
+    }
+    const body = await bodyJson(request);
+    const site = String(body.collectionSite || "").trim();
+    if (!site) throw Object.assign(new Error("Sampling site required"), { status: 400 });
+    sample.collectionSite = site;
+    sample.status = "Sample Collected";
+    sample.workflowStage = "Sample Collected";
+    if (body.collectedAt) sample.collectedAt = body.collectedAt;
+    if (body.collectionLat) sample.collectionLat = String(body.collectionLat);
+    if (body.collectionLng) sample.collectionLng = String(body.collectionLng);
+    sample.updatedAt = now();
+    const locNote = sample.collectionLat && sample.collectionLng ? ` @ ${sample.collectionLat},${sample.collectionLng}` : "";
+    sample.chainOfCustody.unshift({
+      at: now(), by: user.name,
+      action: `Sample collected at ${site}${locNote}`,
+      locationId: sample.storageLocationId || ""
+    });
+    addAudit(db, user, "Sample collected", "sample", sample.id, `${sample.sampleCode}: site=${site}${locNote}`);
+    await writeDb(env, db);
+    return json(sample);
+  }
+
+  // Storage move — deliberately open to ANY analyst regardless of assignment.
+  // Physical storage is a lab-logistics concern (someone arriving with new
+  // batch may need to relocate). Auto-advances Sample Collected → Stored on
+  // first storage assignment; later moves leave status alone.
+  if (method === "POST" && path[0] === "api" && path[1] === "samples" && path[3] === "storage") {
+    const sample = db.samples.find(item => item.id === path[2]);
+    if (!sample) throw Object.assign(new Error("Sample not found"), { status: 404 });
+    const body = await bodyJson(request);
+    const previousStorageId = sample.storageLocationId || "";
+    const nextStorageId = body.storageLocationId || "";
+    if (nextStorageId && !storageIsAvailable(db, nextStorageId, previousStorageId)) {
+      throw Object.assign(new Error("Selected storage is full or inactive"), { status: 400 });
+    }
+    if (previousStorageId === nextStorageId) {
+      throw Object.assign(new Error("Sample is already in that storage"), { status: 400 });
+    }
+    sample.storageLocationId = nextStorageId;
+    const isFirstStore = sample.status === "Sample Collected" && nextStorageId;
+    if (isFirstStore) {
+      sample.status = "Stored";
+      sample.workflowStage = "Stored";
+    }
+    sample.chainOfCustody.unshift({
+      at: now(), by: user.name,
+      action: isFirstStore ? "Logged into storage" : "Storage moved",
+      fromLocationId: previousStorageId,
+      toLocationId: nextStorageId,
+      locationId: nextStorageId,
+      note: body.reason || body.note || ""
+    });
+    sample.updatedAt = now();
+    addAudit(db, user, isFirstStore ? "Sample stored" : "Storage moved", "sample", sample.id, `${sample.sampleCode}: ${previousStorageId || "unstored"} -> ${nextStorageId || "unstored"}${body.reason ? ` (${body.reason})` : ""}`);
+    await writeDb(env, db);
+    return json(sample);
+  }
+
   if (method === "PATCH" && path[0] === "api" && path[1] === "samples") {
     const sample = db.samples.find(item => item.id === path[2]);
     if (!sample) throw Object.assign(new Error("Sample not found"), { status: 404 });
@@ -737,7 +913,14 @@ async function handle(request, env, ctx) {
   if (method === "POST" && path[0] === "api" && path[1] === "samples" && path[3] === "files") {
     const sample = db.samples.find(item => item.id === path[2]);
     if (!sample) throw Object.assign(new Error("Sample not found"), { status: 404 });
-    if (!canWorkOnSample(user, sample)) throw Object.assign(new Error("Not allowed for this sample"), { status: 403 });
+    // File uploads (like sample photo) allowed for the named collector OR
+    // canWorkOnSample — collector uploads photo in the field before they're
+    // ever the assigned analyst.
+    const isAdmin = user.role === "admin";
+    const isCollector = sample.collector === user.name;
+    if (!isAdmin && !isCollector && !canWorkOnSample(user, sample)) {
+      throw Object.assign(new Error("Not allowed for this sample"), { status: 403 });
+    }
     const form = await request.formData();
     const category = String(form.get("category") || "Uploaded File");
     const files = [];
@@ -770,14 +953,15 @@ async function handle(request, env, ctx) {
     const sample = db.samples.find(item => item.id === path[2]);
     if (!sample) throw Object.assign(new Error("Sample not found"), { status: 404 });
     const body = await bodyJson(request);
-    if (!["Retained", "Disposed", "Active"].includes(body.action)) throw Object.assign(new Error("Invalid lifecycle action"), { status: 400 });
-    sample.retentionStatus = body.action;
-    if (body.action === "Disposed") {
+    if (!["Retained", "Disposed", "Active", "Dispose"].includes(body.action)) throw Object.assign(new Error("Invalid lifecycle action"), { status: 400 });
+    const action = body.action === "Dispose" ? "Disposed" : body.action;
+    sample.retentionStatus = action;
+    if (action === "Disposed") {
       sample.status = "Disposed";
       sample.workflowStage = "Disposed";
       sample.disposal = { disposedAt: now(), disposedBy: user.name, reason: body.reason || "" };
     }
-    sample.chainOfCustody.unshift({ at: now(), by: user.name, action: body.action, locationId: sample.storageLocationId || "" });
+    sample.chainOfCustody.unshift({ at: now(), by: user.name, action, locationId: sample.storageLocationId || "" });
     await writeDb(env, db);
     return json(sample);
   }
