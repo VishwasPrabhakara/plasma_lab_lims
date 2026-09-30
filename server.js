@@ -652,9 +652,14 @@ app.post("/api/password-reset/confirm", async (req, res) => {
 app.post("/api/login", async (req, res) => {
   const { email, password, rememberMe } = req.body;
   const db = readDb();
-  // Look up by email regardless of active state so we can distinguish
-  // "waiting for approval" from "wrong password".
-  const anyUser = db.users.find(item => item.email.toLowerCase() === String(email || "").toLowerCase());
+  // Look up by email, but skip records replaced by a newer signup of the
+  // same email. Take the most recently created candidate so a fresh signup
+  // wins over any stale deactivated ghost from earlier attempts.
+  const emailLower = String(email || "").toLowerCase();
+  const candidates = db.users
+    .filter(item => item.email.toLowerCase() === emailLower && !item.replacedAt && item.passwordHash)
+    .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+  const anyUser = candidates[0];
   if (!anyUser || !(await bcrypt.compare(password || "", anyUser.passwordHash))) {
     return res.status(401).json({ error: "Invalid email or password" });
   }

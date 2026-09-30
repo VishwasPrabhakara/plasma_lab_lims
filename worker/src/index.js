@@ -459,9 +459,14 @@ async function handle(request, env, ctx) {
   if (method === "POST" && path.join("/") === "api/login") {
     const body = await bodyJson(request);
     const db = await readDb(env);
-    // Look up by email regardless of active state so we can tell the user
-    // exactly why login was refused (pending vs deactivated vs wrong pwd).
-    const anyUser = db.users.find(item => item.email.toLowerCase() === String(body.email || "").toLowerCase());
+    // Look up by email, but skip any user that's been replaced by a newer
+    // signup with the same email. Also skip records with no password hash.
+    // Then take the most recently created one so a fresh signup wins.
+    const emailLower = String(body.email || "").toLowerCase();
+    const candidates = db.users
+      .filter(item => item.email.toLowerCase() === emailLower && !item.replacedAt && item.passwordHash)
+      .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+    const anyUser = candidates[0];
     if (!anyUser || !(await verifyPassword(body.password || "", anyUser.passwordHash))) {
       throw Object.assign(new Error("Invalid email or password"), { status: 401 });
     }
