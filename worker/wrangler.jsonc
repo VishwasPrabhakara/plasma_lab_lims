@@ -7,5 +7,30 @@
     "FRONTEND_PUBLIC_URL": "https://vishwasprabhakara.github.io/plasma_lab_lims/",
     "ALLOWED_ORIGINS": "https://vishwasprabhakara.github.io",
     "SMTP_FROM_NAME": "Plasma Lab LIMS"
+  },
+  // D1 SQL database (Phase 1 of the Neon → D1 migration).
+  // Create with:  wrangler d1 create plasma-lab-lims
+  // Then paste the returned "database_id" below and:
+  //   wrangler d1 execute plasma-lab-lims --remote --file=./migrations/0001_initial_schema.sql
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "plasma-lab-lims",
+      "database_id": "REPLACE_WITH_D1_ID_AFTER_wrangler_d1_create"
+    }
+  ],
+  // R2 bucket for sample photos + archive bundles (Phase 3).
+  // Create with:  wrangler r2 bucket create plasma-lab-lims-media
+  "r2_buckets": [
+    {
+      "binding": "MEDIA",
+      "bucket_name": "plasma-lab-lims-media"
+    }
+  ],
+  // Cron trigger for scheduled archive checks (Phase 4).
+  // Fires 03:00 UTC on the 1st of every month. Handler checks for samples
+  // eligible for archiving and emails admin instead of auto-purging.
+  "triggers": {
+    "crons": ["0 3 1 * *"]
   }
 }
