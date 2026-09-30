@@ -282,6 +282,13 @@ function publicUser(user) {
     phone: user.phone || "",
     role: user.role,
     active: user.active,
+    approvalStatus: user.approvalStatus || (user.active ? "approved" : "deactivated"),
+    signedUpAt: user.signedUpAt || null,
+    approvedAt: user.approvedAt || null,
+    approvedBy: user.approvedBy || null,
+    rejectedAt: user.rejectedAt || null,
+    rejectedBy: user.rejectedBy || null,
+    rejectionReason: user.rejectionReason || null,
     createdAt: user.createdAt
   };
 }
@@ -552,13 +559,17 @@ app.post("/api/signup/complete", async (req, res) => {
   const db = readDb();
   const pending = db.pendingSignups.find(item => item.id === pendingId);
   if (!pending || !pending.emailVerified || !pending.phone) return res.status(400).json({ error: "Verify email and enter phone before creating password" });
-  const role = db.users.length === 0 ? "admin" : "analyst";
+  const isFirstUser = db.users.length === 0;
+  const role = isFirstUser ? "admin" : "analyst";
   db.users
     .filter(item => !item.active && item.email.toLowerCase() === pending.email.toLowerCase())
     .forEach(item => {
       item.replacedAt = now();
       item.replacedByEmail = pending.email;
     });
+  // Sample data is sensitive — new signups start INACTIVE and pending admin
+  // approval, so nobody can create an account and immediately touch records.
+  // First-user-ever is auto-approved because there's no admin yet to approve.
   const user = {
     id: uuid(),
     name: pending.name,
@@ -567,15 +578,27 @@ app.post("/api/signup/complete", async (req, res) => {
     phone: pending.phone,
     passwordHash: await bcrypt.hash(password, 10),
     role,
-    active: true,
+    active: isFirstUser,
+    approvalStatus: isFirstUser ? "approved" : "pending",
+    signedUpAt: now(),
+    approvedAt: isFirstUser ? now() : null,
+    approvedBy: isFirstUser ? "system (first user)" : null,
     createdAt: now()
   };
   db.users.push(user);
   db.pendingSignups = db.pendingSignups.filter(item => item.id !== pendingId);
-  addAudit(db, user, "Verified signup", "user", user.id, `${user.name} created a verified account`);
+  addAudit(db, user, isFirstUser ? "Verified signup (auto-approved as first user)" : "Signed up — awaiting approval", "user", user.id, `${user.name} · ${user.email}`);
   writeDb(db);
-  const token = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: "12h" });
-  res.json({ token, user: publicUser(user) });
+  if (isFirstUser) {
+    const token = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: "12h" });
+    return res.json({ token, user: publicUser(user), approvalStatus: "approved" });
+  }
+  // No token — sample data is behind an approval wall.
+  res.json({
+    approvalStatus: "pending",
+    user: publicUser(user),
+    message: "Account created — awaiting admin approval before you can sign in."
+  });
 });
 
 app.post("/api/signup/resend", async (req, res) => {
@@ -629,10 +652,22 @@ app.post("/api/password-reset/confirm", async (req, res) => {
 app.post("/api/login", async (req, res) => {
   const { email, password, rememberMe } = req.body;
   const db = readDb();
-  const user = db.users.find(item => item.email.toLowerCase() === String(email || "").toLowerCase() && item.active);
-  if (!user || !(await bcrypt.compare(password || "", user.passwordHash))) {
+  // Look up by email regardless of active state so we can distinguish
+  // "waiting for approval" from "wrong password".
+  const anyUser = db.users.find(item => item.email.toLowerCase() === String(email || "").toLowerCase());
+  if (!anyUser || !(await bcrypt.compare(password || "", anyUser.passwordHash))) {
     return res.status(401).json({ error: "Invalid email or password" });
   }
+  if (anyUser.approvalStatus === "pending") {
+    return res.status(403).json({ error: "Your account is awaiting admin approval. You'll be able to sign in once an admin approves it.", approvalStatus: "pending" });
+  }
+  if (anyUser.approvalStatus === "rejected") {
+    return res.status(403).json({ error: "Your account request was declined. Contact the lab administrator.", approvalStatus: "rejected" });
+  }
+  if (!anyUser.active) {
+    return res.status(403).json({ error: "This account is deactivated. Contact the lab administrator.", approvalStatus: "deactivated" });
+  }
+  const user = anyUser;
   addAudit(db, user, "Logged in", "user", user.id, "User session started");
   writeDb(db);
   const token = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: rememberMe ? "30d" : "12h" });
@@ -763,9 +798,51 @@ app.post("/api/users", auth, requireRole("admin"), async (req, res) => {
       user.replacedAt = now();
       user.replacedByEmail = email;
     });
-  const user = { id: uuid(), name, email, phone, passwordHash: await bcrypt.hash(password, 10), role, active: true, createdAt: now() };
+  // Admin-created users are pre-approved (an admin is vouching for them).
+  const user = { id: uuid(), name, email, phone, passwordHash: await bcrypt.hash(password, 10), role, active: true, approvalStatus: "approved", approvedAt: now(), approvedBy: req.user.name, createdAt: now() };
   db.users.push(user);
   addAudit(db, req.user, "Created user", "user", user.id, `${name} added as ${role}`);
+  writeDb(db);
+  res.json(publicUser(user));
+});
+
+// Approve a pending signup — admin action. Flips active:true, records
+// who approved and when, so the audit trail can prove who authorized every
+// account with access to sample data.
+app.post("/api/users/:id/approve", auth, requireRole("admin"), (req, res) => {
+  const db = req.db;
+  const user = db.users.find(item => item.id === req.params.id);
+  if (!user) return res.status(404).json({ error: "User not found" });
+  if (user.approvalStatus !== "pending") {
+    return res.status(400).json({ error: `Cannot approve — user status is "${user.approvalStatus || "approved"}"` });
+  }
+  const role = req.body.role && ["admin", "analyst"].includes(req.body.role) ? req.body.role : user.role;
+  user.role = role;
+  user.approvalStatus = "approved";
+  user.approvedAt = now();
+  user.approvedBy = req.user.name;
+  user.active = true;
+  addAudit(db, req.user, "Approved user", "user", user.id, `${user.name} approved as ${role}`);
+  writeDb(db);
+  res.json(publicUser(user));
+});
+
+// Reject a pending signup — admin action. Marks the request declined and
+// keeps the record for audit (does not hard-delete, so the reason and who
+// declined stays traceable).
+app.post("/api/users/:id/reject", auth, requireRole("admin"), (req, res) => {
+  const db = req.db;
+  const user = db.users.find(item => item.id === req.params.id);
+  if (!user) return res.status(404).json({ error: "User not found" });
+  if (user.approvalStatus !== "pending") {
+    return res.status(400).json({ error: `Cannot reject — user status is "${user.approvalStatus || "approved"}"` });
+  }
+  user.approvalStatus = "rejected";
+  user.active = false;
+  user.rejectedAt = now();
+  user.rejectedBy = req.user.name;
+  user.rejectionReason = String(req.body.reason || "").slice(0, 500);
+  addAudit(db, req.user, "Rejected user signup", "user", user.id, `${user.name}${user.rejectionReason ? ` — ${user.rejectionReason}` : ""}`);
   writeDb(db);
   res.json(publicUser(user));
 });
