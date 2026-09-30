@@ -399,6 +399,14 @@ function auth(req, res, next) {
     const db = readDb();
     const user = db.users.find(item => item.id === decoded.id && item.active);
     if (!user) return res.status(401).json({ error: "Invalid user" });
+    // Single-active-session: invalidate stale tokens when a newer login
+    // bumped sessionVersion. Grandfather in old tokens (missing sv) if the
+    // user has never done a versioned login yet.
+    const currentSv = Number(user.sessionVersion) || 0;
+    const tokenSv = Number(decoded.sv) || 0;
+    if (currentSv > 0 && tokenSv !== currentSv) {
+      return res.status(401).json({ error: "Signed in on another device — this session was ended.", reason: "session_superseded" });
+    }
     req.user = user;
     req.db = db;
     next();
@@ -673,9 +681,12 @@ app.post("/api/login", async (req, res) => {
     return res.status(403).json({ error: "This account is deactivated. Contact the lab administrator.", approvalStatus: "deactivated" });
   }
   const user = anyUser;
+  // Bump sessionVersion to invalidate any other active session for this user.
+  user.sessionVersion = (Number(user.sessionVersion) || 0) + 1;
+  user.lastLoginAt = new Date().toISOString();
   addAudit(db, user, "Logged in", "user", user.id, "User session started");
   writeDb(db);
-  const token = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: rememberMe ? "30d" : "12h" });
+  const token = jwt.sign({ id: user.id, sv: user.sessionVersion }, JWT_SECRET, { expiresIn: rememberMe ? "30d" : "12h" });
   res.json({ token, user: publicUser(user) });
 });
 
