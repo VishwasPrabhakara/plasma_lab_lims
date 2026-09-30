@@ -2491,6 +2491,34 @@
       notify({ type: 'success', title: 'User created' });
     });
   }
+  function pendingUserRow(u) {
+    const roleSel = h('select', { class: 'select' });
+    roleSel.appendChild(h('option', { value: 'analyst', selected: true }, 'Analyst'));
+    roleSel.appendChild(h('option', { value: 'admin' }, 'Admin / Manager'));
+    const approveBtn = h('button', { class: 'btn btn-primary btn-sm', type: 'button' }, h('span',{class:'btn-label'},'✓ Approve'));
+    const rejectBtn = h('button', { class: 'btn btn-sm btn-ghost', type: 'button' }, h('span',{class:'btn-label'},'Reject'));
+    approveBtn.onclick = safe(async () => {
+      if (!confirm(`Approve ${u.name} (${u.email}) as ${roleSel.value}? They will be able to sign in immediately.`)) return;
+      await api(`/api/users/${u.id}/approve`, { method: 'POST', body: JSON.stringify({ role: roleSel.value }) });
+      await load();
+      notify({ type: 'success', title: 'Approved', description: `${u.name} can now sign in as ${roleSel.value}.` });
+    });
+    rejectBtn.onclick = safe(async () => {
+      const reason = window.prompt(`Reason for rejecting ${u.name} (optional):`, '') || '';
+      if (!confirm(`Reject ${u.name}'s signup? They cannot request again with the same email.`)) return;
+      await api(`/api/users/${u.id}/reject`, { method: 'POST', body: JSON.stringify({ reason }) });
+      await load();
+      notify({ type: 'success', title: 'Rejected', description: `${u.name}'s signup declined.` });
+    });
+    return h('tr', null,
+      h('td', { 'data-label': 'Name' }, u.name),
+      h('td', { 'data-label': 'Email', class: 'mono text-sm' }, u.email),
+      h('td', { 'data-label': 'Phone', class: 'mono text-sm' }, u.phone || '—'),
+      h('td', { 'data-label': 'Signed up', class: 'mono text-sm' }, u.signedUpAt ? fmtDate(u.signedUpAt) : '—'),
+      h('td', { 'data-label': 'Approve as' }, roleSel),
+      h('td', { 'data-label': 'Action' }, h('div', { class: 'row', style: { gap: '6px' } }, approveBtn, rejectBtn))
+    );
+  }
   function userRow(u) {
     const roleSel = h('select', { class: 'select', style: { minWidth: '160px' }, 'data-user-role': u.id },
       h('option', { value: 'admin',   selected: u.role === 'admin' ? true : null }, 'Admin / Manager'),
