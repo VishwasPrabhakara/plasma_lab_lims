@@ -2227,8 +2227,10 @@
       h('button', { class: 'btn btn-primary', type: 'button', onclick: async () => {
         try {
           const storageLocationId = sel.value;
+          if (!storageLocationId) throw new Error('Pick a storage location first.');
+          // Backend auto-advances status to "Stored" when logging in from
+          // Sample Collected — no separate status PATCH needed.
           await api(`/api/samples/${sample.id}/storage`, { method: 'POST', body: JSON.stringify({ storageLocationId, reason: 'Log into storage after arrival' }) });
-          await api(`/api/samples/${sample.id}`, { method: 'PATCH', body: JSON.stringify({ status: 'Stored' }) });
           await load();
           dlg.close();
           notify({ type: 'success', title: 'Stored', description: `${sample.sampleCode} logged in.` });
@@ -2411,7 +2413,32 @@
   function renderUsers() {
     const root = $('#usersView');
     root.innerHTML = '';
-    const visible = state.showInactiveUsers ? state.users : state.users.filter(u => u.active);
+    const pending = state.users.filter(u => u.approvalStatus === 'pending');
+    const visible = state.showInactiveUsers ? state.users.filter(u => u.approvalStatus !== 'pending') : state.users.filter(u => u.active && u.approvalStatus !== 'pending');
+    // Pending-approval banner: signups waiting for admin review, front-and-centre.
+    if (pending.length > 0) {
+      root.appendChild(h('div', { class: 'card', style: { marginBottom: '16px', borderColor: 'var(--warn, #c58a1a)' } },
+        h('div', { class: 'card-header' },
+          h('h3', { class: 'card-title' }, `⏳ ${pending.length} pending approval${pending.length === 1 ? '' : 's'}`),
+          h('div', { class: 'muted text-sm' }, 'New signups waiting for you to approve access.')
+        ),
+        h('div', { class: 'card-body' },
+          h('div', { class: 'table-wrap' },
+            h('table', { class: 'data-table' },
+              h('thead', null, h('tr', null,
+                h('th', { scope: 'col' }, 'Name'),
+                h('th', { scope: 'col' }, 'Email'),
+                h('th', { scope: 'col' }, 'Phone'),
+                h('th', { scope: 'col' }, 'Signed up'),
+                h('th', { scope: 'col' }, 'Approve as'),
+                h('th', { scope: 'col' }, 'Action')
+              )),
+              h('tbody', null, ...pending.map(u => pendingUserRow(u)))
+            )
+          )
+        )
+      ));
+    }
     root.appendChild(h('div', { class: 'section-grid', 'data-cols': '2' },
       // Create form
       h('form', { class: 'card', id: 'userForm' },
@@ -2922,7 +2949,22 @@
     state.pendingSignupId = '';
     showSlide('login');
     $('#loginEmail').value = data.user.email;
-    notify({ type: 'success', title: 'Account created', description: 'You can sign in now.' });
+    // New signups need admin approval before they can sign in. The very
+    // first-ever user of a fresh deployment auto-approves as admin.
+    if (data.approvalStatus === 'approved' && data.token) {
+      // First user path — server returned a token, log them straight in.
+      state.token = data.token;
+      localStorage.setItem('plasma-lab-token', data.token);
+      showApp();
+      await load();
+      notify({ type: 'success', title: 'Account created', description: 'Signed in as first admin.' });
+    } else {
+      notify({
+        type: 'info',
+        title: 'Awaiting admin approval',
+        description: 'Your account was created. An admin needs to approve it before you can sign in. You\'ll get access as soon as they do.'
+      });
+    }
   });
   $('#resetStartForm').onsubmit = safe(async e => {
     e.preventDefault();
