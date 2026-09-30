@@ -189,6 +189,54 @@
   const roleLabel = r => r === 'admin' ? 'Admin / Manager' : 'Analyst';
   const initials = name => String(name || '?').trim().split(/\s+/).map(p => p[0]).slice(0,2).join('').toUpperCase();
 
+  // All people who can be assigned as analysts on a sample. Merges the
+  // People roster (admin-curated) with active approved users who have an
+  // analyst or admin role. This means a newly-approved analyst account shows
+  // up in the assign dropdown immediately, without also being added to the
+  // People roster by hand.
+  function allAnalystNames() {
+    const set = new Set();
+    (state.people || []).forEach(p => { if (p.name) set.add(p.name); });
+    (state.users || []).forEach(u => {
+      if (u.active && u.approvalStatus !== 'pending' && u.approvalStatus !== 'rejected' && ['admin', 'analyst'].includes(u.role) && u.name) {
+        set.add(u.name);
+      }
+    });
+    return [...set].sort((a, b) => a.localeCompare(b));
+  }
+
+  // Compress an image file client-side before upload so it fits under the
+  // backend's per-file size cap and doesn't bloat the DB blob. Aims for
+  // <500KB by scaling the longest side to 1280px and re-encoding as JPEG
+  // quality 0.75. Falls back to the original file if the browser can't
+  // do canvas work or the file isn't an image.
+  async function compressImage(file, { maxDim = 1280, quality = 0.75, maxBytes = 500 * 1024 } = {}) {
+    if (!file || !file.type || !file.type.startsWith('image/')) return file;
+    if (file.size <= maxBytes) return file; // already small enough
+    try {
+      const bmp = await createImageBitmap(file);
+      const scale = Math.min(1, maxDim / Math.max(bmp.width, bmp.height));
+      const w = Math.round(bmp.width * scale);
+      const h = Math.round(bmp.height * scale);
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(bmp, 0, 0, w, h);
+      const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', quality));
+      if (!blob) return file;
+      // If still too big, try a lower quality once more
+      let out = blob;
+      if (out.size > maxBytes) {
+        const blob2 = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.55));
+        if (blob2 && blob2.size < out.size) out = blob2;
+      }
+      const compressed = new File([out], (file.name || 'photo').replace(/\.[^.]+$/, '') + '.jpg', { type: 'image/jpeg', lastModified: Date.now() });
+      return compressed;
+    } catch (e) {
+      console.warn('Image compression failed, uploading original:', e);
+      return file;
+    }
+  }
+
   /* ---------------------------------------------------------------------- */
   /* API                                                                    */
   /* ---------------------------------------------------------------------- */
@@ -804,7 +852,17 @@
     const from = f.from ? new Date(f.from + 'T00:00:00').getTime() : 0;
     const to = f.to ? new Date(f.to + 'T23:59:59').getTime() : Infinity;
     return state.samples.filter(s => {
-      const text = [s.sampleCode, s.clientName, s.collectionSite, s.assignedTo, s.collector, s.sourceType].join(' ').toLowerCase();
+      // Expanded search: matches sample code, project, site, collector,
+      // assigned analyst, source, source-water type, storage location name,
+      // status, sampling / analysis / disposal dates, and any parameter name.
+      const storageName = state.storageLocations.find(l => l.id === s.storageLocationId)?.name || '';
+      const paramNames = (s.results || []).map(r => r.parameter).join(' ');
+      const text = [
+        s.sampleCode, s.clientName, s.collectionSite, s.assignedTo, s.collector,
+        s.sourceType, s.status, storageName, paramNames,
+        s.collectedAt || '', s.receivedAt || '', s.reviewedAt || '', s.disposal?.disposedAt || '',
+        (s.collectedAt || s.receivedAt || '').slice(0, 10) // YYYY-MM-DD form for "2026-09-30"
+      ].join(' ').toLowerCase();
       const created = new Date(s.createdAt || s.receivedAt || 0).getTime();
       return (!q || text.includes(q))
         && (!f.status || s.status === f.status)
@@ -945,10 +1003,12 @@
     input.onchange = safe(async () => {
       const file = input.files?.[0];
       if (!file) return;
+      status.textContent = 'Compressing photo…';
+      const compressed = await compressImage(file);
       status.textContent = 'Uploading photo…';
       const fd = new FormData();
       fd.append('category', 'Sample Photo');
-      fd.append('files', file);
+      fd.append('files', compressed);
       const takenAt = new Date().toISOString();
       fd.append('takenAt', takenAt);
       // NOTE: Deliberately not capturing GPS on the add-later flow. An analyst
@@ -1041,7 +1101,7 @@
         h('div', { class: 'form-error-banner hidden', 'data-form-error': true }),
         h('div', { class: 'form-grid' },
           fieldWith('Lab step', selectFor(STATUS_OPTIONS, sample.status, 'editStatus')),
-          fieldWith('Assigned analyst', selectFor(['Unassigned', ...state.people.map(p => p.name)], sample.assignedTo || 'Unassigned', 'editAnalyst')),
+          fieldWith('Assigned analyst', selectFor(['Unassigned', ...allAnalystNames()], sample.assignedTo || 'Unassigned', 'editAnalyst')),
           fieldWith('Current storage', storageSelect(sample.storageLocationId, 'editStorage')),
           fieldWith('Target completion', h('input', { class: 'input', id: 'editDueAt', type: 'datetime-local', value: toDateTimeLocal(sample.dueAt) })),
           h('div', { class: 'field field-wide' },
@@ -1190,7 +1250,7 @@
     // Panel picker — project → parameter mapping.
     const guessed = guessPanelName(sample);
     const panelNames = Object.keys(PROJECT_PANELS);
-    const analystOptions = (state.people || []).map(p => p.name).filter(Boolean);
+    const analystOptions = allAnalystNames();
 
     // Header controls: panel + sampling date + analysis date + log book page
     const headerControls = h('div', { class: 'sheet-header-controls' },
@@ -2192,10 +2252,11 @@
       if (btn) { btn.disabled = true; btn.querySelector('.btn-label').textContent = 'Saving…'; }
       const takenAt = new Date().toISOString();
       try {
-        // 1. Upload photo (with GPS + timestamp as file metadata)
+        // 1. Compress + upload photo (with GPS + timestamp as file metadata)
+        const compressed = await compressImage(file);
         const fd = new FormData();
         fd.append('category', 'Sample Photo');
-        fd.append('files', file);
+        fd.append('files', compressed);
         if (lat) fd.append('lat', lat);
         if (lng) fd.append('lng', lng);
         fd.append('takenAt', takenAt);
@@ -2712,7 +2773,7 @@
       storage.innerHTML = '<option value="">Not stored yet</option>' + state.storageLocations.map(loc => `<option value="${loc.id}"${loc.isFull ? ' disabled' : ''}>${esc(loc.name)}${loc.isFull ? ' — FULL' : ''}</option>`).join('');
     }
     if (analyst) {
-      analyst.innerHTML = '<option value="">Unassigned</option>' + state.people.map(p => `<option value="${esc(p.name)}">${esc(p.name)}</option>`).join('');
+      analyst.innerHTML = '<option value="">Unassigned</option>' + allAnalystNames().map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('');
     }
     if (bulkStorage) {
       bulkStorage.innerHTML = '<option value="">Not stored yet</option>' + state.storageLocations.map(loc => `<option value="${loc.id}">${esc(loc.name)}</option>`).join('');
@@ -2835,9 +2896,10 @@
     if (!data.requestedTests.length) throw new Error('Choose at least one requested test');
     const sample = await api('/api/samples', { method: 'POST', body: JSON.stringify(data) });
     if (photo && photo.size > 0) {
+      const compressed = await compressImage(photo);
       const upload = new FormData();
       upload.append('category', 'Sample Photo');
-      upload.append('files', photo);
+      upload.append('files', compressed);
       await api(`/api/samples/${sample.id}/files`, { method: 'POST', body: upload });
     }
     $('#sampleDialog').close();

@@ -245,6 +245,18 @@ async function auth(request, env) {
   const db = await readDb(env);
   const user = db.users.find(item => item.id === payload.id && item.active);
   if (!user) throw Object.assign(new Error("Invalid user"), { status: 401 });
+  // Single-active-session guard: if the token was issued for an earlier
+  // session (someone signed in on another device since), refuse. This is
+  // what invalidates the other browser when the user signs in fresh.
+  const currentSv = Number(user.sessionVersion) || 0;
+  const tokenSv = Number(payload.sv) || 0;
+  // Grandfather in tokens from before sessionVersion existed (sv missing on
+  // the token AND user.sessionVersion still 0) so existing sessions don't
+  // all break at deploy time. Once anyone logs in fresh, sv is set and
+  // stale tokens for that user are refused.
+  if (currentSv > 0 && tokenSv !== currentSv) {
+    throw Object.assign(new Error("Signed in on another device — this session was ended."), { status: 401, reason: "session_superseded" });
+  }
   return { db, user };
 }
 
@@ -480,7 +492,12 @@ async function handle(request, env, ctx) {
       throw Object.assign(new Error("This account is deactivated. Contact the lab administrator."), { status: 403, approvalStatus: "deactivated" });
     }
     const authedUser = anyUser;
-    const token = await signJwt({ id: authedUser.id }, env.JWT_SECRET || "change-this-before-production", body.rememberMe ? 30 * 24 * 60 * 60 : 12 * 60 * 60);
+    // Bump sessionVersion — invalidates any earlier session on any other
+    // device for this account. Only after all auth checks passed.
+    authedUser.sessionVersion = (Number(authedUser.sessionVersion) || 0) + 1;
+    authedUser.lastLoginAt = now();
+    await writeDb(env, db);
+    const token = await signJwt({ id: authedUser.id, sv: authedUser.sessionVersion }, env.JWT_SECRET || "change-this-before-production", body.rememberMe ? 30 * 24 * 60 * 60 : 12 * 60 * 60);
     return json({ token, user: publicUser(authedUser) });
   }
 
