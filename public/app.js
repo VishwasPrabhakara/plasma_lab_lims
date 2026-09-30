@@ -2024,7 +2024,16 @@
       list.appendChild(h('button', {
         class: 'btn ' + (a.primary ? 'btn-primary' : ''),
         type: 'button',
-        onclick: async () => { await a.onclick(); dlg.close(); }
+        onclick: async () => {
+          // Each action is responsible for its own dialog lifecycle:
+          // - actions that navigate to a full page call openSampleDetail (which
+          //   is fine, then we close);
+          // - actions that swap in a sub-form inside the same dialog (Mark
+          //   collected, Log storage) return { keepOpen: true } to prevent
+          //   the close.
+          const result = await a.onclick();
+          if (!result || !result.keepOpen) dlg.close();
+        }
       }, h('span', { class: 'btn-label' }, a.label)));
     });
     if (actions.length === 0) {
@@ -2064,7 +2073,7 @@
         // In the field — collector marks the sample collected with photo + GPS.
         actions.push({
           label: '✓ Mark collected + take photo', primary: true,
-          onclick: () => scanQuickMarkCollected(sample)
+          onclick: () => { scanQuickMarkCollected(sample); return { keepOpen: true }; }
         });
         break;
       case 'Sample Collected':
@@ -2072,7 +2081,7 @@
         // storage. Admin will assign analysts as a separate step.
         actions.push({
           label: '❄ Log into storage', primary: true,
-          onclick: () => scanQuickPickStorage(sample)
+          onclick: () => { scanQuickPickStorage(sample); return { keepOpen: true }; }
         });
         break;
       case 'Stored':
