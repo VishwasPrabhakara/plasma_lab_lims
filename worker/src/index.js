@@ -304,11 +304,8 @@ async function auth(request, env) {
   const payload = await verifyJwt(token, env.JWT_SECRET || "change-this-before-production");
   const user = await env.DB.prepare("SELECT * FROM users WHERE id = ? AND active = 1").bind(payload.id).first();
   if (!user) throw Object.assign(new Error("Invalid user"), { status: 401 });
-  const currentSv = Number(user.session_version) || 0;
-  const tokenSv = Number(payload.sv) || 0;
-  if (currentSv > 0 && tokenSv !== currentSv) {
-    throw Object.assign(new Error("Signed in on another device — this session was ended."), { status: 401, reason: "session_superseded" });
-  }
+  // Multi-device allowed: no sessionVersion enforcement. Same account can
+  // have multiple active tokens at once (phone + desktop + another phone).
   return { user };
 }
 
@@ -321,9 +318,17 @@ function canReadSample(user, sample) {
   if (user.role === "analyst") return sample.active !== false && !sample.archived_at;
   return false;
 }
+// assignedTo may now hold multiple analyst names, comma-separated (e.g.
+// "Amrutha Shanbhag, Anshika M"). An analyst can work on the sample if
+// their name appears in the list — this is how the lab's two-person
+// replicate flow works: 2 replicates by one analyst, 1 by another.
+function assignedNames(sample) {
+  return String(sample?.assigned_to || sample?.assignedTo || "")
+    .split(",").map(s => s.trim()).filter(Boolean);
+}
 function canWorkOnSample(user, sample) {
   if (user.role === "admin") return true;
-  if (user.role === "analyst") return sample.assigned_to === user.name;
+  if (user.role === "analyst") return assignedNames(sample).includes(user.name);
   return false;
 }
 
@@ -357,11 +362,12 @@ async function handle(request, env, ctx) {
     if (anyUser.approval_status === "pending") throw Object.assign(new Error("Your account is awaiting admin approval. You'll be able to sign in once an admin approves it."), { status: 403, approvalStatus: "pending" });
     if (anyUser.approval_status === "rejected") throw Object.assign(new Error("Your account request was declined. Contact the lab administrator."), { status: 403 });
     if (!anyUser.active) throw Object.assign(new Error("This account is deactivated. Contact the lab administrator."), { status: 403 });
-    const newSv = (Number(anyUser.session_version) || 0) + 1;
-    await env.DB.prepare("UPDATE users SET session_version = ?, last_login_at = ? WHERE id = ?").bind(newSv, now(), anyUser.id).run();
+    await env.DB.prepare("UPDATE users SET last_login_at = ? WHERE id = ?").bind(now(), anyUser.id).run();
     await addAudit(env, anyUser, "Logged in", "user", anyUser.id, "User session started");
-    const token = await signJwt({ id: anyUser.id, sv: newSv }, env.JWT_SECRET || "change-this-before-production", body.rememberMe ? 30 * 24 * 60 * 60 : 12 * 60 * 60);
-    return json({ token, user: rowToPublicUser({ ...anyUser, session_version: newSv }) });
+    // Multi-device allowed. Token expires in 12h regardless of Remember Me
+    // because the frontend will drop it on browser close either way.
+    const token = await signJwt({ id: anyUser.id }, env.JWT_SECRET || "change-this-before-production", 12 * 60 * 60);
+    return json({ token, user: rowToPublicUser(anyUser) });
   }
 
   /* --- Signup email start --- */

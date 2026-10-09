@@ -600,6 +600,20 @@ code, .mono { font-family: var(--font-mono); font-feature-settings: "zero"; }
 .status-Disposed      { background: var(--surface-3); color: var(--text-subtle); }
 
 .chip-role { background: var(--accent-soft); color: var(--accent); }
+.analyst-picker { display: flex; flex-direction: column; gap: 8px; }
+.analyst-chips { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px; min-height: 36px; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-sm); }
+.analyst-picker .chip { padding-right: 4px; display: inline-flex; align-items: center; gap: 4px; }
+.chip-x { background: transparent; border: 0; color: inherit; cursor: pointer; font-size: 14px; padding: 0 4px; line-height: 1; opacity: 0.6; }
+.chip-x:hover { opacity: 1; }
+
+.storage-widget { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 8px; }
+.storage-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--surface); cursor: pointer; transition: background 0.1s; }
+.storage-row:hover { background: var(--surface-2); }
+.storage-row[data-full="true"] { border-color: var(--danger, #c0392b); background: color-mix(in oklab, var(--danger, #c0392b) 4%, var(--surface)); }
+.storage-row[data-unstored="true"] { border-style: dashed; background: var(--surface-2); cursor: default; }
+.storage-row-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.storage-row-name { font-weight: var(--fw-m); color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.storage-row-count { font-size: 24px; font-weight: var(--fw-b); color: var(--accent); font-family: var(--font-mono); }
 
 /* Legacy badge alias */
 .badge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: var(--r-full); font-size: var(--fs-xs); font-weight: var(--fw-b); background: var(--surface-3); color: var(--text-muted); }

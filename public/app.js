@@ -14,7 +14,10 @@
   /* State                                                                  */
   /* ---------------------------------------------------------------------- */
   const state = {
-    token: localStorage.getItem('plasma-lab-token') || sessionStorage.getItem('plasma-lab-token') || '',
+    // Only read token from sessionStorage so closing the browser logs out.
+    // Any legacy localStorage token from before this change is ignored and
+    // will be cleared on the next successful login.
+    token: sessionStorage.getItem('plasma-lab-token') || '',
     user: null,
     users: [], people: [], storageLocations: [], tests: [], samples: [], audit: [],
     alerts: null, exports: [], health: null,
@@ -453,12 +456,16 @@
   function can(...roles) { return state.user && roles.includes(state.user.role); }
   function canModifySamples() { return can('admin','analyst'); }
   function canEnterResults() { return can('admin','analyst'); }
-  // Per-sample write gate: admins always, analysts only if the sample is
-  // explicitly assigned to them by name. Mirrors backend canWorkOnSample.
+  // assignedTo may hold multiple names, comma-separated. An analyst can work
+  // on the sample if their name is in that list — supports the lab's
+  // two-person replicate workflow (2 reps by analyst A + 1 rep by B).
+  function assignedList(sample) {
+    return String(sample?.assignedTo || "").split(",").map(s => s.trim()).filter(Boolean);
+  }
   function canWorkOn(sample) {
     if (!sample) return false;
     if (can('admin')) return true;
-    if (can('analyst')) return sample.assignedTo && sample.assignedTo === state.user?.name;
+    if (can('analyst')) return assignedList(sample).includes(state.user?.name);
     return false;
   }
   function canUploadFiles()  { return can('admin','analyst'); }
@@ -595,7 +602,7 @@
     root.innerHTML = '';
 
     root.appendChild(h('section', { class: 'dashboard-hero' },
-      h('h3', null, `Good ${greeting()}, ${state.user?.name?.split(' ')[0] || ''}`),
+      h('h3', null, `Good ${greeting()}, ${state.user?.name || 'there'}`),
       h('p', null, s.length === 0 ? 'No samples yet — press "+ New sample" to register the first bottle.' : `You have ${s.length} sample${s.length === 1 ? '' : 's'} across the lab.`)
     ));
 
@@ -614,6 +621,46 @@
           ...(alerts.dueSoon?.length ? [h('div', { class: 'muted' }, `${alerts.dueSoon.length} sample${alerts.dueSoon.length === 1 ? '' : 's'} due in the next 24 hours.`)] : [])
         )
       ));
+    }
+
+    // Storage-wise sample distribution — one row per freezer/location showing
+    // how many active samples sit in it, with a quick "Open" filter button.
+    const storageCounts = (state.storageLocations || []).map(loc => ({
+      loc,
+      count: s.filter(x => x.storageLocationId === loc.id && x.status !== 'Disposed').length
+    })).filter(x => x.count > 0 || state.storageLocations.length <= 6);
+    const unstoredCount = s.filter(x => !x.storageLocationId && x.status !== 'Disposed').length;
+    if (storageCounts.length || unstoredCount) {
+      const storageCard = h('div', { class: 'card' },
+        h('div', { class: 'card-header' },
+          h('h3', { class: 'card-title' }, 'Samples by storage location'),
+          h('button', { class: 'btn btn-sm', type: 'button', onclick: () => switchView('samples') }, h('span',{class:'btn-label'},'Open registry'))
+        )
+      );
+      const body = h('div', { class: 'card-body' });
+      const grid = h('div', { class: 'storage-widget' });
+      storageCounts.forEach(({ loc, count }) => {
+        const row = h('div', { class: 'storage-row', 'data-full': loc.isFull ? 'true' : null, onclick: () => { state.sampleFilters.storage = loc.id; switchView('samples'); } },
+          h('div', { class: 'storage-row-main' },
+            h('div', { class: 'storage-row-name' }, loc.name),
+            h('div', { class: 'storage-row-meta muted text-xs' }, `${loc.type || 'Storage'}${loc.isFull ? ' · FULL' : ''}${loc.capacityNote ? ' · ' + loc.capacityNote : ''}`)
+          ),
+          h('div', { class: 'storage-row-count' }, String(count))
+        );
+        grid.appendChild(row);
+      });
+      if (unstoredCount) {
+        grid.appendChild(h('div', { class: 'storage-row', 'data-unstored': 'true' },
+          h('div', { class: 'storage-row-main' },
+            h('div', { class: 'storage-row-name' }, 'Not yet stored'),
+            h('div', { class: 'storage-row-meta muted text-xs' }, 'Bottles in prep or being collected')
+          ),
+          h('div', { class: 'storage-row-count' }, String(unstoredCount))
+        ));
+      }
+      body.appendChild(grid);
+      storageCard.appendChild(body);
+      root.appendChild(storageCard);
     }
 
     const list = h('div', { class: 'card' });
@@ -813,8 +860,14 @@
             state._searchTimer = setTimeout(() => render(), 200);
           } }) }),
           fieldEl({ id: 'fStatus', label: 'Status', input: selectEl('fStatus', ['', ...STATUS_OPTIONS], f.status, v => { f.status = v; render(); }, 'All statuses') }),
-          fieldEl({ id: 'fFrom', label: 'From date', input: h('input', { class: 'input', type: 'date', id: 'fFrom', value: f.from, onchange: e => { f.from = e.target.value; render(); } }) }),
-          fieldEl({ id: 'fTo', label: 'To date', input: h('input', { class: 'input', type: 'date', id: 'fTo', value: f.to, onchange: e => { f.to = e.target.value; render(); } }) }),
+          h('div', { class: 'field' },
+            h('label', { class: 'field-label', for: 'fFrom' }, 'From date'),
+            h('input', { class: 'input', type: 'date', id: 'fFrom', value: f.from, onchange: e => { f.from = e.target.value; render(); } })
+          ),
+          h('div', { class: 'field' },
+            h('label', { class: 'field-label', for: 'fTo' }, 'To date'),
+            h('input', { class: 'input', type: 'date', id: 'fTo', value: f.to, onchange: e => { f.to = e.target.value; render(); } })
+          ),
           h('div', null,
             h('button', { class: 'btn', type: 'button', onclick: () => showMoreFilters(projects, collectors, analysts, f) }, h('span',{class:'btn-label'},'More filters'))
           )
@@ -957,7 +1010,7 @@
             factEl('Last updated', fmtDate(sample.updatedAt || sample.receivedAt)),
             factEl('Target completion', sample.dueAt ? fmtDate(sample.dueAt) : '—'),
             factEl('Brought by', sample.collector),
-            factEl('Analyst', sample.assignedTo || 'Unassigned'),
+            factEl('Analyst' + (assignedList(sample).length > 1 ? 's' : ''), sample.assignedTo || 'Unassigned'),
             factEl('Storage', storage),
             factEl('Retention', sample.retentionStatus || 'Active'),
             factEl('Tests', (sample.requestedTests || []).join(', '))
@@ -1101,7 +1154,7 @@
         h('div', { class: 'form-error-banner hidden', 'data-form-error': true }),
         h('div', { class: 'form-grid' },
           fieldWith('Lab step', selectFor(STATUS_OPTIONS, sample.status, 'editStatus')),
-          fieldWith('Assigned analyst', selectFor(['Unassigned', ...allAnalystNames()], sample.assignedTo || 'Unassigned', 'editAnalyst')),
+          fieldWith('Assigned analysts (pick one or more)', analystMultiPicker(sample.assignedTo || '', 'editAnalyst')),
           fieldWith('Current storage', storageSelect(sample.storageLocationId, 'editStorage')),
           fieldWith('Target completion', h('input', { class: 'input', id: 'editDueAt', type: 'datetime-local', value: toDateTimeLocal(sample.dueAt) })),
           h('div', { class: 'field field-wide' },
@@ -1128,6 +1181,47 @@
     const sel = h('select', { class: 'select', id });
     options.forEach(o => sel.appendChild(h('option', { value: o === 'Unassigned' ? '' : o, selected: o === value ? true : null }, o)));
     return sel;
+  }
+  // Multi-select picker for analyst assignment. Shows selected names as
+  // chips and a dropdown to add more. The underlying element is a hidden
+  // input (id=`id`) whose value is a comma-separated name list, so the
+  // existing form-serialization keeps working.
+  function analystMultiPicker(initial, id) {
+    const wrap = h('div', { class: 'analyst-picker' });
+    const hidden = h('input', { type: 'hidden', id, value: initial || '' });
+    const chipsRow = h('div', { class: 'analyst-chips' });
+    const names = () => String(hidden.value || '').split(',').map(s => s.trim()).filter(Boolean);
+    const render = () => {
+      chipsRow.innerHTML = '';
+      const picked = names();
+      picked.forEach(n => {
+        const chip = h('span', { class: 'chip chip-role' }, n);
+        const x = h('button', { class: 'chip-x', type: 'button', 'aria-label': 'Remove ' + n }, '✕');
+        x.onclick = () => { hidden.value = picked.filter(x => x !== n).join(', '); render(); };
+        chip.appendChild(x);
+        chipsRow.appendChild(chip);
+      });
+      if (!picked.length) chipsRow.appendChild(h('span', { class: 'muted text-sm' }, 'No analysts assigned'));
+      // Rebuild dropdown with people not yet picked
+      sel.innerHTML = '';
+      sel.appendChild(h('option', { value: '' }, '+ Add analyst'));
+      allAnalystNames().filter(n => !picked.includes(n)).forEach(n => sel.appendChild(h('option', { value: n }, n)));
+    };
+    const sel = h('select', { class: 'select analyst-picker-add' });
+    sel.onchange = () => {
+      if (!sel.value) return;
+      const picked = names();
+      if (!picked.includes(sel.value)) {
+        picked.push(sel.value);
+        hidden.value = picked.join(', ');
+      }
+      render();
+    };
+    wrap.appendChild(hidden);
+    wrap.appendChild(chipsRow);
+    wrap.appendChild(sel);
+    setTimeout(render, 0);
+    return wrap;
   }
   function storageSelect(value, id) {
     const sel = h('select', { class: 'select', id });
@@ -1824,18 +1918,41 @@
         )
       ),
       h('div', { class: 'card' },
-        h('div', { class: 'card-header' }, h('h3', { class: 'card-title' }, 'Open by code')),
+        h('div', { class: 'card-header' }, h('h3', { class: 'card-title' }, 'Open by code or image')),
         h('div', { class: 'card-body' },
           h('div', { class: 'field' },
             h('label', { class: 'field-label', for: 'manualCode' }, 'Sample code or scanned payload'),
             h('input', { class: 'input', id: 'manualCode', placeholder: 'PL-2026-000001' })
           ),
-          h('button', { class: 'btn btn-primary', type: 'button', onclick: () => openByCode($('#manualCode').value) }, h('span',{class:'btn-label'},'Open sample'))
+          h('button', { class: 'btn btn-primary', type: 'button', onclick: () => openByCode($('#manualCode').value) }, h('span',{class:'btn-label'},'Open sample')),
+          h('div', { class: 'muted text-xs', style: { margin: '12px 0 6px' } }, 'Or upload a photo of a QR label — works when the camera scanner is unavailable (desktop browsers without BarcodeDetector).'),
+          h('input', { class: 'input', type: 'file', id: 'qrImageInput', accept: 'image/*' }),
+          h('div', { class: 'muted text-sm', id: 'qrImageStatus', style: { marginTop: '6px' } })
         )
       )
     ));
     $('#startScanner').onclick = startScanner;
     $('#stopScanner').onclick = stopScanner;
+    $('#qrImageInput').onchange = async e => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      const status = $('#qrImageStatus');
+      status.textContent = 'Decoding…';
+      try {
+        if (!('BarcodeDetector' in window)) {
+          throw new Error('This browser can\'t decode QR images. Open on a mobile Chrome, or type the code manually above.');
+        }
+        const detector = new BarcodeDetector({ formats: ['qr_code'] });
+        const bmp = await createImageBitmap(file);
+        const codes = await detector.detect(bmp);
+        if (!codes.length) throw new Error('No QR code found in the image. Try a clearer or larger photo of the label.');
+        status.textContent = `Found: ${codes[0].rawValue}`;
+        $('#manualCode').value = codes[0].rawValue;
+        openByCode(codes[0].rawValue);
+      } catch (err) {
+        status.textContent = err.message;
+      }
+    };
   }
   async function startScanner() {
     if (!('BarcodeDetector' in window)) {
@@ -2768,12 +2885,13 @@
   /* Sample creation dialog                                                 */
   /* ---------------------------------------------------------------------- */
   function renderSampleDialogOptions() {
-    const storage = $('#fStorage'); const analyst = $('#fAnalyst'); const bulkStorage = $('#bulkStorage');
+    const storage = $('#fStorage'); const analystWrap = $('#fAnalystWrap'); const bulkStorage = $('#bulkStorage');
     if (storage) {
       storage.innerHTML = '<option value="">Not stored yet</option>' + state.storageLocations.map(loc => `<option value="${loc.id}"${loc.isFull ? ' disabled' : ''}>${esc(loc.name)}${loc.isFull ? ' — FULL' : ''}</option>`).join('');
     }
-    if (analyst) {
-      analyst.innerHTML = '<option value="">Unassigned</option>' + allAnalystNames().map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('');
+    if (analystWrap) {
+      analystWrap.innerHTML = '';
+      analystWrap.appendChild(analystMultiPicker('', 'fAnalyst'));
     }
     if (bulkStorage) {
       bulkStorage.innerHTML = '<option value="">Not stored yet</option>' + state.storageLocations.map(loc => `<option value="${loc.id}">${esc(loc.name)}</option>`).join('');
@@ -2984,12 +3102,16 @@
     body.rememberMe = remember;
     const data = await api('/api/login', { method: 'POST', body: JSON.stringify(body) });
     state.token = data.token;
+    // Token ALWAYS goes to sessionStorage — it dies when the browser closes
+    // so the user lands on the login page next time they open it. Remember
+    // Me only remembers the email so the field is pre-filled; the browser's
+    // own password manager handles the password itself.
+    sessionStorage.setItem('plasma-lab-token', state.token);
+    localStorage.removeItem('plasma-lab-token'); // wipe any legacy persisted token
     if (remember) {
-      localStorage.setItem('plasma-lab-token', state.token);
       localStorage.setItem('plasma-lab-remember-email', f.elements.email.value.trim());
     } else {
-      sessionStorage.setItem('plasma-lab-token', state.token);
-      localStorage.removeItem('plasma-lab-token');
+      localStorage.removeItem('plasma-lab-remember-email');
     }
     showApp();
     await load();
@@ -3053,7 +3175,7 @@
     if (data.approvalStatus === 'approved' && data.token) {
       // First user path — server returned a token, log them straight in.
       state.token = data.token;
-      localStorage.setItem('plasma-lab-token', data.token);
+      sessionStorage.setItem('plasma-lab-token', data.token);
       showApp();
       await load();
       notify({ type: 'success', title: 'Account created', description: 'Signed in as first admin.' });
@@ -3124,11 +3246,15 @@
     notify({ type: 'success', title: 'Backup downloaded' });
   });
 
-  // Remember me — repopulate
+  // Remember me — pre-fills the email (and ticks the checkbox so it stays
+  // on). Password is NOT stored here; the browser's native password manager
+  // handles that via the input's autocomplete="current-password" hint.
   const rememberedEmail = localStorage.getItem('plasma-lab-remember-email');
   if (rememberedEmail) {
     $('#loginEmail').value = rememberedEmail;
     $('#loginForm').elements.rememberMe.checked = true;
+    // Focus password so browser's password manager offers to fill it
+    setTimeout(() => $('#loginForm').elements.password?.focus(), 100);
   }
 
   // Boot
