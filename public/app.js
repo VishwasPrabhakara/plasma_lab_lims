@@ -3354,8 +3354,8 @@
     const sourceTypes = ['Drinking Water','Ground Water','Surface Water','Wastewater','Industrial Effluent','Other'];
     const testOptions = [...new Set([
       ...(state.tests || []).map(t => t.name),
-      ...Object.values(PROJECT_PANELS || {}).flat()
-    ])].filter(Boolean).sort();
+      ...Object.values(PROJECT_PANELS || {}).flat().map(p => (p && typeof p === 'object' ? p.name : p))
+    ])].filter(x => typeof x === 'string' && x).sort();
     const analystOptions = allAnalystNames();
     rows.forEach((row, idx) => {
       const card = h('div', { class: 'brw-row', 'data-brw-id': row.id });
