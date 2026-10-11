@@ -79,6 +79,7 @@
           <div class="auth-proof-card"><strong>SCAN</strong><span>Bottle to record</span></div>
           <div class="auth-proof-card"><strong>SIGN</strong><span>Approvals re-authenticated</span></div>
           <div class="auth-proof-card"><strong>LOG</strong><span>Every change traced</span></div>
+          <div class="auth-proof-card"><strong>SYNC</strong><span>Live data mirror</span></div>
         </div>
       </div>
 
@@ -418,7 +419,10 @@
           <div class="field"><label class="field-label" for="fStorage">Initial storage</label><select class="select" id="fStorage" name="storageLocationId"></select></div>
           <div class="field"><label class="field-label" for="fAnalyst">Analysts (pick 2)</label><div id="fAnalystWrap"></div><input type="hidden" id="fAnalyst" name="assignedTo"></div>
           <div class="field"><label class="field-label" for="fDue">Target completion</label><input class="input" id="fDue" name="dueAt" type="datetime-local"></div>
-          <div class="field"><label class="field-label" for="fPhoto">Sample photo (auto-captures date + GPS)</label>
+          <div class="field"><label class="field-label" for="fPhoto">
+              Sample photo (auto-captures GPS + timestamp)
+              <span class="muted text-xs">📍 Tap to capture location</span>
+            </label>
             <input class="input" id="fPhoto" name="samplePhoto" type="file" accept="image/*" capture="environment">
             <div class="muted text-xs" id="fPhotoHint" style="margin-top:4px;"></div>
             <input type="hidden" id="fCollectedAt" name="collectedAt">

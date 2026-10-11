@@ -54,13 +54,15 @@
   --text-subtle: #7f8a9b;
   --text-on-accent: #0a1628;
 
-  /* -- Brand accent: plasma arc (lightning in the logo) */
-  --accent: #2b6bb3;         /* water-blue reads on light ground; arc appears as glow */
-  --accent-hover: #1e5aa0;
-  --accent-soft: #dceaf7;
+  /* -- Primary action (muted institutional blue, LabWare/Agilent/Eurofins register) */
+  --accent: #1f4f87;
+  --accent-hover: #163e6c;
+  --accent-soft: #e3ecf5;
   --accent-strong: #0a1628;
-  --signal: #4ab3ff;         /* plasma-arc white-blue, the live-signal color */
-  --signal-soft: rgba(74, 179, 255, 0.14);
+  /* -- Signal (plasma arc, reserved for live/active state only) */
+  --signal: #2b6bb3;
+  --signal-strong: #0f3a66;
+  --signal-soft: rgba(43, 107, 179, 0.10);
 
   /* -- Semantic (hydrograph state system) */
   --success: #0f8a56;
@@ -142,12 +144,13 @@
     --text-muted: #b4c4de;
     --text-subtle: #8a99b4;
     --text-on-accent: #0a1628;
-    --accent: #8fd3ff;             /* plasma arc white-blue */
-    --accent-hover: #b7e3ff;
-    --accent-soft: rgba(143, 211, 255, 0.14);
-    --accent-strong: #e5f3ff;
+    --accent: #4a8bc9;
+    --accent-hover: #5fa0dd;
+    --accent-soft: rgba(74, 139, 201, 0.14);
+    --accent-strong: #c6dcf0;
     --signal: #8fd3ff;
-    --signal-soft: rgba(143, 211, 255, 0.16);
+    --signal-strong: #e5f3ff;
+    --signal-soft: rgba(143, 211, 255, 0.14);
     --success: #3fcf8e;
     --success-soft: rgba(63, 207, 142, 0.14);
     --warn: #e6a23c;
@@ -174,12 +177,13 @@
   --text-muted: #9fb3ce;
   --text-subtle: #6c82a0;
   --text-on-accent: #0a1628;
-  --accent: #8fd3ff;
-  --accent-hover: #b7e3ff;
-  --accent-soft: rgba(143, 211, 255, 0.14);
-  --accent-strong: #e5f3ff;
+  --accent: #4a8bc9;
+  --accent-hover: #5fa0dd;
+  --accent-soft: rgba(74, 139, 201, 0.14);
+  --accent-strong: #c6dcf0;
   --signal: #8fd3ff;
-  --signal-soft: rgba(143, 211, 255, 0.16);
+  --signal-strong: #e5f3ff;
+  --signal-soft: rgba(143, 211, 255, 0.14);
   --success: #3fcf8e;
   --success-soft: rgba(63, 207, 142, 0.14);
   --warn: #e6a23c;
@@ -206,7 +210,8 @@ body {
   background: var(--bg);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  font-feature-settings: "cv02", "cv03", "cv11", "ss01";
+  font-feature-settings: "cv02", "cv03", "cv11", "ss01", "tnum" 1;
+  font-variant-numeric: tabular-nums;
   transition: background var(--dur-med) var(--ease), color var(--dur-med) var(--ease);
 }
 h1, h2, h3, h4, h5, h6 {
@@ -773,12 +778,13 @@ dialog.dialog::backdrop {
 }
 .data-table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate; /* Changed to separate for border-spacing */
+  border-spacing: 0 1px; /* Added vertical spacing between rows */
   font-size: var(--fs-md);
 }
 .data-table th,
 .data-table td {
-  padding: 12px 14px;
+  padding: var(--s-3) var(--s-4); /* Increased padding */
   text-align: left;
   vertical-align: middle;
 }
@@ -794,7 +800,8 @@ dialog.dialog::backdrop {
   z-index: 1;
 }
 .data-table tbody tr {
-  border-bottom: 1px solid var(--border);
+  background: var(--surface); /* Ensure background is set for spacing */
+  border-bottom: 0; /* Removed explicit border-bottom */
   transition: background var(--dur-fast) var(--ease);
 }
 .data-table tbody tr:last-child { border-bottom: 0; }
@@ -1113,33 +1120,37 @@ dialog.dialog::backdrop {
 
 /* 14. AUTH SURFACE ============================================================ */
 .auth {
+  position: fixed;
+  inset: 0;
   min-height: 100dvh;
-  width: 100%;
-  display: grid;
-  place-items: center;
+  width: 100vw;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   padding: var(--s-4);
   box-sizing: border-box;
-  background:
-    radial-gradient(1200px 800px at 20% 15%, color-mix(in oklab, var(--accent) 14%, transparent), transparent 60%),
-    radial-gradient(900px 600px at 85% 90%, color-mix(in oklab, var(--success) 8%, transparent), transparent 60%),
-    var(--bg);
+  overflow-y: auto;
+  background: var(--bg);
 }
 @media (max-width: 640px) {
-  .auth { padding: var(--s-3); }
+  .auth { padding: 0; align-items: stretch; }
 }
 .auth-panel {
-  width: min(1120px, 100%);
-  margin: 0 auto;
+  width: min(1080px, 100%);
   display: grid;
   grid-template-columns: 1fr;
   overflow: hidden;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--r-lg);
-  box-shadow: var(--el-3);
+  border-radius: var(--r-md);
 }
 @media (max-width: 640px) {
-  .auth-panel { width: 100%; border-radius: var(--r-md); }
+  .auth-panel {
+    width: 100%;
+    min-height: 100dvh;
+    border-radius: 0;
+    border: 0;
+  }
 }
 @media (min-width: 900px) {
   .auth-panel { grid-template-columns: 5fr 6fr; min-height: 620px; }
@@ -1147,8 +1158,9 @@ dialog.dialog::backdrop {
 .auth-brand-panel {
   padding: var(--s-6);
   background:
-    radial-gradient(500px 400px at 20% 20%, rgba(214, 120, 133, 0.28), transparent 60%),
-    linear-gradient(160deg, #3a0a15 0%, #260810 50%, #180510 100%);
+    linear-gradient(180deg, rgba(10, 22, 40, 0.00), rgba(10, 22, 40, 0.6)),
+    radial-gradient(ellipse 70% 55% at 35% 25%, rgba(143, 211, 255, 0.28), transparent 55%),
+    #0a1628;
   color: #fff;
   display: grid;
   align-content: space-between;
@@ -1364,16 +1376,26 @@ dialog.dialog::backdrop {
   font-weight: var(--fw-m);
   text-decoration: none;
   background: none;
-  border: 0;
+  border: 1px solid transparent; /* Added default border */
+  border-left: 3px solid transparent; /* Added left accent bar */
   cursor: pointer;
   min-height: 40px;
   text-align: left;
   width: 100%;
+  transition: all var(--dur-fast) var(--ease);
 }
-.app-nav .nav-item:hover { background: var(--surface-2); color: var(--text); }
+.app-nav .nav-item:hover {
+  background: var(--surface-2);
+  color: var(--text);
+  border-color: var(--border);
+  border-left-color: var(--accent);
+}
 .app-nav .nav-item[aria-current="page"] {
   background: var(--accent-soft);
   color: var(--accent);
+  border-color: color-mix(in oklab, var(--accent) 30%, transparent);
+  border-left-color: var(--accent);
+  font-weight: var(--fw-b);
 }
 .app-nav .nav-item svg { width: 18px; height: 18px; flex: 0 0 auto; }
 .app-nav .nav-item .nav-count {
@@ -2662,18 +2684,16 @@ dialog.dialog::backdrop {
 }
 .sync-chip::before {
   content: "";
-  width: 7px; height: 7px; border-radius: 50%;
-  background: var(--signal, var(--accent));
-  box-shadow: 0 0 0 0 var(--signal, var(--accent));
-  animation: sync-pulse 1.4s cubic-bezier(0.25,0.46,0.45,0.94) infinite;
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--signal);
+  animation: sync-pulse 2s cubic-bezier(0.25,0.46,0.45,0.94) infinite;
 }
 .sync-chip[data-state="syncing"]::before { animation-duration: 0.6s; }
 .sync-chip[data-state="offline"]::before { background: var(--text-subtle); animation: none; }
 .sync-chip[data-state="failed"]::before { background: var(--danger); animation: none; }
 @keyframes sync-pulse {
-  0% { box-shadow: 0 0 0 0 color-mix(in oklab, var(--signal, var(--accent)) 60%, transparent); }
-  70% { box-shadow: 0 0 0 10px rgba(0,0,0,0); }
-  100% { box-shadow: 0 0 0 0 rgba(0,0,0,0); }
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
 }
 @media (prefers-reduced-motion: reduce) {
   .sync-chip::before { animation: none; }
@@ -2683,27 +2703,19 @@ dialog.dialog::backdrop {
   color: var(--accent);
   position: relative;
 }
+.tab-bar .tab[aria-current="page"] { color: var(--text); font-weight: var(--fw-b); }
 .tab-bar .tab[aria-current="page"]::before {
   content: "";
   position: absolute; top: 0; left: 20%; right: 20%; height: 2px;
-  background: var(--signal, var(--accent));
-  box-shadow: 0 0 8px -1px var(--signal, var(--accent));
-  border-radius: 2px;
+  background: var(--signal);
+  border-radius: 1px;
 }
 /* Plasma hero backdrop on auth */
 .auth {
   position: relative;
   overflow: hidden;
 }
-.auth::before {
-  content: "";
-  position: absolute; inset: -10%;
-  background: radial-gradient(ellipse 60% 50% at 25% 20%, color-mix(in oklab, var(--signal, var(--accent)) 22%, transparent), transparent 60%),
-              radial-gradient(ellipse 40% 60% at 80% 85%, color-mix(in oklab, var(--info) 20%, transparent), transparent 60%);
-  pointer-events: none;
-  z-index: 0;
-}
-.auth-panel { position: relative; z-index: 1; }
+
 /* Auth brand panel: plasma world instead of warm hero */
 .auth-brand-panel {
   background:
@@ -2733,3 +2745,181 @@ dialog.dialog::backdrop {
 .auth-brand-panel .auth-brand-row,
 .auth-brand-panel .auth-hero,
 .auth-brand-panel .auth-proof { position: relative; z-index: 1; }
+
+
+/* ====================================================================
+ * MATURITY LIFT — world-class analytical-lab LIMS register
+ * Reference bar: STARLIMS, LabWare, Agilent OpenLab, Eurofins internals.
+ * Rules: hairline chrome, flat buttons, demoted plasma (signal only),
+ * tabular numbers, muted neutrals, zero decorative glow.
+ * This block is appended last; later rules win.
+ * ==================================================================== */
+
+/* -- Primary button: flat solid, no glow, white ink -- */
+.btn.btn-primary {
+  background: var(--accent);
+  color: #ffffff;
+  border-color: transparent;
+  box-shadow: none;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+.btn.btn-primary:hover { background: var(--accent-hover); box-shadow: none; }
+.btn.btn-primary:active { background: var(--accent-hover); box-shadow: inset 0 1px 0 rgba(0,0,0,0.1); }
+.btn.btn-primary:focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; }
+:root[data-theme="dark"] .btn.btn-primary,
+:root:not([data-theme="light"]) .btn.btn-primary { color: #ffffff; }
+
+/* -- Chrome: hairline rules everywhere, no card puff -- */
+.card, .dialog, .notification, .app-nav, .app-header,
+.storage-row, .stat-tile, .facts-group, .brw-row, .sample-card,
+.auth-panel, .auth-brand-panel { box-shadow: none !important; }
+.app-header { border-bottom: 1px solid var(--border); background: var(--surface); }
+.app-nav { border-right: 1px solid var(--border); background: var(--surface); }
+.card { border: 1px solid var(--border); background: var(--surface); border-radius: var(--r-sm); }
+
+/* -- Sync-chip: hairline tag, not a bubble -- */
+.sync-chip {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  padding: 3px 10px 3px 8px;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+/* -- Status chips: lab-tag register, flat, no glow -- */
+.chip {
+  border-radius: 3px;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-weight: 600;
+  padding: 2px 7px;
+  border: 1px solid transparent;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  line-height: 1.4;
+}
+.chip.status-Bottle-Ready { background: color-mix(in oklab, var(--info) 10%, var(--surface-2)); color: var(--info); border-color: color-mix(in oklab, var(--info) 25%, var(--border)); }
+.chip.status-Assigned     { background: color-mix(in oklab, var(--accent) 10%, var(--surface-2)); color: var(--accent); border-color: color-mix(in oklab, var(--accent) 25%, var(--border)); }
+.chip.status-In-Analysis  { background: color-mix(in oklab, var(--signal) 10%, var(--surface-2)); color: var(--signal); border-color: color-mix(in oklab, var(--signal) 30%, var(--border)); }
+.chip.status-Needs-Review { background: color-mix(in oklab, var(--warn) 12%, var(--surface-2)); color: var(--warn); border-color: color-mix(in oklab, var(--warn) 30%, var(--border)); }
+.chip.status-Approved     { background: color-mix(in oklab, var(--success) 10%, var(--surface-2)); color: var(--success); border-color: color-mix(in oklab, var(--success) 28%, var(--border)); }
+.chip.status-Flagged      { background: color-mix(in oklab, var(--danger) 15%, var(--surface-2)); color: var(--danger); border-color: color-mix(in oklab, var(--danger) 42%, var(--border)); }
+.chip.status-Disposed     { background: var(--surface-3); color: var(--text-subtle); border-color: var(--border); }
+.chip.status-Stored       { background: color-mix(in oklab, var(--text-muted) 10%, var(--surface-2)); color: var(--text); border-color: var(--border); }
+
+/* -- Mono/tabular on all codes and counts -- */
+.mono, .sample-code, .sample-card .code, .storage-sample-code,
+.metric-value, .storage-row-count, .fact-value {
+  font-feature-settings: "tnum" 1, "zero" 1;
+  font-variant-numeric: tabular-nums;
+}
+.metric-value, .storage-row-count {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--text);
+}
+
+/* -- Lifecycle strip: lift contrast on completed/pending labels -- */
+.lifecycle-strip .step { color: var(--text-muted); }
+.lifecycle-strip .step[data-done="true"] { color: var(--text); }
+.lifecycle-strip .step[data-done="true"] .dot { background: var(--success); border-color: var(--success); }
+.lifecycle-strip .step[data-current="true"] { color: var(--text); font-weight: 600; }
+.lifecycle-strip .step[data-current="true"] .dot { background: var(--signal); border-color: var(--signal); }
+
+/* -- Stat tile: calmer overdue state -- */
+.stat-tile.is-overdue { background: color-mix(in oklab, var(--danger) 7%, var(--surface)); border-color: color-mix(in oklab, var(--danger) 32%, var(--border)); }
+.stat-tile.is-overdue .stat-tile-label { color: var(--danger); font-weight: 600; }
+.stat-tile.is-overdue .stat-tile-value { color: var(--text); }
+
+/* -- Attention / alert banner: hairline inset, not drop-shadow panel -- */
+.form-error-banner, .alert-banner {
+  border-left: 3px solid var(--danger);
+  background: color-mix(in oklab, var(--danger) 6%, var(--surface));
+  color: var(--text);
+  padding: 10px 12px;
+  border-radius: 0 var(--r-sm) var(--r-sm) 0;
+  box-shadow: none;
+}
+
+/* -- Sample detail: expand content column so no dead desktop band -- */
+@media (min-width: 1280px) {
+  .ledger-layout[data-panes="2"] {
+    grid-template-columns: minmax(0, 1fr) 320px;
+    column-gap: var(--s-5);
+    align-items: start;
+  }
+}
+@media (max-width: 1279px) {
+  .ledger-layout[data-panes="2"] > .audit-rail { display: none; }
+}
+
+/* -- Mobile: force one column, kill stray gutters -- */
+@media (max-width: 640px) {
+  .ledger-layout,
+  .ledger-layout[data-panes="2"],
+  .ledger-layout[data-panes="3"] { grid-template-columns: 1fr !important; }
+  .detail-body { grid-template-columns: 1fr !important; }
+  .app-main { padding-left: var(--s-3) !important; padding-right: var(--s-3) !important; }
+  .app-main-inner { max-width: 100% !important; }
+}
+
+/* -- Focus ring: consistent, uses signal color -- */
+*:focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; border-radius: 2px; }
+
+/* -- Main surface: no decorative background texture -- */
+.app-main-inner { background-image: none !important; }
+
+/* -- Headings: unified scale, dropped Fraunces mannerisms -- */
+h1 { font-size: 22px; font-weight: 600; letter-spacing: -0.015em; }
+h2 { font-size: 18px; font-weight: 600; letter-spacing: -0.01em; }
+h3 { font-size: 15px; font-weight: 600; letter-spacing: 0; }
+h4 { font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); }
+.app-nav .nav-section-title { font-size: 10px; letter-spacing: 0.1em; color: var(--text-subtle); font-weight: 700; }
+
+/* -- Auth brand panel: clean, no over-paint -- */
+.auth-brand-panel::after { display: none !important; }
+.auth-brand-panel {
+  background: linear-gradient(180deg, rgba(10,22,40,0), rgba(10,22,40,0.4)), #0a1628;
+  padding: var(--s-6) var(--s-5);
+}
+.auth-brand-panel h1, .auth-brand-panel h2 { color: #ffffff; }
+.auth-eyebrow {
+  background: rgba(255,255,255,0.06);
+  color: #9fb3ce;
+  letter-spacing: 0.12em;
+  font-weight: 700;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+.auth-eyebrow-small { color: var(--signal); letter-spacing: 0.14em; font-weight: 700; font-size: 10px; text-transform: uppercase; }
+.auth-arc { opacity: 0.45; }
+
+/* -- Sign-in card: calmer, consistent padding -- */
+.auth-slider { background: var(--surface); padding: var(--s-6) var(--s-5); }
+.auth-slide h2 { font-size: 20px; letter-spacing: -0.01em; }
+
+/* -- Dialog: hairline border, no puff -- */
+dialog.dialog { border: 1px solid var(--border); }
+
+/* -- Dashboard metric tiles: more grid, less card feel -- */
+.metric-tile {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: var(--s-3) var(--s-4);
+  border-radius: var(--r-sm);
+}
+.metric-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); font-weight: 600; margin-bottom: 4px; }
+.metric-value { font-size: 24px; line-height: 1.1; }
+
+/* -- Table (registry grid-view) tightening -- */
+.data-table th { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); font-weight: 700; border-bottom: 1px solid var(--border); padding: 8px 10px; text-align: left; }
+.data-table td { padding: 10px; border-bottom: 1px solid color-mix(in oklab, var(--border) 60%, transparent); font-variant-numeric: tabular-nums; }
+
+/* -- Readiness strip: hairline tag, not pill -- */
+.ready-item { border-radius: 3px; border: 1px solid var(--border); padding: 3px 8px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 600; color: var(--text-muted); background: var(--surface-2); }
+.ready-item[data-done="true"] { color: var(--success); border-color: color-mix(in oklab, var(--success) 28%, var(--border)); background: color-mix(in oklab, var(--success) 7%, var(--surface-2)); }

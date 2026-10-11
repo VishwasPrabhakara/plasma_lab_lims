@@ -291,8 +291,11 @@
     // Limit stack
     while (stack.children.length >= 3) stack.removeChild(stack.firstChild);
     stack.appendChild(el);
-    // Auto-dismiss success after 5s (user-adjustable via inline close); errors persist
-    if (type === 'success' && !opts.persist) setTimeout(dismiss, 5000);
+    // Auto-dismiss by type unless opts.persist = true. Error gets more time to be read.
+    if (!opts.persist) {
+      const ttl = type === 'error' ? 8000 : type === 'warn' ? 7000 : 5000;
+      setTimeout(dismiss, ttl);
+    }
     return { dismiss };
   }
 
@@ -558,6 +561,9 @@
     state.view = view;
     state.sampleDetailOpen = false;
     if (view !== 'scan') stopScanner();
+    // Clear stale toasts on navigation — nothing carried from a previous view should alarm the new one.
+    const stack = $('#notificationStack');
+    if (stack) while (stack.firstChild) stack.removeChild(stack.firstChild);
     render();
   }
 
@@ -1638,9 +1644,54 @@
       // Recompute on any input change
       tr.querySelectorAll('[data-field="r1"], [data-field="r2"], [data-field="r3"], [data-field="std"]')
         .forEach(inp => inp.addEventListener('input', () => recomputeRow(tr)));
+      // Add keyboard navigation
+      tr.querySelectorAll('input').forEach(inp => {
+        inp.addEventListener('keydown', (e) => {
+          if (e.key === 'ArrowUp' || e.key === 'ArrowDown' || e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'Enter') {
+            e.preventDefault();
+            navigateGrid(e.key, inp, tr);
+          }
+        });
+      });
       tbody.appendChild(tr);
       recomputeRow(tr);
       return tr;
+    }
+
+    function navigateGrid(direction, currentInput, currentRow) {
+      const inputs = [...currentRow.querySelectorAll('input')];
+      const currentIndex = inputs.indexOf(currentInput);
+      let nextInput;
+
+      switch (direction) {
+        case 'ArrowUp':
+          if (currentRow.previousElementSibling) {
+            nextInput = currentRow.previousElementSibling.querySelectorAll('input')[currentIndex];
+          }
+          break;
+        case 'ArrowDown':
+          if (currentRow.nextElementSibling) {
+            nextInput = currentRow.nextElementSibling.querySelectorAll('input')[currentIndex];
+          }
+          break;
+        case 'ArrowLeft':
+          nextInput = inputs[currentIndex - 1] || inputs[inputs.length - 1];
+          break;
+        case 'ArrowRight':
+          nextInput = inputs[currentIndex + 1] || inputs[0];
+          break;
+        case 'Enter':
+          // Move to the next cell in the same row
+          nextInput = inputs[currentIndex + 1] || inputs[0];
+          break;
+      }
+
+      if (nextInput) {
+        nextInput.focus();
+        if (nextInput.type !== 'checkbox') {
+          nextInput.select();
+        }
+      }
     }
     function reloadPanel(panelName) {
       tbody.innerHTML = '';
