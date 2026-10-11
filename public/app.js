@@ -594,7 +594,7 @@
       { label: 'Bottles ready', value: s.filter(x => x.status === 'Bottle Ready').length, tone: 'info' },
       { label: 'In storage',    value: s.filter(x => x.status === 'Stored').length, tone: 'success' },
       { label: 'In analysis',   value: s.filter(x => x.status === 'In Analysis').length, tone: 'warn' },
-      { label: 'Needs review',  value: alerts.waitingApproval?.length || s.filter(x => x.status === 'Needs Review' || x.status === 'Results Entered').length, tone: 'warn' },
+      { label: 'Needs review',  value: s.filter(x => x.status === 'Needs Review' || x.status === 'Results Entered').length, tone: 'warn' },
       { label: 'Flagged',       value: s.filter(x => x.status === 'Flagged').length, tone: 'danger' }
     ];
     const recentSamples = s.slice(0, 8);
@@ -639,24 +639,52 @@
       );
       const body = h('div', { class: 'card-body' });
       const grid = h('div', { class: 'storage-widget' });
-      storageCounts.forEach(({ loc, count }) => {
-        const row = h('div', { class: 'storage-row', 'data-full': loc.isFull ? 'true' : null, onclick: () => { state.sampleFilters.storage = loc.id; switchView('samples'); } },
+      const buildRow = ({ title, meta, count, samples, locId, extraClass }) => {
+        const card = h('div', { class: 'storage-row' + (extraClass ? ' ' + extraClass : '') });
+        card.appendChild(h('div', { class: 'storage-row-head' },
           h('div', { class: 'storage-row-main' },
-            h('div', { class: 'storage-row-name' }, loc.name),
-            h('div', { class: 'storage-row-meta muted text-xs' }, `${loc.type || 'Storage'}${loc.isFull ? ' · FULL' : ''}${loc.capacityNote ? ' · ' + loc.capacityNote : ''}`)
+            h('div', { class: 'storage-row-name' }, title),
+            h('div', { class: 'storage-row-meta muted text-xs' }, meta)
           ),
           h('div', { class: 'storage-row-count' }, String(count))
-        );
-        grid.appendChild(row);
+        ));
+        if (samples.length) {
+          const list = h('div', { class: 'storage-row-samples' });
+          samples.forEach(x => {
+            const chip = h('button', { class: 'storage-sample-chip', type: 'button',
+              onclick: (e) => { e.stopPropagation(); openSampleDetail(x.id); } },
+              h('span', { class: 'storage-sample-code mono' }, x.sampleCode),
+              h('span', { class: 'storage-sample-sub muted text-xs' }, `${x.clientName || '—'} · ${x.status}`)
+            );
+            list.appendChild(chip);
+          });
+          card.appendChild(list);
+        }
+        if (locId) {
+          const openBtn = h('button', { class: 'btn btn-ghost btn-sm storage-row-open', type: 'button',
+            onclick: () => { state.sampleFilters.storage = locId; switchView('samples'); } },
+            h('span', { class: 'btn-label' }, 'Filter registry'));
+          card.appendChild(openBtn);
+        }
+        return card;
+      };
+      storageCounts.forEach(({ loc, count }) => {
+        const samples = s.filter(x => x.storageLocationId === loc.id && x.status !== 'Disposed');
+        grid.appendChild(buildRow({
+          title: loc.name,
+          meta: `${loc.type || 'Storage'}${loc.isFull ? ' · FULL' : ''}${loc.capacityNote ? ' · ' + loc.capacityNote : ''}`,
+          count, samples, locId: loc.id,
+          extraClass: loc.isFull ? 'is-full' : ''
+        }));
       });
       if (unstoredCount) {
-        grid.appendChild(h('div', { class: 'storage-row', 'data-unstored': 'true' },
-          h('div', { class: 'storage-row-main' },
-            h('div', { class: 'storage-row-name' }, 'Not yet stored'),
-            h('div', { class: 'storage-row-meta muted text-xs' }, 'Bottles in prep or being collected')
-          ),
-          h('div', { class: 'storage-row-count' }, String(unstoredCount))
-        ));
+        const samples = s.filter(x => !x.storageLocationId && x.status !== 'Disposed');
+        grid.appendChild(buildRow({
+          title: 'Not yet stored',
+          meta: 'Bottles in prep or being collected',
+          count: unstoredCount, samples, locId: null,
+          extraClass: 'is-unstored'
+        }));
       }
       body.appendChild(grid);
       storageCard.appendChild(body);
@@ -684,9 +712,11 @@
   }
   function greeting() {
     const h = new Date().getHours();
+    if (h < 5)  return 'late evening';
     if (h < 12) return 'morning';
     if (h < 17) return 'afternoon';
-    return 'evening';
+    if (h < 22) return 'evening';
+    return 'late evening';
   }
 
   function sampleCard(sample, opts = {}) {
@@ -750,21 +780,40 @@
       )
     );
   }
-  async function bulkAssign() {
-    const names = state.people.map(p => p.name);
-    if (names.length === 0) return notify({ type: 'warn', title: 'No analysts', description: 'Add people in Masters first.' });
-    const analyst = window.prompt('Assign selected samples to (analyst name):\n\n' + names.join(', '));
-    if (!analyst) return;
+  function bulkAssign() {
+    if (allAnalystNames().length === 0) return notify({ type: 'warn', title: 'No analysts', description: 'Add people in Masters first.' });
+    const count = state.selectedSamples.size;
+    if (!count) return;
+    $('#bulkAssignTitle').textContent = `Assign analysts to ${count} sample${count === 1 ? '' : 's'}`;
+    $('#bulkAssignContext').textContent = `Pick up to 2 analysts. They will be assigned to every selected sample. Existing assignments will be overwritten.`;
+    $('#bulkAssignValue').value = '';
+    const wrap = $('#bulkAssignWrap');
+    wrap.innerHTML = '';
+    wrap.appendChild(analystMultiPicker('', 'bulkAssignValue'));
+    $('#bulkAssignForm [data-form-error]').classList.add('hidden');
+    $('#bulkAssignDialog').showModal();
+  }
+  $('#bulkAssignForm').addEventListener('submit', safe(async e => {
+    e.preventDefault();
+    const names = ($('#bulkAssignValue').value || '').split(',').map(x => x.trim()).filter(Boolean);
+    if (!names.length) {
+      const banner = $('#bulkAssignForm [data-form-error]');
+      banner.textContent = 'Pick at least one analyst.';
+      banner.classList.remove('hidden');
+      return;
+    }
+    const assignedTo = names.join(', ');
     const ids = [...state.selectedSamples];
     let ok = 0, fail = 0;
     for (const id of ids) {
-      try { await api(`/api/samples/${id}`, { method: 'PATCH', body: JSON.stringify({ assignedTo: analyst.trim() }) }); ok++; }
+      try { await api(`/api/samples/${id}`, { method: 'PATCH', body: JSON.stringify({ assignedTo }) }); ok++; }
       catch { fail++; }
     }
+    $('#bulkAssignDialog').close();
     clearSampleSelection();
     await load();
-    notify({ type: fail ? 'warn' : 'success', title: `${ok} assigned`, description: fail ? `${fail} failed` : `All to ${analyst}` });
-  }
+    notify({ type: fail ? 'warn' : 'success', title: `${ok} assigned`, description: fail ? `${fail} failed` : `All to ${assignedTo}` });
+  }));
   async function bulkMarkStatus(status) {
     const confirmed = await confirmDialog({ title: 'Bulk update', message: `Mark ${state.selectedSamples.size} samples as "${status}"?`, okLabel: 'Update' });
     if (!confirmed) return;
@@ -876,8 +925,66 @@
     );
   }
   function showMoreFilters(projects, collectors, analysts, f) {
-    // Simple inline expander — could be a popover
-    notify({ type: 'info', title: 'More filters available', description: 'Project, collector and analyst filters are available in the API — full popover UI in the next iteration.' });
+    const fillSelect = (id, options, current) => {
+      const sel = $(id); sel.innerHTML = '';
+      sel.appendChild(h('option', { value: '' }, 'Any'));
+      options.forEach(o => sel.appendChild(h('option', { value: o, selected: o === current ? true : null }, o)));
+    };
+    fillSelect('#mfProject', projects, f.project || '');
+    fillSelect('#mfCollector', collectors, f.collector || '');
+    fillSelect('#mfAnalyst', analysts, f.analyst || '');
+    const form = $('#moreFiltersForm');
+    form.onsubmit = (e) => {
+      e.preventDefault();
+      f.project = $('#mfProject').value;
+      f.collector = $('#mfCollector').value;
+      f.analyst = $('#mfAnalyst').value;
+      $('#moreFiltersDialog').close();
+      render();
+    };
+    $('#mfClear').onclick = () => {
+      $('#mfProject').value = '';
+      $('#mfCollector').value = '';
+      $('#mfAnalyst').value = '';
+    };
+    $('#moreFiltersDialog').showModal();
+  }
+
+  // Lightweight reason-reason dialog built on the reject dialog shell
+  function rejectReasonDialog({ title, subject, context, required = true }) {
+    return new Promise(resolve => {
+      $('#rejectTitle').textContent = title || ('Reject ' + (subject || ''));
+      $('#rejectContext').textContent = context || 'This decision is recorded in the activity log.';
+      const reasonLabel = $('#rejectForm label[for="rejectReason"]');
+      if (reasonLabel) reasonLabel.innerHTML = required ? 'Reason <span class="required">*</span>' : 'Reason (optional)';
+      $('#rejectReason').value = '';
+      $('#rejectReason').required = required;
+      const banner = $('#rejectForm [data-form-error]'); banner.classList.add('hidden');
+      const form = $('#rejectForm');
+      const dlg = $('#rejectDialog');
+      // Temporarily hijack the submit handler
+      const previousOnSubmit = form.onsubmit;
+      const prevListeners = state._rejectFormHijack;
+      state._rejectFormHijack = true;
+      const onSubmit = (e) => {
+        e.preventDefault(); e.stopImmediatePropagation();
+        const v = $('#rejectReason').value.trim();
+        if (required && !v) { banner.textContent = 'Reason is required.'; banner.classList.remove('hidden'); return; }
+        form.removeEventListener('submit', onSubmit, true);
+        state._rejectFormHijack = prevListeners;
+        dlg.close();
+        resolve(v);
+      };
+      const onClose = () => {
+        form.removeEventListener('submit', onSubmit, true);
+        dlg.removeEventListener('close', onClose);
+        state._rejectFormHijack = prevListeners;
+        resolve(null);
+      };
+      form.addEventListener('submit', onSubmit, true);
+      dlg.addEventListener('close', onClose);
+      dlg.showModal();
+    });
   }
   function fieldEl({ id, label, input }) {
     return h('div', { class: 'field' },
@@ -921,7 +1028,7 @@
         && (!f.status || s.status === f.status)
         && (!f.project || s.clientName === f.project)
         && (!f.collector || s.collector === f.collector)
-        && (!f.analyst || s.assignedTo === f.analyst)
+        && (!f.analyst || (s.assignedTo || '').split(',').map(x=>x.trim()).includes(f.analyst))
         && (!f.storage || s.storageLocationId === f.storage)
         && created >= from && created <= to;
     });
@@ -1002,18 +1109,36 @@
       h('div', { class: 'detail-body' },
         samplePhotoCard(sample),
         h('div', { class: 'stack detail-right' },
-          h('div', { class: 'facts' },
-            factEl('Project / client', sample.clientName),
-            factEl('Site', sample.collectionSite),
-            factEl('Source', sample.sourceType),
-            factEl('Bottle labelled', fmtDate(sample.createdAt || sample.receivedAt)),
-            factEl('Last updated', fmtDate(sample.updatedAt || sample.receivedAt)),
-            factEl('Target completion', sample.dueAt ? fmtDate(sample.dueAt) : '—'),
-            factEl('Brought by', sample.collector),
-            factEl('Analyst' + (assignedList(sample).length > 1 ? 's' : ''), sample.assignedTo || 'Unassigned'),
-            factEl('Storage', storage),
-            factEl('Retention', sample.retentionStatus || 'Active'),
-            factEl('Tests', (sample.requestedTests || []).join(', '))
+          // Stat strip: the 4 things every reviewer asks for first.
+          h('div', { class: 'detail-stat-strip' },
+            statTile('Target completion', sample.dueAt ? fmtDate(sample.dueAt) : '—', sample.dueAt && new Date(sample.dueAt) < new Date() && sample.status !== 'Approved' && sample.status !== 'Disposed' ? 'overdue' : null),
+            statTile('Tests', (sample.requestedTests || []).join(', ') || '—'),
+            statTile('Analyst' + (assignedList(sample).length > 1 ? 's' : ''), sample.assignedTo || 'Unassigned'),
+            statTile('Storage', storage)
+          ),
+          h('div', { class: 'facts-grouped' },
+            h('div', { class: 'facts-group' },
+              h('div', { class: 'facts-group-head' }, 'Identity'),
+              h('div', { class: 'facts' },
+                factEl('Project / client', sample.clientName),
+                factEl('Site', sample.collectionSite),
+                factEl('Source', sample.sourceType)
+              )
+            ),
+            h('div', { class: 'facts-group' },
+              h('div', { class: 'facts-group-head' }, 'Custody'),
+              h('div', { class: 'facts' },
+                factEl('Brought by', sample.collector),
+                factEl('Retention', sample.retentionStatus || 'Active')
+              )
+            ),
+            h('div', { class: 'facts-group' },
+              h('div', { class: 'facts-group-head' }, 'Timeline'),
+              h('div', { class: 'facts' },
+                factEl('Bottle labelled', fmtDate(sample.createdAt || sample.receivedAt)),
+                factEl('Last updated', fmtDate(sample.updatedAt || sample.receivedAt))
+              )
+            )
           ),
           h('div', { class: 'readiness' },
             h('span', { class: 'ready-item', 'data-done': String(hasStorage) }, `Storage ${hasStorage ? 'set' : 'needed'}`),
@@ -1036,6 +1161,12 @@
     return h('div', { class: 'fact' },
       h('div', { class: 'fact-label' }, label),
       h('div', { class: 'fact-value' }, value || '—')
+    );
+  }
+  function statTile(label, value, flag) {
+    return h('div', { class: 'stat-tile' + (flag ? ' is-' + flag : '') },
+      h('div', { class: 'stat-tile-label' }, label),
+      h('div', { class: 'stat-tile-value' }, value || '—')
     );
   }
   // Left column: sample photo, fills the full column height.
@@ -1112,15 +1243,34 @@
   }
 
   function lifecycleStripEl(sample) {
-    const idx = LIFECYCLE_STRIP.indexOf(sample.status);
-    const container = h('div', { class: 'lifecycle-strip' });
+    // Map off-strip statuses onto a strip step so the pipeline stays legible.
+    // 'Results Entered' is semantically between In Analysis and Needs Review — park on 'In Analysis'.
+    // 'Flagged' is a return-to-analyst — park on 'In Analysis' with a flag badge.
+    // 'Disposed' is a terminal state past Approved — show the whole strip done + a disposed badge.
+    const stripMap = {
+      'Results Entered': 'In Analysis',
+      'Flagged': 'In Analysis',
+      'Disposed': 'Approved',
+    };
+    const effectiveStatus = stripMap[sample.status] || sample.status;
+    const idx = LIFECYCLE_STRIP.indexOf(effectiveStatus);
+    const sideState = sample.status === 'Flagged' ? 'flagged'
+                    : sample.status === 'Disposed' ? 'disposed'
+                    : sample.status === 'Results Entered' ? 'results-entered'
+                    : null;
+    const container = h('div', { class: 'lifecycle-strip' + (sideState ? ' is-' + sideState : '') });
     LIFECYCLE_STRIP.forEach((step, i) => {
       if (i > 0) container.appendChild(h('span', { class: 'connector' }));
-      container.appendChild(h('span', { class: 'step', 'data-done': i < idx ? 'true' : null, 'data-current': i === idx ? 'true' : null },
+      const isDone = sample.status === 'Disposed' ? true : i < idx;
+      const isCurrent = i === idx;
+      container.appendChild(h('span', { class: 'step', 'data-done': isDone ? 'true' : null, 'data-current': isCurrent ? 'true' : null },
         h('span', { class: 'dot' }),
         step
       ));
     });
+    if (sideState) {
+      container.appendChild(h('span', { class: 'lifecycle-badge chip ' + statusClass(sample.status) }, sample.status));
+    }
     return container;
   }
 
@@ -1204,13 +1354,20 @@
       if (!picked.length) chipsRow.appendChild(h('span', { class: 'muted text-sm' }, 'No analysts assigned'));
       // Rebuild dropdown with people not yet picked
       sel.innerHTML = '';
-      sel.appendChild(h('option', { value: '' }, '+ Add analyst'));
-      allAnalystNames().filter(n => !picked.includes(n)).forEach(n => sel.appendChild(h('option', { value: n }, n)));
+      const atMax = picked.length >= 2;
+      sel.appendChild(h('option', { value: '' }, atMax ? 'Max 2 analysts' : '+ Add analyst'));
+      sel.disabled = atMax;
+      if (!atMax) allAnalystNames().filter(n => !picked.includes(n)).forEach(n => sel.appendChild(h('option', { value: n }, n)));
     };
     const sel = h('select', { class: 'select analyst-picker-add' });
     sel.onchange = () => {
       if (!sel.value) return;
       const picked = names();
+      if (picked.length >= 2) {
+        notify({ type: 'warn', title: 'Two analysts max', description: 'Remove one before adding another.' });
+        sel.value = '';
+        return;
+      }
       if (!picked.includes(sel.value)) {
         picked.push(sel.value);
         hidden.value = picked.join(', ');
@@ -1711,7 +1868,16 @@
     } catch (e) { notify({ type: 'error', title: 'Save failed', description: e.message }); }
   }
 
-  function filesTab(sample) {
+  async function deleteSampleFile(sample, file) {
+    const ok = await confirmDialog({ title: 'Delete file', message: `Delete "${file.originalName || file.category}" from ${sample.sampleCode}? This cannot be undone.`, okLabel: 'Delete' });
+    if (!ok) return;
+    try {
+      await api(`/api/samples/${sample.id}/files/${file.id}`, { method: 'DELETE' });
+      await load();
+      notify({ type: 'success', title: 'File removed', description: file.originalName || file.category });
+    } catch (e) { notify({ type: 'error', title: 'Delete failed', description: e.message }); }
+  }
+    function filesTab(sample) {
     const files = sample.files || [];
     const wrap = h('div', { class: 'stack-lg' });
     const tblWrap = h('div', { class: 'table-wrap' });
@@ -1720,12 +1886,13 @@
         h('th', { scope: 'col' }, 'File'),
         h('th', { scope: 'col' }, 'Category'),
         h('th', { scope: 'col' }, 'Uploaded by'),
-        h('th', { scope: 'col' }, 'Open')
+        h('th', { scope: 'col' }, 'Open'),
+        can('admin') ? h('th', { scope: 'col' }, 'Remove') : null
       ))
     );
     const tbody = h('tbody');
     if (files.length === 0) {
-      tbody.appendChild(h('tr', null, h('td', { colspan: '4', 'data-label': '' }, emptyState({ title: 'No files yet', message: 'Upload written records, instrument data, or worksheets.' }))));
+      tbody.appendChild(h('tr', null, h('td', { colspan: can('admin') ? '5' : '4', 'data-label': '' }, emptyState({ title: 'No files yet', message: 'Upload written records, instrument data, or worksheets.' }))));
     } else {
       files.forEach(f => tbody.appendChild(h('tr', null,
         h('td', { 'data-label': 'File' }, f.originalName || '—'),
@@ -1734,7 +1901,8 @@
           h('div', null, f.uploadedBy || '—'),
           h('small', { class: 'muted' }, fmtDate(f.uploadedAt))
         ),
-        h('td', { 'data-label': 'Open' }, h('a', { href: apiUrl(f.url), target: '_blank' }, 'View'))
+        h('td', { 'data-label': 'Open' }, f.url ? h('a', { href: apiUrl(f.url), target: '_blank' }, 'View') : h('span', { class: 'muted' }, '—')),
+        can('admin') ? h('td', { 'data-label': 'Remove' }, h('button', { class: 'btn btn-sm btn-ghost', type: 'button', onclick: () => deleteSampleFile(sample, f) }, h('span',{class:'btn-label'},'Delete'))) : null
       )));
     }
     tbl.appendChild(tbody);
@@ -1888,16 +2056,37 @@
       throw err;
     }
   }));
-  async function rejectSample(sample) {
-    const reason = window.prompt('Reason for rejecting ' + sample.sampleCode + ' (required):', '');
-    if (!reason || !reason.trim()) return;
+  function rejectSample(sample) {
+    state.pendingReject = sample;
+    $('#rejectTitle').textContent = 'Send ' + sample.sampleCode + ' back to analyst';
+    $('#rejectContext').textContent = 'The analyst assigned to ' + sample.sampleCode + ' will see this reason in the activity log and in the sample notes.';
+    $('#rejectReason').value = '';
+    $('#rejectForm [data-form-error]').classList.add('hidden');
+    $('#rejectDialog').showModal();
+  }
+  $('#rejectForm').addEventListener('submit', safe(async e => {
+    e.preventDefault();
+    const sample = state.pendingReject; if (!sample) return;
+    const reason = $('#rejectReason').value.trim();
+    if (!reason) {
+      const banner = $('#rejectForm [data-form-error]');
+      banner.textContent = 'Reason is required.';
+      banner.classList.remove('hidden');
+      return;
+    }
     try {
-      // Backend has no reject endpoint yet; use PATCH to move status back
-      await api(`/api/samples/${sample.id}`, { method: 'PATCH', body: JSON.stringify({ status: 'In Analysis', notes: (sample.notes || '') + `\n[Rejected] ${reason}` }) });
+      await api(`/api/samples/${sample.id}`, { method: 'PATCH', body: JSON.stringify({ status: 'In Analysis', notes: (sample.notes || '') + `\n[Rejected ${new Date().toISOString().slice(0,10)}] ${reason}` }) });
+      $('#rejectDialog').close();
+      state.pendingReject = null;
       await load();
       notify({ type: 'success', title: 'Sample returned', description: `${sample.sampleCode} sent back to analyst.` });
-    } catch (e) { notify({ type: 'error', title: 'Reject failed', description: e.message }); }
-  }
+    } catch (err) {
+      const banner = $('#rejectForm [data-form-error]');
+      banner.textContent = err.message || 'Could not send back';
+      banner.classList.remove('hidden');
+      throw err;
+    }
+  }));
 
   /* ---------------------------------------------------------------------- */
   /* Scan                                                                   */
@@ -2427,7 +2616,7 @@
     dlg.showModal();
   }
   async function scanQuickDispose(sample) {
-    if (!confirm(`Mark ${sample.sampleCode} as disposed? This records the disposal in the audit log.`)) return;
+    if (!(await confirmDialog({ title: 'Dispose sample', message: `Mark ${sample.sampleCode} as disposed? This records the disposal in the audit log.`, okLabel: 'Dispose' }))) return;
     try {
       await api(`/api/samples/${sample.id}/lifecycle`, { method: 'POST', body: JSON.stringify({ action: 'Dispose', reason: 'Post-approval disposal — QR scan' }) });
       await load();
@@ -2527,8 +2716,8 @@
                 paramsTa.value = params.map(p => `${p.name},${p.unit || ''},${p.std || ''}`).join('\n');
                 nameInp.scrollIntoView({ behavior: 'smooth', block: 'center' });
               } }, h('span',{class:'btn-label'},'Edit')),
-              h('button', { class: 'btn btn-sm btn-ghost', type: 'button', onclick: () => {
-                if (!confirm(`Delete the "${n}" panel? This only removes your customization; if this was overriding a built-in panel, the built-in will return after page reload.`)) return;
+              h('button', { class: 'btn btn-sm btn-ghost', type: 'button', onclick: async () => {
+                if (!(await confirmDialog({ title: `Delete ${n} panel`, message: `This only removes your customization; if this was overriding a built-in panel, the built-in will return after page reload.`, okLabel: 'Delete' }))) return;
                 deleteCustomPanel(n);
                 renderMasters();
                 notify({ type: 'success', title: 'Panel deleted', description: n });
@@ -2685,14 +2874,15 @@
     const approveBtn = h('button', { class: 'btn btn-primary btn-sm', type: 'button' }, h('span',{class:'btn-label'},'✓ Approve'));
     const rejectBtn = h('button', { class: 'btn btn-sm btn-ghost', type: 'button' }, h('span',{class:'btn-label'},'Reject'));
     approveBtn.onclick = safe(async () => {
-      if (!confirm(`Approve ${u.name} (${u.email}) as ${roleSel.value}? They will be able to sign in immediately.`)) return;
+      const ok = await confirmDialog({ title: 'Approve signup', message: `Approve ${u.name} (${u.email}) as ${roleSel.value}? They will be able to sign in immediately.`, okLabel: 'Approve' });
+      if (!ok) return;
       await api(`/api/users/${u.id}/approve`, { method: 'POST', body: JSON.stringify({ role: roleSel.value }) });
       await load();
       notify({ type: 'success', title: 'Approved', description: `${u.name} can now sign in as ${roleSel.value}.` });
     });
     rejectBtn.onclick = safe(async () => {
-      const reason = window.prompt(`Reason for rejecting ${u.name} (optional):`, '') || '';
-      if (!confirm(`Reject ${u.name}'s signup? They cannot request again with the same email.`)) return;
+      const reason = await rejectReasonDialog({ title: 'Reject signup', subject: u.name, context: 'This decision is recorded. They cannot request again with the same email.', required: false });
+      if (reason === null) return;
       await api(`/api/users/${u.id}/reject`, { method: 'POST', body: JSON.stringify({ reason }) });
       await load();
       notify({ type: 'success', title: 'Rejected', description: `${u.name}'s signup declined.` });
@@ -3003,7 +3193,10 @@
     renderSampleDialogOptions();
     $('#bulkResult').innerHTML = '';
     $('#bulkSampleDialog').showModal();
+    validateBulkRows();
   };
+  $('#bulkRows').addEventListener('input', validateBulkRows);
+  $('#downloadBulkTemplate').onclick = downloadBulkTemplate;
   $('#sampleForm').onsubmit = safe(async e => {
     e.preventDefault();
     const fd = new FormData(e.target);
@@ -3047,7 +3240,54 @@
     renderBulkResult(result.created, result.errors);
     notify({ type: 'success', title: `${result.created.length} sample${result.created.length === 1 ? '' : 's'} imported` });
   });
-  function parseBulkRows(text) {
+  function validateBulkRows() {
+    const text = $('#bulkRows').value || '';
+    const out = $('#bulkRowsValidation');
+    if (!text.trim()) { out.innerHTML = ''; return; }
+    const lines = text.split(/\r?\n/).map(r => r.trim()).filter(Boolean);
+    const storageLookup = new Map(state.storageLocations.map(l => [l.name.toLowerCase(), l]));
+    const issues = [];
+    let valid = 0;
+    lines.forEach((line, i) => {
+      if (i === 0 && (line.toLowerCase().startsWith('project,') || line.toLowerCase().startsWith('client,'))) return;
+      const cells = line.split(/,|\t/).map(c => c.trim());
+      const rowNum = i + 1;
+      if (cells.length < 4) { issues.push(`Row ${rowNum}: fewer than 4 cells — needs at least Project, Source Type, Site, Brought By`); return; }
+      if (!cells[0]) { issues.push(`Row ${rowNum}: Project is empty`); return; }
+      if (cells[4] && !storageLookup.has(cells[4].toLowerCase())) {
+        const known = state.storageLocations.map(l => l.name).join(', ') || '(none configured)';
+        issues.push(`Row ${rowNum}: unknown storage "${cells[4]}" — known: ${known}`); return;
+      }
+      if (!cells[6]) { issues.push(`Row ${rowNum}: Tests is empty — list at least one test`); return; }
+      if (cells[7] && Number.isNaN(new Date(cells[7]).getTime())) { issues.push(`Row ${rowNum}: Target Completion "${cells[7]}" is not a valid date`); return; }
+      valid++;
+    });
+    out.innerHTML = '';
+    const summary = h('div', { class: 'bulk-validation-summary' },
+      h('span', { class: 'chip ' + (issues.length ? 'chip-warn' : 'chip-success') }, `${valid} ok · ${issues.length} issue${issues.length === 1 ? '' : 's'}`)
+    );
+    out.appendChild(summary);
+    if (issues.length) {
+      const list = h('ul', { class: 'bulk-validation-list' });
+      issues.slice(0, 10).forEach(msg => list.appendChild(h('li', null, msg)));
+      if (issues.length > 10) list.appendChild(h('li', { class: 'muted' }, `…and ${issues.length - 10} more`));
+      out.appendChild(list);
+    }
+  }
+  function downloadBulkTemplate() {
+    const header = ['Project', 'Source Type', 'Site', 'Brought By', 'Storage', 'Analyst', 'Tests', 'Target Completion', 'Notes'];
+    const example = ['Project A', 'Drinking Water', 'Borewell 1 — Ward 42', 'Ramesh', state.storageLocations[0]?.name || 'Fridge 1', (allAnalystNames()[0] || 'Priya'), 'pH; TDS; Hardness', '2026-10-20 17:00', 'First morning collection'];
+    const csv = [header, example].map(r => r.map(c => /[",\n]/.test(c) ? '"' + c.replace(/"/g,'""') + '"' : c).join(',')).join('\n') + '\n';
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'plasma-lab-bulk-samples-template.csv';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    notify({ type: 'info', title: 'Template downloaded', description: 'Open it in Excel, fill rows, then paste back here or upload via the Excel panel.' });
+  }
+    function parseBulkRows(text) {
     return String(text || '').split(/\r?\n/).map(r => r.trim()).filter(Boolean)
       .filter((r,i) => i > 0 || !r.toLowerCase().startsWith('project,') && !r.toLowerCase().startsWith('client,'))
       .map(r => r.split(/,|\t/).map(c => c.trim()))

@@ -318,6 +318,14 @@ function canReadSample(user, sample) {
   if (user.role === "analyst") return sample.active !== false && !sample.archived_at;
   return false;
 }
+function normalizeAssignedTo(v) {
+  const names = String(v || "").split(",").map(x => x.trim()).filter(Boolean);
+  const unique = [...new Set(names)];
+  if (unique.length > 2) {
+    throw Object.assign(new Error("At most 2 analysts can be assigned to a sample"), { status: 400 });
+  }
+  return unique.join(", ");
+}
 // assignedTo may now hold multiple analyst names, comma-separated (e.g.
 // "Amrutha Shanbhag, Anshika M"). An analyst can work on the sample if
 // their name appears in the list — this is how the lab's two-person
@@ -682,7 +690,7 @@ async function handle(request, env, ctx) {
       id, code, body.status || "Bottle Ready", body.status || "Bottle Ready",
       body.clientName, body.sourceType, body.collectionSite, body.collector,
       user.name, now(),
-      body.storageLocationId || null, body.assignedTo || "",
+      body.storageLocationId || null, normalizeAssignedTo(body.assignedTo),
       JSON.stringify(body.requestedTests), body.notes || "",
       body.plannedSamplingDate || "",
       dueAt, now(), now()
@@ -710,7 +718,7 @@ async function handle(request, env, ctx) {
         await env.DB.prepare(`
           INSERT INTO samples (id,sample_code,status,workflow_stage,client_name,source_type,collection_site,collector,received_by,received_at,storage_location_id,assigned_to,requested_tests,notes,planned_sampling_date,due_at,retention_status,active,created_at,updated_at)
           VALUES (?,?,'Bottle Ready','Bottle Ready',?,?,?,?,?,?,?,?,?,?,?,?,'Active',1,?,?)
-        `).bind(id, code, row.clientName, row.sourceType, row.collectionSite, row.collector, user.name, now(), row.storageLocationId || null, row.assignedTo || "", JSON.stringify(row.requestedTests), row.notes || "", row.plannedSamplingDate || "", dueAt, now(), now()).run();
+        `).bind(id, code, row.clientName, row.sourceType, row.collectionSite, row.collector, user.name, now(), row.storageLocationId || null, normalizeAssignedTo(row.assignedTo), JSON.stringify(row.requestedTests), row.notes || "", row.plannedSamplingDate || "", dueAt, now(), now()).run();
         await env.DB.prepare("INSERT INTO chain_of_custody (id,sample_id,at,by_name,action,location_id,note) VALUES (?,?,?,?,?,?,?)").bind(crypto.randomUUID(), id, now(), user.name, "Bottle labelled", row.storageLocationId || null, "").run();
         created.push(await loadSampleFull(env, id));
       } catch (e) {
@@ -770,6 +778,7 @@ async function handle(request, env, ctx) {
     const body = await bodyJson(request);
     const prev = s.storage_location_id || "";
     if ("storageLocationId" in body && !(await storageIsAvailable(env, body.storageLocationId, prev))) throw Object.assign(new Error("Selected storage is full or inactive"), { status: 400 });
+    if ("assignedTo" in body) body.assignedTo = normalizeAssignedTo(body.assignedTo);
     const parts = [], args = [];
     const map = { status: "status", assignedTo: "assigned_to", storageLocationId: "storage_location_id", notes: "notes", dueAt: "due_at" };
     for (const [k, col] of Object.entries(map)) {
@@ -869,6 +878,21 @@ async function handle(request, env, ctx) {
         "cache-control": "private, max-age=3600"
       }
     });
+  }
+
+  /* --- Samples: delete a file --- */
+  if (method === "DELETE" && path[0] === "api" && path[1] === "samples" && path[3] === "files" && path[4]) {
+    requireRole(user, "admin");
+    const s = await env.DB.prepare("SELECT * FROM samples WHERE id = ?").bind(path[2]).first();
+    if (!s) throw Object.assign(new Error("Sample not found"), { status: 404 });
+    const file = await env.DB.prepare("SELECT * FROM sample_files WHERE id = ? AND sample_id = ?").bind(path[4], s.id).first();
+    if (!file) throw Object.assign(new Error("File not found"), { status: 404 });
+    if (file.r2_key && env.MEDIA) {
+      try { await env.MEDIA.delete(file.r2_key); } catch (e) { /* best effort */ }
+    }
+    await env.DB.prepare("DELETE FROM sample_files WHERE id = ?").bind(file.id).run();
+    await addAudit(env, user, "Deleted sample file", "sample", s.id, `${s.sample_code}: ${file.original_name || file.category}`);
+    return json({ ok: true });
   }
 
   /* --- Samples: approve --- */

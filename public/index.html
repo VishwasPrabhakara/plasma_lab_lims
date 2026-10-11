@@ -422,14 +422,20 @@
           <div class="card">
             <div class="card-header"><h3 class="card-title">Paste rows</h3></div>
             <div class="card-body">
-              <p class="muted text-sm">Header order: Project, Source Type, Site, Brought By, Storage, Analyst, Tests, Target Completion, Notes.</p>
+              <p class="muted text-sm">Header order: Project, Source Type, Site, Brought By, Storage, Analyst, Tests, Target Completion, Notes. Separate cells with commas or tabs (paste from Excel works).</p>
               <div class="field">
                 <label class="field-label sr-only" for="bulkRows">Sample rows</label>
                 <textarea class="textarea" id="bulkRows" style="min-height:220px;font-family:var(--font-mono);font-size:var(--fs-sm);" placeholder="Project A, Drinking Water, Borewell 1, Ramesh, Fridge 1, Priya, pH; TDS, 2026-08-20 17:00, note"></textarea>
               </div>
-              <button type="button" class="btn btn-primary" id="createBulkSamples" data-busy-label="Creating…">
-                <span class="btn-label">Create samples</span>
-              </button>
+              <div id="bulkRowsValidation" class="bulk-validation" aria-live="polite"></div>
+              <div class="row" style="gap:8px;flex-wrap:wrap">
+                <button type="button" class="btn btn-primary" id="createBulkSamples" data-busy-label="Creating…">
+                  <span class="btn-label">Create samples</span>
+                </button>
+                <button type="button" class="btn btn-ghost" id="downloadBulkTemplate">
+                  <span class="btn-label">Download Excel template</span>
+                </button>
+              </div>
             </div>
           </div>
           <div class="card">
@@ -497,6 +503,86 @@
       <div class="dialog-footer">
         <button type="button" class="btn" data-close-dialog="approvalDialog"><span class="btn-label">Cancel</span></button>
         <button type="submit" class="btn btn-primary" data-busy-label="Signing…"><span class="btn-label">Sign &amp; approve</span></button>
+      </div>
+    </form>
+  </dialog>
+
+
+  <!-- Reject dialog -->
+  <dialog id="rejectDialog" class="dialog" data-size="sm" aria-labelledby="rejectTitle">
+    <form id="rejectForm" class="dialog-inner" novalidate>
+      <div class="dialog-header">
+        <h2 class="dialog-title" id="rejectTitle">Send sample back to analyst</h2>
+        <button type="button" class="btn btn-ghost btn-icon" data-close-dialog="rejectDialog" aria-label="Close dialog">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="dialog-body">
+        <div class="form-error-banner hidden" data-form-error></div>
+        <p class="muted text-sm" id="rejectContext">Rejection reason is recorded permanently in the activity log.</p>
+        <div class="field">
+          <label class="field-label" for="rejectReason">Reason <span class="required">*</span></label>
+          <textarea class="textarea" id="rejectReason" required placeholder="What should the analyst correct or re-run?"></textarea>
+        </div>
+      </div>
+      <div class="dialog-footer">
+        <button type="button" class="btn" data-close-dialog="rejectDialog"><span class="btn-label">Cancel</span></button>
+        <button type="submit" class="btn btn-danger" data-busy-label="Sending back…"><span class="btn-label">Send back to analyst</span></button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Bulk assign dialog -->
+  <dialog id="bulkAssignDialog" class="dialog" data-size="sm" aria-labelledby="bulkAssignTitle">
+    <form id="bulkAssignForm" class="dialog-inner" novalidate>
+      <div class="dialog-header">
+        <h2 class="dialog-title" id="bulkAssignTitle">Assign analysts to selected samples</h2>
+        <button type="button" class="btn btn-ghost btn-icon" data-close-dialog="bulkAssignDialog" aria-label="Close dialog">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="dialog-body">
+        <div class="form-error-banner hidden" data-form-error></div>
+        <p class="muted text-sm" id="bulkAssignContext">Pick up to 2 analysts. They will be assigned to every selected sample.</p>
+        <div class="field">
+          <label class="field-label">Analysts</label>
+          <div id="bulkAssignWrap"></div>
+          <input type="hidden" id="bulkAssignValue">
+        </div>
+      </div>
+      <div class="dialog-footer">
+        <button type="button" class="btn" data-close-dialog="bulkAssignDialog"><span class="btn-label">Cancel</span></button>
+        <button type="submit" class="btn btn-primary" data-busy-label="Assigning…"><span class="btn-label">Assign</span></button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- More filters popover (modal on mobile, floating on desktop via same dialog) -->
+  <dialog id="moreFiltersDialog" class="dialog" data-size="sm" aria-labelledby="moreFiltersTitle">
+    <form id="moreFiltersForm" class="dialog-inner" novalidate>
+      <div class="dialog-header">
+        <h2 class="dialog-title" id="moreFiltersTitle">More filters</h2>
+        <button type="button" class="btn btn-ghost btn-icon" data-close-dialog="moreFiltersDialog" aria-label="Close dialog">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="dialog-body">
+        <div class="field">
+          <label class="field-label" for="mfProject">Project</label>
+          <select class="select" id="mfProject"></select>
+        </div>
+        <div class="field">
+          <label class="field-label" for="mfCollector">Collected / brought by</label>
+          <select class="select" id="mfCollector"></select>
+        </div>
+        <div class="field">
+          <label class="field-label" for="mfAnalyst">Assigned analyst</label>
+          <select class="select" id="mfAnalyst"></select>
+        </div>
+      </div>
+      <div class="dialog-footer">
+        <button type="button" class="btn btn-ghost" id="mfClear"><span class="btn-label">Clear all</span></button>
+        <button type="submit" class="btn btn-primary"><span class="btn-label">Apply</span></button>
       </div>
     </form>
   </dialog>

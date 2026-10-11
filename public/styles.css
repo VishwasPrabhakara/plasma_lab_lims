@@ -606,14 +606,20 @@ code, .mono { font-family: var(--font-mono); font-feature-settings: "zero"; }
 .chip-x { background: transparent; border: 0; color: inherit; cursor: pointer; font-size: 14px; padding: 0 4px; line-height: 1; opacity: 0.6; }
 .chip-x:hover { opacity: 1; }
 
-.storage-widget { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 8px; }
-.storage-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--surface); cursor: pointer; transition: background 0.1s; }
-.storage-row:hover { background: var(--surface-2); }
-.storage-row[data-full="true"] { border-color: var(--danger, #c0392b); background: color-mix(in oklab, var(--danger, #c0392b) 4%, var(--surface)); }
-.storage-row[data-unstored="true"] { border-style: dashed; background: var(--surface-2); cursor: default; }
+.storage-widget { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px; }
+.storage-row { display: flex; flex-direction: column; gap: 8px; padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--surface); transition: background 0.1s; }
+.storage-row.is-full { border-color: var(--danger, #c0392b); background: color-mix(in oklab, var(--danger, #c0392b) 4%, var(--surface)); }
+.storage-row.is-unstored { border-style: dashed; background: var(--surface-2); }
+.storage-row-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .storage-row-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .storage-row-name { font-weight: var(--fw-m); color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .storage-row-count { font-size: 24px; font-weight: var(--fw-b); color: var(--accent); font-family: var(--font-mono); }
+.storage-row-samples { display: flex; flex-direction: column; gap: 4px; }
+.storage-sample-chip { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 10px; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-sm); cursor: pointer; text-align: left; font: inherit; color: inherit; }
+.storage-sample-chip:hover { background: color-mix(in oklab, var(--accent) 8%, var(--surface-2)); border-color: var(--accent); }
+.storage-sample-code { font-weight: var(--fw-m); font-size: 13px; }
+.storage-sample-sub { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.storage-row-open { align-self: flex-start; }
 
 /* Legacy badge alias */
 .badge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: var(--r-full); font-size: var(--fs-xs); font-weight: var(--fw-b); background: var(--surface-3); color: var(--text-muted); }
@@ -1103,16 +1109,22 @@ dialog.dialog::backdrop {
 /* 14. AUTH SURFACE ============================================================ */
 .auth {
   min-height: 100dvh;
+  width: 100%;
   display: grid;
   place-items: center;
   padding: var(--s-4);
+  box-sizing: border-box;
   background:
-    radial-gradient(1000px 700px at 15% 10%, color-mix(in oklab, var(--accent) 12%, transparent), transparent 60%),
-    radial-gradient(800px 500px at 85% 90%, color-mix(in oklab, var(--success) 8%, transparent), transparent 60%),
+    radial-gradient(1200px 800px at 20% 15%, color-mix(in oklab, var(--accent) 14%, transparent), transparent 60%),
+    radial-gradient(900px 600px at 85% 90%, color-mix(in oklab, var(--success) 8%, transparent), transparent 60%),
     var(--bg);
 }
+@media (max-width: 640px) {
+  .auth { padding: var(--s-3); }
+}
 .auth-panel {
-  width: min(1080px, 100%);
+  width: min(1120px, 100%);
+  margin: 0 auto;
   display: grid;
   grid-template-columns: 1fr;
   overflow: hidden;
@@ -1120,6 +1132,9 @@ dialog.dialog::backdrop {
   border: 1px solid var(--border);
   border-radius: var(--r-lg);
   box-shadow: var(--el-3);
+}
+@media (max-width: 640px) {
+  .auth-panel { width: 100%; border-radius: var(--r-md); }
 }
 @media (min-width: 900px) {
   .auth-panel { grid-template-columns: 5fr 6fr; min-height: 620px; }
@@ -1154,7 +1169,7 @@ dialog.dialog::backdrop {
   padding: 4px 10px;
   border-radius: var(--r-full);
   background: rgba(255,255,255,0.12);
-  color: color-mix(in oklab, var(--accent) 60%, #fff);
+  color: color-mix(in oklab, var(--accent) 30%, #fff);
   font-size: var(--fs-xs);
   font-weight: var(--fw-b);
   letter-spacing: 0.1em;
@@ -1415,10 +1430,11 @@ dialog.dialog::backdrop {
   border: 0;
   border-radius: var(--r-sm);
   color: var(--text-muted);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: var(--fw-m);
   cursor: pointer;
   min-height: 52px;
+  letter-spacing: 0.01em;
 }
 .tab-bar .tab[aria-current="page"] { color: var(--accent); }
 .tab-bar .tab svg { width: 22px; height: 22px; }
@@ -1583,6 +1599,10 @@ dialog.dialog::backdrop {
 .lifecycle-strip .connector {
   width: 12px; height: 2px; background: var(--border); flex: 0 0 auto;
 }
+.lifecycle-badge { margin-left: auto; flex: 0 0 auto; }
+.lifecycle-strip.is-flagged { border: 1px solid color-mix(in oklab, var(--warn, #c67700) 50%, transparent); }
+.lifecycle-strip.is-disposed { opacity: 0.72; }
+.lifecycle-strip.is-results-entered { border: 1px solid color-mix(in oklab, var(--accent) 30%, transparent); }
 
 .tabs {
   display: flex;
@@ -1740,6 +1760,55 @@ dialog.dialog::backdrop {
   letter-spacing: 0.06em;
 }
 .fact-value { font-weight: var(--fw-m); color: var(--text); overflow-wrap: anywhere; }
+
+.detail-stat-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: var(--s-2);
+  margin-bottom: var(--s-3);
+}
+.stat-tile {
+  padding: var(--s-3);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+}
+.stat-tile-label {
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+  font-weight: var(--fw-m);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 4px;
+}
+.stat-tile-value {
+  font-weight: var(--fw-b);
+  color: var(--text);
+  font-size: var(--fs-md);
+  overflow-wrap: anywhere;
+}
+.stat-tile.is-overdue { border-color: color-mix(in oklab, var(--danger, #c0392b) 55%, var(--border)); background: color-mix(in oklab, var(--danger, #c0392b) 6%, var(--surface-2)); }
+.stat-tile.is-overdue .stat-tile-value { color: var(--danger, #c0392b); }
+.facts-grouped {
+  display: grid;
+  gap: var(--s-3);
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+.facts-group {
+  padding: var(--s-3);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+}
+.facts-group-head {
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-b);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  margin-bottom: var(--s-2);
+}
+.facts-group .facts { grid-template-columns: 1fr; gap: var(--s-2); }
 
 .readiness {
   display: flex;
@@ -2093,7 +2162,7 @@ dialog.dialog::backdrop {
   .tab-bar {
     padding: 4px 4px 0 4px !important;
   }
-  .tab-bar .tab { min-height: 48px; font-size: 10px; padding-bottom: 4px; }
+  .tab-bar .tab { min-height: 48px; font-size: 11px; padding-bottom: 4px; }
   .tab-bar .tab svg { width: 20px; height: 20px; }
 
   /* App main: no bottom padding — tab bar handles it */
@@ -2541,3 +2610,11 @@ dialog.dialog::backdrop {
     --text-muted: var(--text);
   }
 }
+
+/* Bulk-paste live validation */
+.bulk-validation { margin-top: 8px; }
+.bulk-validation-summary { margin-bottom: 8px; }
+.bulk-validation-list { margin: 0; padding: 8px 12px; list-style: none; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-sm); font-size: var(--fs-sm); color: var(--text); display: grid; gap: 4px; }
+.bulk-validation-list li { padding: 2px 0; }
+.chip-warn { background: color-mix(in oklab, var(--warn, #c67700) 15%, var(--surface-2)); color: var(--warn, #c67700); border-color: color-mix(in oklab, var(--warn, #c67700) 35%, var(--border)); }
+.chip-success { background: color-mix(in oklab, var(--success) 15%, var(--surface-2)); color: var(--success); border-color: color-mix(in oklab, var(--success) 35%, var(--border)); }
