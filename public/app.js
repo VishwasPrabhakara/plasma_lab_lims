@@ -803,12 +803,24 @@
       banner.classList.remove('hidden');
       return;
     }
-    const assignedTo = names.join(', ');
+    const assignedTo = [...new Set([...assignedList(sample), ...names])].join(', ');
+    const isPriority = $('#bulkAssignPriority').checked;
     const ids = [...state.selectedSamples];
     let ok = 0, fail = 0;
     for (const id of ids) {
-      try { await api(`/api/samples/${id}`, { method: 'PATCH', body: JSON.stringify({ assignedTo }) }); ok++; }
-      catch { fail++; }
+      const sample = state.samples.find(s => s.id === id);
+      if (!sample) continue;
+      const sampleAssignedTo = [...new Set([...assignedList(sample), ...names])].join(', ');
+      try {
+        await api(`/api/samples/${id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({
+            assignedTo: sampleAssignedTo,
+            isPriority: isPriority
+          })
+        });
+        ok++;
+      } catch { fail++; }
     }
     $('#bulkAssignDialog').close();
     clearSampleSelection();
@@ -1632,8 +1644,27 @@
     }
     function reloadPanel(panelName) {
       tbody.innerHTML = '';
+      // Clear any stale no-panel warning
+      const existingWarn = body.querySelector('.sheet-no-panel-warn');
+      if (existingWarn) existingWarn.remove();
+
       if (panelName && PROJECT_PANELS[panelName]) {
         PROJECT_PANELS[panelName].forEach((p, i) => addRow({ parameter: p.name, unit: p.unit, std: p.std }, i + 1));
+        return;
+      }
+
+      // No standard panel matched — warn the analyst explicitly. Still pre-fill
+      // with the guessed panel's parameters when there was a guess, so a wrong
+      // guess is visible and recoverable instead of landing on a blank sheet.
+      body.insertBefore(h('div', { class: 'sheet-no-panel-warn' },
+        h('div', { class: 'form-error-banner' },
+          'No standard panel found — you are entering free-form values that will not be checked against a standard.'
+        )
+      ), body.firstChild);
+
+      const prefill = (guessed && PROJECT_PANELS[guessed]) ? PROJECT_PANELS[guessed] : null;
+      if (prefill) {
+        prefill.forEach((p, i) => addRow({ parameter: p.name, unit: p.unit, std: p.std }, i + 1));
       } else {
         // Fallback: use sample.requestedTests
         const tests = sample.requestedTests?.length ? sample.requestedTests : state.tests.slice(0, 5).map(t => t.name);
@@ -3657,7 +3688,7 @@
 
   // Header buttons
   $('#logoutBtn').onclick = () => { stopScanner(); clearSession(); showAuth(); notify({ type: 'info', title: 'Signed out' }); };
-  $('#syncBtn').onclick = safe(async () => { await load(); notify({ type: 'success', title: 'Synced' }); });
+  $('#syncBtn').onclick = safe(async () => { const b = $('#syncBtn'); b.dataset.state = 'syncing'; try { await load(); b.dataset.state = 'live'; notify({ type: 'success', title: 'Synced' }); } catch (e) { b.dataset.state = 'failed'; throw e; } });
   $('#backupBtn').onclick = safe(async () => {
     const res = await fetch(apiUrl('/api/backup'), { headers: { Authorization: 'Bearer ' + state.token } });
     if (!res.ok) throw new Error('Backup failed');
