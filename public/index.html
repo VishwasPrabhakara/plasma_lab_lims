@@ -384,7 +384,7 @@
             <div class="muted text-xs" style="margin-top:4px;">When the collector is going out to sample. Actual date + location fill in when the photo is uploaded.</div>
           </div>
           <div class="field"><label class="field-label" for="fStorage">Initial storage</label><select class="select" id="fStorage" name="storageLocationId"></select></div>
-          <div class="field"><label class="field-label" for="fAnalyst">Assign analyst(s)</label><div id="fAnalystWrap"></div><input type="hidden" id="fAnalyst" name="assignedTo"></div>
+          <div class="field"><label class="field-label" for="fAnalyst">Analysts (pick 2)</label><div id="fAnalystWrap"></div><input type="hidden" id="fAnalyst" name="assignedTo"></div>
           <div class="field"><label class="field-label" for="fDue">Target completion</label><input class="input" id="fDue" name="dueAt" type="datetime-local"></div>
           <div class="field"><label class="field-label" for="fPhoto">Sample photo (auto-captures date + GPS)</label>
             <input class="input" id="fPhoto" name="samplePhoto" type="file" accept="image/*" capture="environment">
@@ -420,22 +420,25 @@
       <div class="dialog-body">
         <div class="section-grid" data-cols="2">
           <div class="card">
-            <div class="card-header"><h3 class="card-title">Paste rows</h3></div>
+            <div class="card-header">
+              <h3 class="card-title">Add rows one by one</h3>
+              <button type="button" class="btn btn-sm" id="bulkAddRow">
+                <span class="btn-label">+ Add row</span>
+              </button>
+            </div>
             <div class="card-body">
-              <p class="muted text-sm">Header order: Project, Source Type, Site, Brought By, Storage, Analyst, Tests, Target Completion, Notes. Separate cells with commas or tabs (paste from Excel works).</p>
-              <div class="field">
-                <label class="field-label sr-only" for="bulkRows">Sample rows</label>
-                <textarea class="textarea" id="bulkRows" style="min-height:220px;font-family:var(--font-mono);font-size:var(--fs-sm);" placeholder="Project A, Drinking Water, Borewell 1, Ramesh, Fridge 1, Priya, pH; TDS, 2026-08-20 17:00, note"></textarea>
-              </div>
-              <div id="bulkRowsValidation" class="bulk-validation" aria-live="polite"></div>
-              <div class="row" style="gap:8px;flex-wrap:wrap">
+              <p class="muted text-sm">Each row gets proper dropdowns for storage, analysts, and tests. Shared values (same project / site / collector across the batch) stay sticky from the previous row.</p>
+              <div id="bulkRowwiseList" class="bulk-rowwise-list"></div>
+              <div class="row" style="gap:8px;flex-wrap:wrap;margin-top:12px">
                 <button type="button" class="btn btn-primary" id="createBulkSamples" data-busy-label="Creating…">
-                  <span class="btn-label">Create samples</span>
+                  <span class="btn-label">Create 0 samples</span>
                 </button>
-                <button type="button" class="btn btn-ghost" id="downloadBulkTemplate">
-                  <span class="btn-label">Download Excel template</span>
+                <button type="button" class="btn" id="bulkAddRowFooter">
+                  <span class="btn-label">+ Add row</span>
                 </button>
+                <span class="muted text-sm" id="bulkRowwiseCount">0 rows</span>
               </div>
+              <div id="bulkRowwiseErrors" class="bulk-validation" aria-live="polite"></div>
             </div>
           </div>
           <div class="card">
@@ -543,7 +546,7 @@
       </div>
       <div class="dialog-body">
         <div class="form-error-banner hidden" data-form-error></div>
-        <p class="muted text-sm" id="bulkAssignContext">Pick up to 2 analysts. They will be assigned to every selected sample.</p>
+        <p class="muted text-sm" id="bulkAssignContext">Pick 2 analysts. They will be assigned to every selected sample.</p>
         <div class="field">
           <label class="field-label">Analysts</label>
           <div id="bulkAssignWrap"></div>

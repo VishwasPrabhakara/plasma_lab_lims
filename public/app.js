@@ -27,11 +27,12 @@
     stream: null,
     sampleDetailOpen: false,
     openedUrlSample: false,
-    sampleFilters: { q:'', status:'', from:'', to:'', project:'', collector:'', analyst:'', storage:'' },
+    sampleFilters: { q:'', status:'', from:'', to:'', project:'', collector:'', analyst:'', storage:'', showArchived: false },
     auditFilters: { q:'', user:'', action:'', from:'', to:'' },
     pendingSignupId: '', resetId: '',
     showInactiveUsers: false,
     selectedRequestedTests: [],
+    bulkRowwise: [],
     selectedSamples: new Set(),
     pendingConfirm: null,
     pendingApproval: null,
@@ -785,7 +786,7 @@
     const count = state.selectedSamples.size;
     if (!count) return;
     $('#bulkAssignTitle').textContent = `Assign analysts to ${count} sample${count === 1 ? '' : 's'}`;
-    $('#bulkAssignContext').textContent = `Pick up to 2 analysts. They will be assigned to every selected sample. Existing assignments will be overwritten.`;
+    $('#bulkAssignContext').textContent = `Pick 2 analysts. They will be assigned to every selected sample. Existing assignments will be overwritten.`;
     $('#bulkAssignValue').value = '';
     const wrap = $('#bulkAssignWrap');
     wrap.innerHTML = '';
@@ -898,7 +899,14 @@
     return h('div', { class: 'card' },
       h('div', { class: 'card-header' },
         h('h3', { class: 'card-title' }, `${count} matching · ${state.samples.length} total`),
-        h('button', { class: 'btn btn-sm', type: 'button', onclick: resetFilters }, h('span',{class:'btn-label'},'Reset filters'))
+        h('div', { class: 'row', style: { gap: '12px', alignItems: 'center' } },
+          h('label', { class: 'check-label text-sm', style: { marginRight: '8px' } },
+            h('input', { class: 'checkbox', type: 'checkbox', checked: f.showArchived ? true : null,
+              onchange: e => { f.showArchived = e.target.checked; render(); } }),
+            h('span', null, 'Show archived')
+          ),
+          h('button', { class: 'btn btn-sm', type: 'button', onclick: resetFilters }, h('span',{class:'btn-label'},'Reset filters'))
+        )
       ),
       h('div', { class: 'card-body' },
         h('div', { class: 'filters-bar' },
@@ -1002,7 +1010,7 @@
   }
   function uniqueValues(arr) { return [...new Set(arr.filter(Boolean))].sort((a,b) => a.localeCompare(b)); }
   function resetFilters() {
-    state.sampleFilters = { q:'', status:'', from:'', to:'', project:'', collector:'', analyst:'', storage:'' };
+    state.sampleFilters = { q:'', status:'', from:'', to:'', project:'', collector:'', analyst:'', storage:'', showArchived: false };
     state.samplesShown = 0;
     render();
   }
@@ -1030,6 +1038,7 @@
         && (!f.collector || s.collector === f.collector)
         && (!f.analyst || (s.assignedTo || '').split(',').map(x=>x.trim()).includes(f.analyst))
         && (!f.storage || s.storageLocationId === f.storage)
+        && (f.showArchived || !s.archivedAt)
         && created >= from && created <= to;
     });
   }
@@ -1304,7 +1313,7 @@
         h('div', { class: 'form-error-banner hidden', 'data-form-error': true }),
         h('div', { class: 'form-grid' },
           fieldWith('Lab step', selectFor(STATUS_OPTIONS, sample.status, 'editStatus')),
-          fieldWith('Assigned analysts (pick one or more)', analystMultiPicker(sample.assignedTo || '', 'editAnalyst')),
+          fieldWith('Analysts (pick 2)', analystMultiPicker(sample.assignedTo || '', 'editAnalyst')),
           fieldWith('Current storage', storageSelect(sample.storageLocationId, 'editStorage')),
           fieldWith('Target completion', h('input', { class: 'input', id: 'editDueAt', type: 'datetime-local', value: toDateTimeLocal(sample.dueAt) })),
           h('div', { class: 'field field-wide' },
@@ -1351,11 +1360,11 @@
         chip.appendChild(x);
         chipsRow.appendChild(chip);
       });
-      if (!picked.length) chipsRow.appendChild(h('span', { class: 'muted text-sm' }, 'No analysts assigned'));
+      if (!picked.length) chipsRow.appendChild(h('span', { class: 'muted text-sm' }, 'Pick 2 analysts'));
       // Rebuild dropdown with people not yet picked
       sel.innerHTML = '';
       const atMax = picked.length >= 2;
-      sel.appendChild(h('option', { value: '' }, atMax ? 'Max 2 analysts' : '+ Add analyst'));
+      sel.appendChild(h('option', { value: '' }, atMax ? '2 analysts assigned' : '+ Add analyst'));
       sel.disabled = atMax;
       if (!atMax) allAnalystNames().filter(n => !picked.includes(n)).forEach(n => sel.appendChild(h('option', { value: n }, n)));
     };
@@ -1363,11 +1372,7 @@
     sel.onchange = () => {
       if (!sel.value) return;
       const picked = names();
-      if (picked.length >= 2) {
-        notify({ type: 'warn', title: 'Two analysts max', description: 'Remove one before adding another.' });
-        sel.value = '';
-        return;
-      }
+      if (picked.length >= 2) { sel.value = ''; return; }
       if (!picked.includes(sel.value)) {
         picked.push(sel.value);
         hidden.value = picked.join(', ');
@@ -2983,6 +2988,57 @@
         )
       )
     ));
+    // Archive bundle card — export JSON + photos ZIP for a date range.
+    // Optional: also mark those samples as Archived (soft-hide from registry, data stays).
+    const archiveCard = h('div', { class: 'card', style: { marginTop: '12px' } },
+      h('div', { class: 'card-header' },
+        h('h3', { class: 'card-title' }, 'Archive export'),
+        h('span', { class: 'chip' }, 'No deletion')
+      ),
+      h('div', { class: 'card-body' },
+        h('p', { class: 'muted text-sm' }, 'Build a downloadable bundle (JSON + photos ZIP) for samples in a date range. Nothing is deleted. Optionally mark the samples as Archived so they drop out of the day-to-day registry (still searchable via Show archived).'),
+        h('div', { class: 'form-grid' },
+          fieldWith('From', h('input', { class: 'input', type: 'date', id: 'arcFrom' })),
+          fieldWith('To', h('input', { class: 'input', type: 'date', id: 'arcTo' }))
+        ),
+        h('div', { class: 'row', style: { gap: '12px', alignItems: 'center', marginTop: '8px' } },
+          h('button', { class: 'btn', type: 'button', id: 'arcPreview' }, h('span', { class: 'btn-label' }, 'Preview matches')),
+          h('span', { id: 'arcPreviewCount', class: 'muted text-sm' }, 'Pick a range and press Preview.')
+        ),
+        h('label', { class: 'check-label', style: { marginTop: '8px' } },
+          h('input', { class: 'checkbox', type: 'checkbox', id: 'arcSoftArchive' }),
+          h('span', null, 'Also mark these samples as Archived (hides from registry; data preserved)')
+        ),
+        h('div', { class: 'row', style: { gap: '8px', marginTop: '12px', flexWrap: 'wrap' } },
+          h('button', { class: 'btn btn-primary', type: 'button', id: 'arcExport', 'data-busy-label': 'Building bundle…' }, h('span', { class: 'btn-label' }, 'Download bundle')),
+          h('span', { class: 'muted text-xs' }, 'JSON of samples / results / custody + photos from R2.')
+        )
+      )
+    );
+    root.appendChild(archiveCard);
+    // Default range: last 90 days
+    const to = new Date(); const from = new Date(to); from.setDate(from.getDate() - 90);
+    $('#arcFrom').value = from.toISOString().slice(0, 10);
+    $('#arcTo').value = to.toISOString().slice(0, 10);
+    $('#arcPreview').onclick = safe(async () => {
+      const r = await api(`/api/archive/preview?from=${$('#arcFrom').value}&to=${$('#arcTo').value}`);
+      $('#arcPreviewCount').textContent = `${r.count} sample${r.count === 1 ? '' : 's'} in range (${r.photoCount} photo${r.photoCount === 1 ? '' : 's'}).`;
+    });
+    $('#arcExport').onclick = safe(async () => {
+      const soft = $('#arcSoftArchive').checked;
+      const url = apiUrl(`/api/archive/export?from=${$('#arcFrom').value}&to=${$('#arcTo').value}&soft=${soft ? '1' : '0'}&token=${encodeURIComponent(state.token)}`);
+      // Trigger download via a transient link so we can keep auth in the token param.
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `plasma-lab-archive-${$('#arcFrom').value}_to_${$('#arcTo').value}.zip`;
+      document.body.appendChild(a); a.click(); a.remove();
+      if (soft) {
+        notify({ type: 'info', title: 'Archive export started', description: 'Samples will be marked Archived after the download completes server-side.' });
+        setTimeout(() => load(), 2500);
+      } else {
+        notify({ type: 'info', title: 'Archive bundle downloaded', description: 'No changes to the database.' });
+      }
+    });
   }
   function formatBytes(b) {
     const v = Number(b || 0);
@@ -3192,11 +3248,13 @@
   $('#bulkSampleBtn').onclick = () => {
     renderSampleDialogOptions();
     $('#bulkResult').innerHTML = '';
+    state.bulkRowwise = [];
+    $('#bulkRowwiseList').innerHTML = '';
+    addBulkRowwiseRow();
     $('#bulkSampleDialog').showModal();
-    validateBulkRows();
   };
-  $('#bulkRows').addEventListener('input', validateBulkRows);
-  $('#downloadBulkTemplate').onclick = downloadBulkTemplate;
+  $('#bulkAddRow').onclick = () => addBulkRowwiseRow();
+  $('#bulkAddRowFooter').onclick = () => addBulkRowwiseRow();
   $('#sampleForm').onsubmit = safe(async e => {
     e.preventDefault();
     const fd = new FormData(e.target);
@@ -3221,12 +3279,22 @@
     notify({ type: 'success', title: 'Sample registered', description: `${sample.sampleCode} — QR label ready to print.` });
   });
 
-  // Bulk create
+  // Bulk create (row-wise)
   $('#createBulkSamples').onclick = safe(async () => {
-    const rows = parseBulkRows($('#bulkRows').value);
+    const rows = collectBulkRowwiseRows();
+    if (!rows.length) throw new Error('Add at least one row');
+    const issues = validateBulkRowwise(rows);
+    if (issues.length) {
+      renderBulkRowwiseErrors(issues);
+      throw new Error('Fix the highlighted rows before creating');
+    }
     const result = await api('/api/samples/bulk', { method: 'POST', body: JSON.stringify({ rows }) });
     await load();
     renderBulkResult(result.created, result.errors);
+    state.bulkRowwise = [];
+    $('#bulkRowwiseList').innerHTML = '';
+    addBulkRowwiseRow();
+    updateBulkRowwiseCount();
     notify({ type: 'success', title: `${result.created.length} sample${result.created.length === 1 ? '' : 's'} created` });
   });
   $('#importBulkExcel').onclick = safe(async () => {
@@ -3240,73 +3308,188 @@
     renderBulkResult(result.created, result.errors);
     notify({ type: 'success', title: `${result.created.length} sample${result.created.length === 1 ? '' : 's'} imported` });
   });
-  function validateBulkRows() {
-    const text = $('#bulkRows').value || '';
-    const out = $('#bulkRowsValidation');
-    if (!text.trim()) { out.innerHTML = ''; return; }
-    const lines = text.split(/\r?\n/).map(r => r.trim()).filter(Boolean);
-    const storageLookup = new Map(state.storageLocations.map(l => [l.name.toLowerCase(), l]));
-    const issues = [];
-    let valid = 0;
-    lines.forEach((line, i) => {
-      if (i === 0 && (line.toLowerCase().startsWith('project,') || line.toLowerCase().startsWith('client,'))) return;
-      const cells = line.split(/,|\t/).map(c => c.trim());
-      const rowNum = i + 1;
-      if (cells.length < 4) { issues.push(`Row ${rowNum}: fewer than 4 cells — needs at least Project, Source Type, Site, Brought By`); return; }
-      if (!cells[0]) { issues.push(`Row ${rowNum}: Project is empty`); return; }
-      if (cells[4] && !storageLookup.has(cells[4].toLowerCase())) {
-        const known = state.storageLocations.map(l => l.name).join(', ') || '(none configured)';
-        issues.push(`Row ${rowNum}: unknown storage "${cells[4]}" — known: ${known}`); return;
-      }
-      if (!cells[6]) { issues.push(`Row ${rowNum}: Tests is empty — list at least one test`); return; }
-      if (cells[7] && Number.isNaN(new Date(cells[7]).getTime())) { issues.push(`Row ${rowNum}: Target Completion "${cells[7]}" is not a valid date`); return; }
-      valid++;
+  // --- Row-wise bulk creation state + rendering ---
+  function addBulkRowwiseRow() {
+    if (!state.bulkRowwise) state.bulkRowwise = [];
+    // Sticky values from previous row: project, source, site, collector, due date
+    const prev = state.bulkRowwise[state.bulkRowwise.length - 1] || {};
+    const row = {
+      id: 'brw-' + Math.random().toString(36).slice(2),
+      clientName: prev.clientName || '',
+      sourceType: prev.sourceType || 'Drinking Water',
+      collectionSite: prev.collectionSite || '',
+      collector: prev.collector || '',
+      storageLocationId: prev.storageLocationId || '',
+      assignedTo: prev.assignedTo || '',
+      requestedTests: Array.isArray(prev.requestedTests) ? [...prev.requestedTests] : [],
+      dueAt: prev.dueAt || '',
+      notes: ''
+    };
+    state.bulkRowwise.push(row);
+    renderBulkRowwiseList();
+    updateBulkRowwiseCount();
+    // Focus the first field of the new row
+    setTimeout(() => {
+      const el = document.querySelector(`[data-brw-id="${row.id}"] input[name="clientName"]`);
+      el?.focus();
+    }, 50);
+  }
+  function removeBulkRowwiseRow(id) {
+    state.bulkRowwise = (state.bulkRowwise || []).filter(r => r.id !== id);
+    if (!state.bulkRowwise.length) addBulkRowwiseRow();
+    else { renderBulkRowwiseList(); updateBulkRowwiseCount(); }
+  }
+  function updateBulkRowwiseCount() {
+    const n = (state.bulkRowwise || []).length;
+    const btn = $('#createBulkSamples .btn-label');
+    if (btn) btn.textContent = `Create ${n} sample${n === 1 ? '' : 's'}`;
+    const countEl = $('#bulkRowwiseCount');
+    if (countEl) countEl.textContent = `${n} row${n === 1 ? '' : 's'}`;
+  }
+  function renderBulkRowwiseList() {
+    const list = $('#bulkRowwiseList');
+    if (!list) return;
+    list.innerHTML = '';
+    const rows = state.bulkRowwise || [];
+    const sourceTypes = ['Drinking Water','Ground Water','Surface Water','Wastewater','Industrial Effluent','Other'];
+    const testOptions = [...new Set([
+      ...(state.tests || []).map(t => t.name),
+      ...Object.values(PROJECT_PANELS || {}).flat()
+    ])].filter(Boolean).sort();
+    const analystOptions = allAnalystNames();
+    rows.forEach((row, idx) => {
+      const card = h('div', { class: 'brw-row', 'data-brw-id': row.id });
+      const head = h('div', { class: 'brw-row-head' },
+        h('span', { class: 'brw-row-index mono' }, `#${idx + 1}`),
+        h('button', { class: 'btn btn-sm btn-ghost', type: 'button', onclick: () => removeBulkRowwiseRow(row.id) }, h('span', { class: 'btn-label' }, '× Remove'))
+      );
+      card.appendChild(head);
+      const grid = h('div', { class: 'brw-grid' });
+      // Project
+      grid.appendChild(brwField('Project / client', textInput(row, 'clientName', { placeholder: 'e.g. KSPCB — Phase 2' })));
+      // Source
+      grid.appendChild(brwField('Source type', selectInput(row, 'sourceType', sourceTypes)));
+      // Site
+      grid.appendChild(brwField('Site', textInput(row, 'collectionSite', { placeholder: 'e.g. Borewell 1' })));
+      // Brought by
+      grid.appendChild(brwField('Brought by', textInput(row, 'collector', { placeholder: 'Collector name' })));
+      // Storage
+      const storageOptions = [{ value: '', label: 'Not stored yet' }, ...state.storageLocations.map(l => ({ value: l.id, label: l.name + (l.isFull ? ' — FULL' : '') }))];
+      grid.appendChild(brwField('Storage', selectInput(row, 'storageLocationId', storageOptions)));
+      // Analysts — chip-style compact picker
+      grid.appendChild(brwField('Analysts (pick 2)', brwAnalystPicker(row, analystOptions)));
+      // Tests — chip-style compact picker
+      grid.appendChild(brwField('Tests', brwTestPicker(row, testOptions)));
+      // Due at
+      grid.appendChild(brwField('Target completion', dateInput(row, 'dueAt')));
+      // Notes (full width)
+      const notesField = brwField('Notes', textInput(row, 'notes', { placeholder: 'Optional context' }));
+      notesField.classList.add('brw-field-wide');
+      grid.appendChild(notesField);
+      card.appendChild(grid);
+      list.appendChild(card);
     });
-    out.innerHTML = '';
-    const summary = h('div', { class: 'bulk-validation-summary' },
-      h('span', { class: 'chip ' + (issues.length ? 'chip-warn' : 'chip-success') }, `${valid} ok · ${issues.length} issue${issues.length === 1 ? '' : 's'}`)
-    );
-    out.appendChild(summary);
-    if (issues.length) {
-      const list = h('ul', { class: 'bulk-validation-list' });
-      issues.slice(0, 10).forEach(msg => list.appendChild(h('li', null, msg)));
-      if (issues.length > 10) list.appendChild(h('li', { class: 'muted' }, `…and ${issues.length - 10} more`));
-      out.appendChild(list);
+    function brwField(label, control) {
+      return h('div', { class: 'brw-field' },
+        h('label', { class: 'field-label' }, label),
+        control
+      );
+    }
+    function textInput(r, key, opts = {}) {
+      return h('input', { class: 'input input-sm', type: 'text', name: key, value: r[key] || '', placeholder: opts.placeholder || '',
+        oninput: e => { r[key] = e.target.value; }
+      });
+    }
+    function dateInput(r, key) {
+      return h('input', { class: 'input input-sm', type: 'datetime-local', name: key, value: r[key] ? toDateTimeLocal(r[key]) : '',
+        onchange: e => { r[key] = e.target.value ? new Date(e.target.value).toISOString() : ''; }
+      });
+    }
+    function selectInput(r, key, options) {
+      const sel = h('select', { class: 'select select-sm', name: key, onchange: e => { r[key] = e.target.value; } });
+      const opts = options.map(o => typeof o === 'string' ? { value: o, label: o } : o);
+      opts.forEach(o => sel.appendChild(h('option', { value: o.value, selected: o.value === r[key] ? true : null }, o.label)));
+      return sel;
+    }
+    function brwAnalystPicker(r, names) {
+      const wrap = h('div', { class: 'brw-chip-picker' });
+      const render = () => {
+        wrap.innerHTML = '';
+        const picked = (r.assignedTo || '').split(',').map(x => x.trim()).filter(Boolean);
+        picked.forEach(n => {
+          const chip = h('span', { class: 'chip chip-role' }, n,
+            h('button', { class: 'chip-x', type: 'button', onclick: () => {
+              r.assignedTo = picked.filter(x => x !== n).join(', ');
+              render();
+            } }, '×'));
+          wrap.appendChild(chip);
+        });
+        if (picked.length < 2) {
+          const sel = h('select', { class: 'select select-sm' });
+          sel.appendChild(h('option', { value: '' }, '+ Add'));
+          names.filter(n => !picked.includes(n)).forEach(n => sel.appendChild(h('option', { value: n }, n)));
+          sel.onchange = () => { if (!sel.value) return; picked.push(sel.value); r.assignedTo = picked.join(', '); render(); };
+          wrap.appendChild(sel);
+        }
+      };
+      render();
+      return wrap;
+    }
+    function brwTestPicker(r, options) {
+      const wrap = h('div', { class: 'brw-chip-picker' });
+      const render = () => {
+        wrap.innerHTML = '';
+        (r.requestedTests || []).forEach(t => {
+          wrap.appendChild(h('span', { class: 'chip chip-test' }, t,
+            h('button', { class: 'chip-x', type: 'button', onclick: () => {
+              r.requestedTests = r.requestedTests.filter(x => x !== t); render();
+            } }, '×')));
+        });
+        const sel = h('select', { class: 'select select-sm' });
+        sel.appendChild(h('option', { value: '' }, '+ Add test'));
+        options.filter(o => !(r.requestedTests || []).includes(o)).forEach(o => sel.appendChild(h('option', { value: o }, o)));
+        sel.onchange = () => { if (!sel.value) return; r.requestedTests = [...(r.requestedTests || []), sel.value]; render(); };
+        wrap.appendChild(sel);
+      };
+      render();
+      return wrap;
     }
   }
-  function downloadBulkTemplate() {
-    const header = ['Project', 'Source Type', 'Site', 'Brought By', 'Storage', 'Analyst', 'Tests', 'Target Completion', 'Notes'];
-    const example = ['Project A', 'Drinking Water', 'Borewell 1 — Ward 42', 'Ramesh', state.storageLocations[0]?.name || 'Fridge 1', (allAnalystNames()[0] || 'Priya'), 'pH; TDS; Hardness', '2026-10-20 17:00', 'First morning collection'];
-    const csv = [header, example].map(r => r.map(c => /[",\n]/.test(c) ? '"' + c.replace(/"/g,'""') + '"' : c).join(',')).join('\n') + '\n';
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'plasma-lab-bulk-samples-template.csv';
-    document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-    notify({ type: 'info', title: 'Template downloaded', description: 'Open it in Excel, fill rows, then paste back here or upload via the Excel panel.' });
+  function collectBulkRowwiseRows() {
+    return (state.bulkRowwise || []).map(r => ({
+      clientName: r.clientName,
+      sourceType: r.sourceType,
+      collectionSite: r.collectionSite,
+      collector: r.collector,
+      storageLocationId: r.storageLocationId,
+      assignedTo: r.assignedTo,
+      requestedTests: r.requestedTests || [],
+      dueAt: r.dueAt || '',
+      notes: r.notes || ''
+    }));
   }
-    function parseBulkRows(text) {
-    return String(text || '').split(/\r?\n/).map(r => r.trim()).filter(Boolean)
-      .filter((r,i) => i > 0 || !r.toLowerCase().startsWith('project,') && !r.toLowerCase().startsWith('client,'))
-      .map(r => r.split(/,|\t/).map(c => c.trim()))
-      .map(cells => {
-        const storage = state.storageLocations.find(l => l.id === cells[4] || l.name.toLowerCase() === String(cells[4] || '').toLowerCase());
-        return {
-          clientName: cells[0] || '',
-          sourceType: cells[1] || 'Drinking Water',
-          collectionSite: cells[2] || '',
-          collector: cells[3] || '',
-          storageLocationId: storage?.id || $('#bulkStorage')?.value || '',
-          assignedTo: cells[5] || '',
-          requestedTests: String(cells[6] || '').split(/[,;]/).map(x => x.trim()).filter(Boolean),
-          dueAt: cells[7] ? new Date(cells[7]).toISOString() : '',
-          notes: cells[8] || ''
-        };
-      });
+  function validateBulkRowwise(rows) {
+    const issues = [];
+    rows.forEach((row, i) => {
+      const n = i + 1;
+      if (!row.clientName?.trim()) issues.push(`Row ${n}: Project is required`);
+      if (!row.collectionSite?.trim()) issues.push(`Row ${n}: Site is required`);
+      if (!row.collector?.trim()) issues.push(`Row ${n}: Brought-by is required`);
+      if (!row.requestedTests?.length) issues.push(`Row ${n}: pick at least one test`);
+      const analysts = (row.assignedTo || '').split(',').map(x => x.trim()).filter(Boolean);
+      if (analysts.length > 2) issues.push(`Row ${n}: only 2 analysts allowed, has ${analysts.length}`);
+    });
+    return issues;
   }
-  function renderBulkResult(created = [], errors = []) {
+  function renderBulkRowwiseErrors(issues) {
+    const out = $('#bulkRowwiseErrors');
+    out.innerHTML = '';
+    if (!issues.length) return;
+    const list = h('ul', { class: 'bulk-validation-list' });
+    issues.forEach(m => list.appendChild(h('li', null, m)));
+    out.appendChild(list);
+  }
+    function renderBulkResult(created = [], errors = []) {
     const out = $('#bulkResult');
     out.innerHTML = '';
     out.appendChild(h('div', { class: 'row-between' },

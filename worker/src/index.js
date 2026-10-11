@@ -309,6 +309,74 @@ async function auth(request, env) {
   return { user };
 }
 
+// Minimal store-only ZIP writer. No compression — fine for already-compressed
+// images (JPEG/PNG) and small JSON. Returns a Uint8Array.
+async function buildZip(entries) {
+  const enc = new TextEncoder();
+  const files = [];
+  let offset = 0;
+  const chunks = [];
+  function crc32(buf) {
+    let c; const table = crc32.table || (crc32.table = (() => {
+      const t = new Uint32Array(256);
+      for (let n = 0; n < 256; n++) {
+        c = n;
+        for (let k = 0; k < 8; k++) c = (c & 1) ? (0xedb88320 ^ (c >>> 1)) : (c >>> 1);
+        t[n] = c;
+      }
+      return t;
+    })());
+    c = 0xffffffff;
+    for (let i = 0; i < buf.length; i++) c = (c >>> 8) ^ table[(c ^ buf[i]) & 0xff];
+    return (c ^ 0xffffffff) >>> 0;
+  }
+  function u16(n) { const b = new Uint8Array(2); new DataView(b.buffer).setUint16(0, n, true); return b; }
+  function u32(n) { const b = new Uint8Array(4); new DataView(b.buffer).setUint32(0, n, true); return b; }
+  for (const { name, data } of entries) {
+    const nameBuf = enc.encode(name);
+    const crc = crc32(data);
+    const size = data.length;
+    const localHeader = new Uint8Array([
+      0x50,0x4b,0x03,0x04, 20,0, 0,0, 0,0,
+      0,0, 0,0,
+      ...u32(crc),
+      ...u32(size), ...u32(size),
+      ...u16(nameBuf.length), 0,0,
+    ]);
+    chunks.push(localHeader, nameBuf, data);
+    files.push({ name: nameBuf, crc, size, offset });
+    offset += localHeader.length + nameBuf.length + size;
+  }
+  const centralStart = offset;
+  for (const f of files) {
+    const central = new Uint8Array([
+      0x50,0x4b,0x01,0x02, 20,0, 20,0, 0,0, 0,0,
+      0,0, 0,0,
+      ...u32(f.crc),
+      ...u32(f.size), ...u32(f.size),
+      ...u16(f.name.length), 0,0, 0,0, 0,0, 0,0,
+      0,0,0,0,
+      ...u32(f.offset),
+    ]);
+    chunks.push(central, f.name);
+    offset += central.length + f.name.length;
+  }
+  const centralSize = offset - centralStart;
+  const eocd = new Uint8Array([
+    0x50,0x4b,0x05,0x06, 0,0, 0,0,
+    ...u16(files.length), ...u16(files.length),
+    ...u32(centralSize), ...u32(centralStart),
+    0,0,
+  ]);
+  chunks.push(eocd);
+  // Concatenate
+  const total = chunks.reduce((n, c) => n + c.length, 0);
+  const out = new Uint8Array(total);
+  let p = 0;
+  for (const c of chunks) { out.set(c, p); p += c.length; }
+  return out;
+}
+
 function requireRole(user, ...roles) {
   if (!roles.includes(user.role)) throw Object.assign(new Error("Not allowed"), { status: 403 });
 }
@@ -525,11 +593,13 @@ async function handle(request, env, ctx) {
 
   /* --- Bootstrap --- */
   if (method === "GET" && path.join("/") === "api/bootstrap") {
-    const whereParts = ["(archived_at IS NULL OR archived_at = '')"];
+    const whereParts = [];
     const whereArgs = [];
     if (user.role === "analyst") {
+      whereParts.push("(archived_at IS NULL OR archived_at = '')");
       whereParts.push("active = 1");
     }
+    if (whereParts.length === 0) whereParts.push("1 = 1");
     const samples = await loadSamplesFull(env, {
       whereSql: whereParts.join(" AND "),
       whereArgs,
@@ -876,6 +946,86 @@ async function handle(request, env, ctx) {
       headers: {
         "content-type": obj.httpMetadata?.contentType || "application/octet-stream",
         "cache-control": "private, max-age=3600"
+      }
+    });
+  }
+
+  /* --- Archive: preview + export bundle (no deletion) --- */
+  if (method === "GET" && path[0] === "api" && path[1] === "archive" && path[2] === "preview") {
+    requireRole(user, "admin");
+    const u = new URL(request.url);
+    const from = u.searchParams.get("from");
+    const to = u.searchParams.get("to");
+    if (!from || !to) throw Object.assign(new Error("Pass from and to as YYYY-MM-DD"), { status: 400 });
+    const where = "created_at >= ? AND created_at <= ? AND (archived_at IS NULL OR archived_at = '')";
+    const bind = [from + "T00:00:00Z", to + "T23:59:59Z"];
+    const samples = await env.DB.prepare(`SELECT COUNT(*) AS n FROM samples WHERE ${where}`).bind(...bind).first();
+    const photos = await env.DB.prepare(`SELECT COUNT(*) AS n FROM sample_files WHERE sample_id IN (SELECT id FROM samples WHERE ${where})`).bind(...bind, ...bind).first();
+    return json({ count: samples.n, photoCount: photos.n });
+  }
+
+  if (method === "GET" && path[0] === "api" && path[1] === "archive" && path[2] === "export") {
+    requireRole(user, "admin");
+    const u = new URL(request.url);
+    const from = u.searchParams.get("from");
+    const to = u.searchParams.get("to");
+    const soft = u.searchParams.get("soft") === "1";
+    if (!from || !to) throw Object.assign(new Error("Pass from and to as YYYY-MM-DD"), { status: 400 });
+    const where = "created_at >= ? AND created_at <= ? AND (archived_at IS NULL OR archived_at = '')";
+    const bind = [from + "T00:00:00Z", to + "T23:59:59Z"];
+    const samples = (await env.DB.prepare(`SELECT * FROM samples WHERE ${where} ORDER BY created_at`).bind(...bind).all()).results;
+    if (!samples.length) throw Object.assign(new Error("No samples in that range"), { status: 404 });
+    const sampleIds = samples.map(x => x.id);
+    const placeholders = sampleIds.map(() => "?").join(",");
+    const [resultsAll, filesAll, custodyAll] = await Promise.all([
+      env.DB.prepare(`SELECT * FROM sample_results WHERE sample_id IN (${placeholders})`).bind(...sampleIds).all(),
+      env.DB.prepare(`SELECT * FROM sample_files WHERE sample_id IN (${placeholders})`).bind(...sampleIds).all(),
+      env.DB.prepare(`SELECT * FROM chain_of_custody WHERE sample_id IN (${placeholders})`).bind(...sampleIds).all()
+    ]);
+    // Build the JSON bundle
+    const bundle = {
+      meta: {
+        generatedAt: now(),
+        generatedBy: user.name,
+        from, to,
+        sampleCount: samples.length,
+        softArchived: soft
+      },
+      samples: samples.map(sm => ({
+        ...sm,
+        results: resultsAll.results.filter(r => r.sample_id === sm.id),
+        files: filesAll.results.filter(f => f.sample_id === sm.id),
+        chainOfCustody: custodyAll.results.filter(c => c.sample_id === sm.id)
+      }))
+    };
+    // Build a ZIP in-memory. Minimal store-only ZIP writer (no deflate) — fine for images + JSON.
+    const zip = await buildZip([
+      { name: "manifest.json", data: new TextEncoder().encode(JSON.stringify(bundle, null, 2)) },
+      ...(await Promise.all(filesAll.results.map(async f => {
+        if (!f.r2_key || !env.MEDIA) return null;
+        const obj = await env.MEDIA.get(f.r2_key);
+        if (!obj) return null;
+        const bytes = new Uint8Array(await obj.arrayBuffer());
+        const safeName = (f.original_name || f.id).replace(/[^a-zA-Z0-9._-]/g, "_");
+        return { name: `photos/${f.sample_id}/${f.id}-${safeName}`, data: bytes };
+      }))).then(a => a.filter(Boolean))
+    ]);
+    // Record the batch and (optionally) soft-archive
+    const batchId = crypto.randomUUID();
+    await env.DB.prepare("INSERT INTO archive_batches (id, created_at, created_by, cutoff_date, sample_count, file_count, notes) VALUES (?,?,?,?,?,?,?)")
+      .bind(batchId, now(), user.name, to, samples.length, filesAll.results.length, JSON.stringify({ from, to, soft, type: "export" })).run();
+    if (soft) {
+      for (const sm of samples) {
+        await env.DB.prepare("UPDATE samples SET archived_at = ?, retention_status = 'Archived', updated_at = ? WHERE id = ?").bind(now(), now(), sm.id).run();
+      }
+      await addAudit(env, user, "Archived samples", "archive", batchId, `${samples.length} samples ${from} → ${to}`);
+    } else {
+      await addAudit(env, user, "Exported archive bundle", "archive", batchId, `${samples.length} samples ${from} → ${to} (no state change)`);
+    }
+    return new Response(zip, {
+      headers: {
+        "content-type": "application/zip",
+        "content-disposition": `attachment; filename="plasma-lab-archive-${from}_to_${to}.zip"`
       }
     });
   }
