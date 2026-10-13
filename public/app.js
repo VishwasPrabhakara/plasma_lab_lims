@@ -435,7 +435,7 @@
     const cf = f.elements.confirmPassword.value;
     let msg = '', ok = false;
     if (pw.length === 0 && cf.length === 0) msg = '';
-    else if (pw.length < 6) msg = 'Use at least 6 characters';
+    else if (pw.length < 8) msg = 'Use at least 8 characters';
     else if (cf && pw !== cf) msg = 'Passwords do not match';
     else if (pw.length >= 6 && cf === pw) { msg = 'Password ready'; ok = true; }
     setCheck('passwordCheck', { valid: ok, available: ok, message: msg });
@@ -3745,7 +3745,15 @@
   });
 
   // Header buttons
-  $('#logoutBtn').onclick = () => { stopScanner(); clearSession(); showAuth(); notify({ type: 'info', title: 'Signed out' }); };
+  $('#logoutBtn').onclick = async () => {
+    stopScanner();
+    // Fire the server-side sign-out so this user's session_version bumps and
+    // every token signed under the previous version is revoked.
+    try { await api('/api/sign-out', { method: 'POST' }); } catch {}
+    clearSession();
+    showAuth();
+    notify({ type: 'info', title: 'Signed out' });
+  };
   $('#syncBtn').onclick = safe(async () => { const b = $('#syncBtn'); b.dataset.state = 'syncing'; try { await load(); b.dataset.state = 'live'; notify({ type: 'success', title: 'Synced' }); } catch (e) { b.dataset.state = 'failed'; throw e; } });
   $('#backupBtn').onclick = safe(async () => {
     const res = await fetch(apiUrl('/api/backup'), { headers: { Authorization: 'Bearer ' + state.token } });

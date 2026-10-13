@@ -433,6 +433,11 @@ async function handle(request, env, ctx) {
       "SELECT * FROM users WHERE LOWER(email) = ? AND replaced_at IS NULL AND password_hash IS NOT NULL ORDER BY created_at DESC LIMIT 1"
     ).bind(emailLower).first();
     if (!anyUser || !(await verifyPassword(body.password || "", anyUser.password_hash))) {
+      // Write a failure audit row so repeated attempts are visible to admins.
+      // We log by email but never by password (never log credentials).
+      try {
+        await addAudit(env, null, "Failed login", "user", anyUser ? anyUser.id : "unknown", `email=${emailLower}`);
+      } catch {}
       throw Object.assign(new Error("Invalid email or password"), { status: 401 });
     }
     if (anyUser.approval_status === "pending") throw Object.assign(new Error("Your account is awaiting admin approval. You'll be able to sign in once an admin approves it."), { status: 403, approvalStatus: "pending" });
@@ -558,16 +563,25 @@ async function handle(request, env, ctx) {
 
   /* --- Password reset --- */
   if (method === "POST" && path.join("/") === "api/password-reset/start") {
+    // Account-enumeration defense: always return the same shape whether the
+    // email is registered or not. A real OTP is still only sent when the email
+    // matches an active user. The caller cannot distinguish from the response.
     const body = await bodyJson(request);
     const id = String(body.identifier || "").trim().toLowerCase();
     const u = await env.DB.prepare("SELECT * FROM users WHERE active = 1 AND LOWER(email) = ? LIMIT 1").bind(id).first();
-    if (!u) throw Object.assign(new Error("No matching registered user found"), { status: 404 });
-    await env.DB.prepare("DELETE FROM password_resets WHERE user_id = ?").bind(u.id).run();
-    const resetId = crypto.randomUUID(), code = otpCode();
-    await env.DB.prepare("INSERT INTO password_resets (id,user_id,email_otp,expires_at,created_at) VALUES (?,?,?,?,?)").bind(resetId, u.id, code, otpExpiry(), now()).run();
-    const delivered = sendOtpInBackground(ctx, env, u.email, code, "Plasma Lab LIMS password reset");
-    await addAudit(env, u, delivered ? "Sent password reset OTP" : "Generated password reset OTP", "user", u.id, "Password reset OTP requested");
-    return json({ resetId, expiresAt: otpExpiry(), deliveryConfigured: delivered });
+    const resetId = crypto.randomUUID();
+    const exp = otpExpiry();
+    if (u) {
+      await env.DB.prepare("DELETE FROM password_resets WHERE user_id = ?").bind(u.id).run();
+      const code = otpCode();
+      await env.DB.prepare("INSERT INTO password_resets (id,user_id,email_otp,expires_at,created_at) VALUES (?,?,?,?,?)").bind(resetId, u.id, code, exp, now()).run();
+      const delivered = sendOtpInBackground(ctx, env, u.email, code, "Plasma Lab LIMS password reset");
+      await addAudit(env, u, delivered ? "Sent password reset OTP" : "Generated password reset OTP", "user", u.id, "Password reset OTP requested");
+    } else {
+      // Still write an audit row for the attempt — repeated failures from one source look suspicious.
+      await addAudit(env, null, "Password reset requested for unknown email", "user", resetId, `identifier=${id}`);
+    }
+    return json({ resetId, expiresAt: exp, deliveryConfigured: !!u });
   }
   if (method === "POST" && path.join("/") === "api/password-reset/confirm") {
     const body = await bodyJson(request);
@@ -590,6 +604,13 @@ async function handle(request, env, ctx) {
   /* ======================================================================== */
 
   const { user } = await auth(request, env);
+
+  /* --- Sign out: revoke every token signed under the current session_version --- */
+  if (method === "POST" && path.join("/") === "api/sign-out") {
+    await env.DB.prepare("UPDATE users SET session_version = COALESCE(session_version, 0) + 1 WHERE id = ?").bind(user.id).run();
+    await addAudit(env, user, "Signed out", "user", user.id, "User chose to sign out — session_version bumped");
+    return json({ ok: true });
+  }
 
   /* --- Bootstrap --- */
   if (method === "GET" && path.join("/") === "api/bootstrap") {
@@ -940,6 +961,14 @@ async function handle(request, env, ctx) {
   if (method === "GET" && path[0] === "api" && path[1] === "media") {
     const key = path.slice(2).join("/");
     if (!key || !env.MEDIA) throw Object.assign(new Error("Media not found"), { status: 404 });
+    // ACL: find the parent sample and check this user may read it. Admin reads
+    // every file. Analyst reads only files on samples they can read (active +
+    // not archived, matches canReadSample).
+    const fileRow = await env.DB.prepare("SELECT sample_id FROM sample_files WHERE r2_key = ? LIMIT 1").bind(key).first();
+    if (!fileRow) throw Object.assign(new Error("Media not found"), { status: 404 });
+    const parentSample = await env.DB.prepare("SELECT * FROM samples WHERE id = ?").bind(fileRow.sample_id).first();
+    if (!parentSample) throw Object.assign(new Error("Media not found"), { status: 404 });
+    if (!canReadSample(user, parentSample)) throw Object.assign(new Error("Not allowed to read this file"), { status: 403 });
     const obj = await env.MEDIA.get(key);
     if (!obj) throw Object.assign(new Error("Media not found"), { status: 404 });
     return new Response(obj.body, {
