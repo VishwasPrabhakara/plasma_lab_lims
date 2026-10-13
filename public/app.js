@@ -2127,10 +2127,17 @@
   $('#approvalForm').addEventListener('submit', safe(async e => {
     e.preventDefault();
     const sample = state.pendingApproval; if (!sample) return;
+    const signaturePassword = ($('#approvalPassword').value || '').trim();
+    if (!signaturePassword) {
+      const banner = $('#approvalForm [data-form-error]');
+      banner.textContent = 'Re-enter your password to sign the approval.';
+      banner.classList.remove('hidden');
+      return;
+    }
     try {
       const updated = await api(`/api/samples/${sample.id}/approve`, { method: 'POST', body: JSON.stringify({
         reason: $('#approvalReason').value,
-        signaturePassword: $('#approvalPassword').value // frontend-shaped for future backend
+        signaturePassword  // verified server-side against the admin's password hash
       }) });
       Object.assign(sample, updated); $('#approvalDialog').close();
       state.pendingApproval = null;
@@ -3774,7 +3781,7 @@
     notify({ type: 'error', title: 'Unexpected error', description: evt.reason?.message || 'Something went wrong' });
   });
 
-  // Expose minimal for debugging
-  window.__lims = { state, api, load, notify };
+  // Debug handle intentionally removed: exposing the live API client + bearer token
+  // on window makes it trivial for any extension to act as the signed-in user.
 
 })();

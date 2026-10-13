@@ -9,3 +9,8 @@ worker/.dev.vars
 data/backups/
 data/exports/
 uploads/
+
+# Never commit seed data with real password hashes or OTPs
+worker/migrations/seed.sql
+worker/migrations/seed.local.sql
+.dev.vars

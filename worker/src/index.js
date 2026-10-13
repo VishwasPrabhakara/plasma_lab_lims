@@ -301,7 +301,7 @@ async function storageIsAvailable(env, id, currentId = "") {
 async function auth(request, env) {
   const token = (request.headers.get("authorization") || "").replace("Bearer ", "") || new URL(request.url).searchParams.get("token");
   if (!token) throw Object.assign(new Error("Login required"), { status: 401 });
-  const payload = await verifyJwt(token, env.JWT_SECRET || "change-this-before-production");
+  const payload = await verifyJwt(token, env.JWT_SECRET);
   const user = await env.DB.prepare("SELECT * FROM users WHERE id = ? AND active = 1").bind(payload.id).first();
   if (!user) throw Object.assign(new Error("Invalid user"), { status: 401 });
   // Multi-device allowed: no sessionVersion enforcement. Same account can
@@ -442,7 +442,7 @@ async function handle(request, env, ctx) {
     await addAudit(env, anyUser, "Logged in", "user", anyUser.id, "User session started");
     // Multi-device allowed. Token expires in 12h regardless of Remember Me
     // because the frontend will drop it on browser close either way.
-    const token = await signJwt({ id: anyUser.id }, env.JWT_SECRET || "change-this-before-production", 12 * 60 * 60);
+    const token = await signJwt({ id: anyUser.id }, env.JWT_SECRET, 12 * 60 * 60);
     return json({ token, user: rowToPublicUser(anyUser) });
   }
 
@@ -523,7 +523,7 @@ async function handle(request, env, ctx) {
     const user = await env.DB.prepare("SELECT * FROM users WHERE id = ?").bind(id).first();
     await addAudit(env, user, isFirstUser ? "Verified signup (auto-approved as first user)" : "Signed up — awaiting approval", "user", id, `${p.name} · ${p.email}`);
     if (isFirstUser) {
-      const token = await signJwt({ id, sv: 0 }, env.JWT_SECRET || "change-this-before-production", 12 * 60 * 60);
+      const token = await signJwt({ id, sv: 0 }, env.JWT_SECRET, 12 * 60 * 60);
       return json({ token, user: rowToPublicUser(user), approvalStatus: "approved" });
     }
     return json({ approvalStatus: "pending", user: rowToPublicUser(user), message: "Account created — awaiting admin approval before you can sign in." });
@@ -1045,15 +1045,27 @@ async function handle(request, env, ctx) {
     return json({ ok: true });
   }
 
-  /* --- Samples: approve --- */
+  /* --- Samples: approve (password re-authenticated) --- */
   if (method === "POST" && path[0] === "api" && path[1] === "samples" && path[3] === "approve") {
     requireRole(user, "admin");
+    const body = await bodyJson(request);
+    // Signature password check: the admin must re-authenticate at the moment of approval.
+    // Without this, the "signed approval" claim in the UI is a lie in the audit trail.
+    if (!body.signaturePassword || !(await verifyPassword(body.signaturePassword, user.password_hash))) {
+      await addAudit(env, user, "Approval refused — bad signature password", "sample", path[2], "signature password did not match stored hash");
+      throw Object.assign(new Error("Signature password did not match. Approval refused."), { status: 401 });
+    }
     const s = await env.DB.prepare("SELECT * FROM samples WHERE id = ?").bind(path[2]).first();
     if (!s) throw Object.assign(new Error("Sample not found"), { status: 404 });
     const resultCount = (await env.DB.prepare("SELECT COUNT(*) AS n FROM sample_results WHERE sample_id = ?").bind(s.id).first()).n;
     if (resultCount === 0) throw Object.assign(new Error("Enter results before approval"), { status: 400 });
-    await env.DB.prepare("UPDATE samples SET status = 'Approved', workflow_stage = 'Approved', reviewed_by = ?, reviewed_at = ?, updated_at = ? WHERE id = ?").bind(user.name, now(), now(), s.id).run();
-    await addAudit(env, user, "Approved sample", "sample", s.id, `${s.sample_code} approved`);
+    const t = now();
+    const reason = (body.reason || "").trim();
+    await env.DB.batch([
+      env.DB.prepare("UPDATE samples SET status = 'Approved', workflow_stage = 'Approved', reviewed_by = ?, reviewed_at = ?, updated_at = ? WHERE id = ?").bind(user.name, t, t, s.id),
+      env.DB.prepare("INSERT INTO chain_of_custody (id,sample_id,at,by_name,action,location_id,note) VALUES (?,?,?,?,?,?,?)").bind(crypto.randomUUID(), s.id, t, user.name, "Approved (signed)", s.storage_location_id, reason),
+      env.DB.prepare("INSERT INTO audit_log (id,at,user_id,user_name,action,entity,entity_id,detail) VALUES (?,?,?,?,?,?,?,?)").bind(crypto.randomUUID(), t, user.id, user.name, "Approved sample (signed)", "sample", s.id, `${s.sample_code} approved${reason ? ": " + reason : ""}`)
+    ]);
     return json(await loadSampleFull(env, s.id));
   }
 
@@ -1129,7 +1141,25 @@ async function handle(request, env, ctx) {
 /* ------------------------------------------------------------------------ */
 
 export default {
+  // Monthly cron: checks for samples older than the retention window and writes
+  // a notification into the meta table. Does not auto-delete anything.
+  async scheduled(event, env, ctx) {
+    try {
+      const cutoff = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString();
+      const old = await env.DB.prepare(
+        "SELECT COUNT(*) AS n FROM samples WHERE created_at < ? AND (archived_at IS NULL OR archived_at = '') AND status != 'Disposed'"
+      ).bind(cutoff).first();
+      await env.DB.prepare("INSERT OR REPLACE INTO meta (key,value,updated_at) VALUES ('archive_reminder', ?, ?)")
+        .bind(JSON.stringify({ olderThanDays: 365, count: old?.n ?? 0, ranAt: new Date().toISOString() }), new Date().toISOString()).run();
+    } catch (e) {
+      console.error("[scheduled] archive reminder failed:", e.message);
+    }
+  },
+
   async fetch(request, env, context) {
+    if (!env.JWT_SECRET || env.JWT_SECRET.length < 32) {
+      return new Response(JSON.stringify({ error: "Server misconfigured: JWT_SECRET missing or too short" }), { status: 500, headers: { "content-type": "application/json" } });
+    }
     const cors = corsHeaders(request, env);
     if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: cors });
     try {
