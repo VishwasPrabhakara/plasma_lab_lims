@@ -12,7 +12,7 @@ import { state, clearSessionState } from "./src/state.js";
 import { $, $$, esc, h, statusClass, roleLabel, initials, fmtDate } from "./src/utils/dom.js";
 import { computeRepStats } from "./src/utils/stats.js";
 import { compressImage } from "./src/utils/image.js";
-import { api, apiUrl, registerSessionExpiredHandler } from "./src/api/client.js";
+import { api, apiUrl, mediaUrl, registerSessionExpiredHandler } from "./src/api/client.js";
 import { notify, confirmDialog, installConfirmClickHandler } from "./src/components/notify.js";
 import {
   PARAM, PROJECT_PANELS,
@@ -892,7 +892,7 @@ function samplePhotoCard(sample) {
   const photo = (sample.files || []).find(f => f.category === 'Sample Photo');
   if (photo) {
     return h('div', { class: 'sample-photo-card' },
-      h('img', { class: 'sample-photo', src: apiUrl(photo.url), alt: 'Sample photo for ' + sample.sampleCode })
+      h('img', { class: 'sample-photo', src: mediaUrl(photo.url), alt: 'Sample photo for ' + sample.sampleCode })
     );
   }
   // No photo — turn the card into an "Add photo" CTA that any role who can
@@ -1679,7 +1679,7 @@ async function deleteSampleFile(sample, file) {
         h('div', null, f.uploadedBy || '—'),
         h('small', { class: 'muted' }, fmtDate(f.uploadedAt))
       ),
-      h('td', { 'data-label': 'Open' }, f.url ? h('a', { href: apiUrl(f.url), target: '_blank' }, 'View') : h('span', { class: 'muted' }, '—')),
+      h('td', { 'data-label': 'Open' }, f.url ? h('a', { href: mediaUrl(f.url), target: '_blank' }, 'View') : h('span', { class: 'muted' }, '—')),
       can('admin') ? h('td', { 'data-label': 'Remove' }, h('button', { class: 'btn btn-sm btn-ghost', type: 'button', onclick: () => deleteSampleFile(sample, f) }, h('span',{class:'btn-label'},'Delete'))) : null
     )));
   }

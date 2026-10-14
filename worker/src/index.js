@@ -12,11 +12,19 @@
 
 import { json, corsHeaders } from "./lib/http.js";
 import { handle } from "./router.js";
+import { rotateAuditLog } from "./lib/audit-archive.js";
 
 export default {
-  // Monthly cron: counts samples older than the retention window and writes
-  // a notification into the meta table. Admins see this on the dashboard; no
-  // automatic deletion ever happens.
+  // Monthly cron, two independent steps. Each wrapped in its own try/catch so
+  // a failure in one does not block the other.
+  //
+  //   1. Archive reminder — counts samples older than 365 days with no
+  //      archived_at, writes a notification into the meta table. Never
+  //      deletes anything.
+  //   2. Audit-log rotation — copies audit_log rows older than
+  //      AUDIT_RETENTION_DAYS (default 90) into one R2 NDJSON per month,
+  //      records a batch row with the SHA-256. Only prunes D1 rows if
+  //      AUDIT_PRUNE_D1=true, in the same batch as the archive row.
   async scheduled(event, env, ctx) {
     try {
       const cutoff = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString();
@@ -31,6 +39,13 @@ export default {
       ).run();
     } catch (e) {
       console.error("[scheduled] archive reminder failed:", e.message);
+    }
+
+    try {
+      const summary = await rotateAuditLog(env, { actorName: "system cron" });
+      console.log("[scheduled] audit-log rotation:", JSON.stringify(summary));
+    } catch (e) {
+      console.error("[scheduled] audit rotation failed:", e.message);
     }
   },
 

@@ -228,16 +228,57 @@ discussion.
 2. **No API path mutates `samples.status` without also writing audit.**
 3. **Approval requires `signaturePassword` re-verification.** The approval
    batch is: `UPDATE samples … + chain_of_custody INSERT + audit INSERT`.
+   The PATCH endpoint whitelists statuses to the intermediate lifecycle
+   so the ceremony cannot be routed around — `"Approved"` only through
+   `/approve`, `"Disposed"` only through `/lifecycle`.
 4. **Sample data is never deleted.** `Disposed` is a status, not a delete.
    Archive export can soft-archive (`archived_at`, `retention_status`);
-   hard delete is not exposed.
+   hard delete is not exposed. The one exception is audit-log rotation
+   (see §6): rows older than `AUDIT_RETENTION_DAYS` are copied to R2
+   with a SHA-256 receipt before `AUDIT_PRUNE_D1` lets the D1 copies
+   be dropped — and only in the same atomic batch as the archive-row
+   insert.
 5. **Media endpoints are ACL-gated** by sample ownership.
 6. **The Worker refuses to boot without `JWT_SECRET` ≥ 32 chars.**
 7. **CORS allowlist** is pinned by `env.ALLOWED_ORIGINS`.
 8. **Frontend never renders user text with `innerHTML`.** Only trusted
    static markup (SVG icons) uses the `html:` attribute of `h()`.
+9. **Reassignment is admin-only.** PATCH `/api/samples/:id` with an
+   `assignedTo` field is refused for analyst callers; sample creation
+   and `assignedTo` edits land only through admin.
+10. **File uploads are size- and type-capped.** 20 MB per file, 60 MB
+    per request, MIME in `{image/jpeg, image/png, image/webp,
+    application/pdf}`. Enforced in `routes/files.js`.
 
 ---
+
+## 5a. Audit log retention
+
+Every write to the LIMS lands in `audit_log` (role: cross-cutting, one row
+per state transition). Rows stay in D1 for `AUDIT_RETENTION_DAYS` (default
+90) and then flow out through a monthly rotator:
+
+- The scheduled handler (`0 3 1 * *`) calls `rotateAuditLog(env)` after the
+  archive-reminder step.
+- For each calendar month older than the retention window and not already
+  archived, the rotator reads every row for that month in deterministic
+  order, serializes to NDJSON, SHA-256-hashes the bytes, and uploads to R2
+  at `audit/YYYY-MM.ndjson`.
+- Only after R2 confirms the write, `audit_archive_batches` gets a row
+  with the file key, SHA-256, row count, byte size, timestamps.
+- With `env.AUDIT_PRUNE_D1 = "true"`, the archived rows are DELETE'd from
+  `audit_log` in the same `env.DB.batch([...])` as the archive-row insert.
+  With `AUDIT_PRUNE_D1` off (default), audit_log is left alone and R2 is
+  a pure backup.
+
+Admin reads an archive back through `GET /api/audit/archive` (list) and
+`GET /api/audit/archive/:yearMonth` (stream the NDJSON with the sha256
+in the response header for client-side verification). The rotator can be
+run on demand with `POST /api/audit/archive/run`.
+
+**What is NOT rotated:** `chain_of_custody` stays in D1 for the life of
+the sample. It's small, queried per-sample, and the sample view relies
+on it being warm.
 
 ## 6. Deployment
 

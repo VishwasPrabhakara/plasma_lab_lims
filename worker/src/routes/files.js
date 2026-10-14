@@ -7,6 +7,11 @@ import { addAudit, loadSampleFull } from "../lib/db.js";
 import { canReadSample, canWorkOnSample, requireRole } from "../lib/perms.js";
 
 const INLINE_LIMIT_BYTES = 300 * 1024;
+const MAX_FILE_BYTES = 20 * 1024 * 1024;      // 20 MB per file
+const MAX_UPLOAD_BYTES = 60 * 1024 * 1024;    // 60 MB per request
+const ALLOWED_MIME = new Set([
+  "image/jpeg", "image/jpg", "image/png", "image/webp", "application/pdf"
+]);
 
 export async function tryFiles(request, env, ctx, { path, method, user }) {
   /* ---------- Upload files ---------- */
@@ -23,6 +28,25 @@ export async function tryFiles(request, env, ctx, { path, method, user }) {
     const lat = form.get("lat") ? String(form.get("lat")) : null;
     const lng = form.get("lng") ? String(form.get("lng")) : null;
     const takenAt = form.get("takenAt") ? String(form.get("takenAt")) : null;
+
+    // Validate everything up front so a single bad file rejects the whole
+    // upload — avoids half-written state and gives a clear error.
+    let totalBytes = 0;
+    for (const [, value] of form.entries()) {
+      if (!(value instanceof File) || !value.size) continue;
+      if (value.size > MAX_FILE_BYTES) {
+        throw httpError(`"${value.name}" is ${Math.round(value.size / (1024 * 1024))} MB — per-file limit is 20 MB.`, 400);
+      }
+      totalBytes += value.size;
+      const mime = String(value.type || "").toLowerCase();
+      if (!ALLOWED_MIME.has(mime)) {
+        throw httpError(`"${value.name}" has unsupported type "${value.type || "unknown"}". Allowed: JPEG, PNG, WEBP, PDF.`, 400);
+      }
+    }
+    if (totalBytes > MAX_UPLOAD_BYTES) {
+      throw httpError(`Upload totals ${Math.round(totalBytes / (1024 * 1024))} MB — per-request limit is 60 MB.`, 400);
+    }
+
     const batch = [];
     for (const [, value] of form.entries()) {
       if (!(value instanceof File) || !value.size) continue;

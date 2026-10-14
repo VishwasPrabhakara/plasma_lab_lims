@@ -14,6 +14,14 @@ import {
 } from "../lib/perms.js";
 import QRCode from "qrcode";
 
+// Statuses the PATCH endpoint may set. "Approved" is signed via /approve;
+// "Disposed" is set via /lifecycle. Keeping that invariant here means the
+// ceremony cannot be routed around.
+const PATCH_ALLOWED_STATUSES = new Set([
+  "Bottle Ready", "Sample Collected", "Stored", "Assigned",
+  "In Analysis", "Results Entered", "Needs Review", "Flagged"
+]);
+
 export async function trySamples(request, env, ctx, { url, path, method, user }) {
   /* ---------- Samples: create one ---------- */
   if (method === "POST" && path.join("/") === "api/samples") {
@@ -187,11 +195,27 @@ export async function trySamples(request, env, ctx, { url, path, method, user })
     return json(await loadSampleFull(env, s.id));
   }
 
-  /* ---------- Samples: PATCH (status, assignedTo, notes, dueAt, storage) ---------- */
+  /* ---------- Samples: PATCH (status, assignedTo, notes, dueAt, storage) ----------
+     Status is whitelisted to the intermediate lifecycle. "Approved" must come
+     through /approve (signature-password ceremony); "Disposed" must come through
+     /lifecycle. assignedTo is admin-only — an analyst who could rewrite the
+     assignment on their own sample could kick other analysts off or add names,
+     muddying attribution. */
   if (method === "PATCH" && path[0] === "api" && path[1] === "samples" && path.length === 3) {
     const s = await requireSample(env, path[2]);
     if (!canWorkOnSample(user, s)) throw httpError("Not allowed for this sample", 403);
     const body = await bodyJson(request);
+
+    if ("status" in body && !PATCH_ALLOWED_STATUSES.has(body.status)) {
+      throw httpError(
+        `Status "${body.status}" cannot be set here. Use /approve for Approved and /lifecycle for Disposed; status must be one of: ${[...PATCH_ALLOWED_STATUSES].join(", ")}.`,
+        400
+      );
+    }
+    if ("assignedTo" in body && user.role !== "admin") {
+      throw httpError("Only an admin can reassign a sample.", 403);
+    }
+
     const prev = s.storage_location_id || "";
     if ("storageLocationId" in body && !(await storageIsAvailable(env, body.storageLocationId, prev))) {
       throw httpError("Selected storage is full or inactive", 400);

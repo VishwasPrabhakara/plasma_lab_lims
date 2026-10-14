@@ -4,7 +4,7 @@
 import { json, bodyJson, now, httpError } from "../lib/http.js";
 import { hashPassword, verifyPassword, signJwt, otpCode, otpExpiry } from "../lib/crypto.js";
 import { validEmail, validPhone } from "../lib/validators.js";
-import { sendOtpInBackground } from "../lib/email.js";
+import { sendOtpInBackground, emailConfigured } from "../lib/email.js";
 import { addAudit, rowToPublicUser } from "../lib/db.js";
 
 export async function tryAuth(request, env, ctx, { url, path, method }) {
@@ -187,7 +187,10 @@ export async function tryAuth(request, env, ctx, { url, path, method }) {
       // Audit the attempt — repeated failures from one source look suspicious.
       await addAudit(env, null, "Password reset requested for unknown email", "user", resetId, `identifier=${id}`);
     }
-    return json({ resetId, expiresAt: exp, deliveryConfigured: !!u });
+    // Enumeration-safe: deliveryConfigured describes the server's email
+    // config, not whether the email is registered. Both branches above return
+    // the same shape here.
+    return json({ resetId, expiresAt: exp, deliveryConfigured: emailConfigured(env) });
   }
 
   /* ---------- Password reset — confirm ---------- */

@@ -21,6 +21,19 @@ export function apiUrl(path) {
   return path;
 }
 
+// Resolve a file.url for use as an <img src> or <a href>. Data URLs pass
+// through unchanged. API paths get prefixed with API_BASE AND get the token
+// appended as ?token= because <img> and <a href> cannot send Authorization
+// headers. The Worker's auth middleware accepts ?token= as a fallback.
+export function mediaUrl(path) {
+  if (!path) return "";
+  if (path.startsWith("data:")) return path;
+  const resolved = apiUrl(path);
+  if (!state.token) return resolved;
+  const joiner = resolved.includes("?") ? "&" : "?";
+  return `${resolved}${joiner}token=${encodeURIComponent(state.token)}`;
+}
+
 export function api(path, options = {}) {
   const headers = options.body instanceof FormData
     ? {}
