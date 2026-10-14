@@ -875,7 +875,6 @@ function renderSampleDetail(root, sample) {
   layout.appendChild(rail);
   root.appendChild(layout);
 }
-function fmtDate(d) { return d ? new Date(d).toLocaleString() : '—'; }
 function factEl(label, value) {
   return h('div', { class: 'fact' },
     h('div', { class: 'fact-label' }, label),
