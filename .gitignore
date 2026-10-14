@@ -14,3 +14,8 @@ uploads/
 worker/migrations/seed.sql
 worker/migrations/seed.local.sql
 .dev.vars
+
+# Session scratch
+.claude/
+.impeccable/
+Claude outputs/

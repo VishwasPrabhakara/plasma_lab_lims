@@ -1,20 +1,25 @@
 #!/usr/bin/env node
 /**
- * One-time migration: read the single-JSON-blob from Neon Postgres and emit
- * a stream of D1 SQL statements to populate the normalized schema.
+ * One-time migration: read the single-JSON-blob from Neon Postgres and write
+ * a UTF-8 SQL file with D1 INSERT statements for the normalized schema.
  *
  * Usage:
- *   DATABASE_URL="postgres://..." node migrate-neon-to-d1.mjs > seed.sql
+ *   DATABASE_URL="postgres://..." node migrate-neon-to-d1.mjs
  *   wrangler d1 execute plasma-lab-lims --remote --file=./seed.sql
  *
- * DATABASE_URL is your Neon connection string (Cloudflare secret NEON_URL,
- * or the copy in your Worker's env). If you don't have it locally, run
- *   wrangler secret list
- * on the current Worker and copy DATABASE_URL from your Cloudflare dashboard.
+ * The script writes seed.sql next to itself so PowerShell's redirect (`>`)
+ * can't turn it into UTF-16-BOM, which Wrangler's D1 executor can't parse.
+ *
+ * DATABASE_URL is your Neon connection string — get it from console.neon.tech
+ * → your project → Connection Details.
  *
  * This script only READS from Neon. It never writes back or deletes.
  */
 import { neon } from "@neondatabase/serverless";
+import { writeFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const DATABASE_URL = process.env.DATABASE_URL;
 if (!DATABASE_URL) {
@@ -46,8 +51,8 @@ const stmts = [];
 const emit = (s) => stmts.push(s);
 
 emit("-- Migration seed generated " + new Date().toISOString());
-emit("PRAGMA foreign_keys = OFF;");
-emit("BEGIN TRANSACTION;");
+// D1 wraps the whole file in its own transaction and forbids explicit
+// BEGIN/COMMIT/PRAGMA statements — leave them out here.
 
 // -- Users --------------------------------------------------------------
 for (const u of db.users || []) {
@@ -88,9 +93,20 @@ for (const s of db.samples || []) {
     emit(`INSERT OR IGNORE INTO sample_results (id,sample_id,parameter,value,unit,"limit",method,flag,analyst,replicates,avg,stddev,msg,entered_at) VALUES (${q(r.id || uuid())},${q(s.id)},${q(r.parameter)},${q(r.value||"")},${q(r.unit||"")},${q(r.limit||"")},${q(r.method||"")},${q(r.flag||"OK")},${q(r.analyst||"")},${j(r.replicates)},${r.avg==null?"NULL":Number(r.avg)},${r.stddev==null?"NULL":Number(r.stddev)},${q(r.msg||null)},${q(r.enteredAt || new Date().toISOString())});`);
   }
 
-  // Files (base64 URLs preserved as data_url; Phase 3 will move to R2)
+  // Files (small base64 URLs preserved; large ones skipped — D1 has a
+  // per-statement size cap (~1 MB) so a 2 MB data URL blows past it.
+  // Files marked with data_url=NULL will be re-uploaded to R2 in Phase 3;
+  // their metadata (name, category, size, GPS, timestamps) survives so the
+  // history is intact.
+  const MAX_INLINE = 300 * 1024; // 300 KB inline cap keeps SQL statements comfortably under D1's limit
   for (const f of s.files || []) {
-    emit(`INSERT OR IGNORE INTO sample_files (id,sample_id,original_name,category,r2_key,data_url,size_bytes,mime_type,lat,lng,taken_at,uploaded_by,uploaded_at) VALUES (${q(f.id || uuid())},${q(s.id)},${q(f.originalName||"")},${q(f.category||"Uploaded File")},NULL,${q(f.url||null)},${Number(f.size)||0},${q(f.mimeType||null)},${q(f.lat||null)},${q(f.lng||null)},${q(f.takenAt||null)},${q(f.uploadedBy||"")},${q(f.uploadedAt || new Date().toISOString())});`);
+    const url = f.url || null;
+    const keepInline = url && url.length <= MAX_INLINE;
+    const dataUrlSql = keepInline ? q(url) : "NULL";
+    emit(`INSERT OR IGNORE INTO sample_files (id,sample_id,original_name,category,r2_key,data_url,size_bytes,mime_type,lat,lng,taken_at,uploaded_by,uploaded_at) VALUES (${q(f.id || uuid())},${q(s.id)},${q(f.originalName||"")},${q(f.category||"Uploaded File")},NULL,${dataUrlSql},${Number(f.size)||0},${q(f.mimeType||null)},${q(f.lat||null)},${q(f.lng||null)},${q(f.takenAt||null)},${q(f.uploadedBy||"")},${q(f.uploadedAt || new Date().toISOString())});`);
+    if (url && !keepInline) {
+      console.error(`  [file ${f.id}] ${f.originalName||"photo"} (${Math.round(url.length/1024)} KB base64) — metadata kept, bytes will be re-uploaded via R2 in Phase 3`);
+    }
   }
 
   // Chain of custody
@@ -109,8 +125,11 @@ emit(`INSERT OR REPLACE INTO meta (key,value,updated_at) VALUES ('migrated_from_
 emit(`INSERT OR REPLACE INTO meta (key,value,updated_at) VALUES ('source_sample_count', ${q(String((db.samples||[]).length))}, ${q(new Date().toISOString())});`);
 emit(`INSERT OR REPLACE INTO meta (key,value,updated_at) VALUES ('source_user_count', ${q(String((db.users||[]).length))}, ${q(new Date().toISOString())});`);
 
-emit("COMMIT;");
-emit("PRAGMA foreign_keys = ON;");
 emit(`-- Migration complete. Rows: users=${(db.users||[]).length}, samples=${(db.samples||[]).length}, results=${(db.samples||[]).reduce((n,s)=>n+(s.results||[]).length,0)}, files=${(db.samples||[]).reduce((n,s)=>n+(s.files||[]).length,0)}, audit=${(db.audit||[]).length}`);
 
-process.stdout.write(stmts.join("\n") + "\n");
+// Write the file ourselves so encoding is guaranteed UTF-8 (no BOM).
+// PowerShell's `>` redirect writes UTF-16-BOM which Wrangler can't parse.
+const out = join(__dirname, "seed.sql");
+writeFileSync(out, stmts.join("\n") + "\n", { encoding: "utf8" });
+console.error(`Wrote ${stmts.length} statements to ${out}`);
+console.error(`Next: wrangler d1 execute plasma-lab-lims --remote --file=./migrations/seed.sql`);

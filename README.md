@@ -1,92 +1,224 @@
 # Plasma Lab LIMS
 
-A working local LIMS-style website for bottle preparation, QR labels, sample storage movement, analyst assignment, written-result uploads, Excel-style result entry, final reports, retention/disposal, and role-based access.
+Laboratory information management system for the **Centre for Sustainable
+Technologies, IISc Bengaluru**. Tracks water and soil samples from bottle
+label through storage, analysis, approval, and retention — with chain of
+custody and an append-only audit log on every state transition.
 
-## Run
+Built as a single-page static frontend hosted on GitHub Pages, backed by a
+Cloudflare Worker API with D1 (SQLite at the edge) and R2 (sample photos).
 
-1. Open a terminal in this folder.
-2. Run `npm start`.
-3. Open `http://localhost:4317`.
+- **Live app:** https://vishwasprabhakara.github.io/plasma_lab_lims/
+- **API:** https://plasma-lab-lims-api.vishwas-borewellworkersdev.workers.dev
+- **Architecture:** [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
+- **API reference:** [`docs/API.md`](docs/API.md)
+- **Product truth:** [`PRODUCT.md`](PRODUCT.md)
 
-For online hosting with GitHub Pages frontend, Cloudflare Worker backend, and Neon PostgreSQL, see `DEPLOYMENT.md`.
+---
 
-Default admin login:
+## Why this exists
 
-- Email: `admin@lab.local`
-- Password: `admin123`
+The lab was running on an Excel workbook and a shared folder of
+WhatsApp-forwarded photos. Mislabelled bottles, lost photos, no audit
+trail, and no way to tell at a glance which samples were waiting on a
+result or an approval. This replaces that with a sample lifecycle every
+step of which is logged, timestamped, and attributable to a specific
+analyst — the standard world-class lab informatics stacks (STARLIMS,
+LabWare, Agilent) use. Smaller, but the same principles.
 
-## Main Workflow
+---
 
-1. Login as admin.
-2. Add people, storage locations, and test methods from **People & Storage**.
-3. Prepare bottle labels from **New Sample**, or many bottle/sample labels from **Bulk Samples**.
-4. Print QR labels. The default print label is the compact tube-size QR label.
-5. When samples return, open the sample and update freezer/shelf/rack storage from **Workflow**. Each movement is recorded from old storage to new storage.
-6. Admin/manager assigns samples to analysts from **Workflow**.
-7. Analysts use **Written Record Upload** to attach written result photos, scans, or PDFs.
-8. Analysts use **Result Sheet** to enter values in an Excel-like grid, or import an existing Excel result sheet.
-9. Use **Saved Results** to review values.
-10. Admin/manager approves final results and downloads the PDF report.
-11. Admin/manager uses **Retention / Disposal** to mark samples active, retained, or disposed.
-12. Use **Data Backup** to download daily/weekly readable exports.
-13. Every important change remains in **Activity Log**.
+## Repository layout
 
-## Roles
+```
+Plasma_lab_lims/
+├── public/                     # Static frontend (served by GitHub Pages)
+│   ├── index.html              # Shell + every dialog markup inline
+│   ├── config.js               # Environment config (API_BASE)
+│   ├── styles.css              # All styles — no framework
+│   ├── app.js                  # Entry module — views, dialogs, boot
+│   └── src/                    # Importable modules
+│       ├── config.js           # Runtime constants (STATUS_OPTIONS, etc.)
+│       ├── state.js            # The one state singleton
+│       ├── perms.js            # can/canWorkOn/canApprove — role gates
+│       ├── api/
+│       │   └── client.js       # fetch wrapper + 401 handling
+│       ├── components/
+│       │   └── notify.js       # Toast stack + confirm dialog
+│       ├── data/
+│       │   ├── nav.js          # NAV_ITEMS, ICONS, TITLES
+│       │   └── panels.js       # Lab's parameter panels per project
+│       └── utils/
+│           ├── dom.js          # $, $$, h, esc, fmtDate
+│           ├── stats.js        # replicate avg/stddev
+│           └── image.js        # client-side JPEG recompression
+│
+├── worker/                     # Cloudflare Worker API
+│   ├── wrangler.jsonc          # Worker config (D1, R2, cron, vars)
+│   ├── package.json            # Only runtime dep: `qrcode`
+│   ├── migrations/             # D1 schema + one-shot data migrations
+│   │   └── 0001_initial_schema.sql
+│   └── src/
+│       ├── index.js            # fetch + scheduled entry
+│       ├── router.js           # Dispatch to route modules
+│       ├── middleware/
+│       │   └── auth.js         # JWT verification
+│       ├── lib/                # Pure helpers
+│       │   ├── http.js         # json/html response, CORS, httpError
+│       │   ├── crypto.js       # JWT sign/verify + PBKDF2
+│       │   ├── validators.js   # email/phone format
+│       │   ├── email.js        # Resend / Gmail Apps Script
+│       │   ├── db.js           # row→shape adapters, loadSample(s)Full
+│       │   ├── perms.js        # requireRole, canReadSample
+│       │   └── zip.js          # store-only ZIP writer for archive
+│       └── routes/             # Route modules — one subsystem each
+│           ├── auth.js         # login/signup/reset
+│           ├── bootstrap.js    # /api/bootstrap, /api/alerts
+│           ├── users.js        # user admin
+│           ├── master.js       # people/storage-locations/tests
+│           ├── samples.js      # create/collect/storage/PATCH/approve
+│           ├── results.js      # result entry
+│           ├── files.js        # upload + R2 serve + delete
+│           └── archive.js      # preview + export ZIP bundle
+│
+├── docs/
+│   ├── ARCHITECTURE.md         # Data model, request flow, boundaries
+│   ├── API.md                  # Every endpoint, with examples
+│   └── surfaces/
+│       └── app-shell.md        # Visual direction contract
+├── PRODUCT.md                  # What this is, who it's for, what it's not
+└── README.md                   # You are here
+```
 
-- **Admin / Manager**: creates samples, bulk labels, users, storage locations, test methods, assignments, approvals, backups, and disposal.
-- **Analyst**: updates assigned samples, changes storage when samples move, uploads written records/files, and enters or imports results. Analysts cannot delete users or records.
+---
 
-## Storage Occupancy
+## Running it
 
-Storage locations can be marked **Available** or **Full / no occupancy** from **People & Storage**. Full freezers remain visible but are disabled in sample creation and movement lists, so staff cannot accidentally move a sample into a freezer with no space.
+### Frontend
 
-## Bulk Sample Creation
+The frontend is a static page. There is no build step — the browser loads
+`index.html` and ES modules handle the rest.
 
-Use **Bulk Samples** when many bottles or tubes arrive together.
+**Serve locally:**
+```bash
+cd public
+python3 -m http.server 8080
+# then open http://localhost:8080
+```
 
-Paste rows with this order:
+The frontend reads `window.PLASMA_LIMS_CONFIG.API_BASE` from
+`public/config.js`. Point it at a local Worker (via `wrangler dev`) or the
+deployed Worker URL. Example override for local dev:
 
-`Project, Source Type, Site, Brought By, Storage, Analyst, Tests, Target Completion, Notes`
+```js
+// public/config.js
+window.PLASMA_LIMS_CONFIG = { API_BASE: "http://localhost:8787" };
+```
 
-Example:
+### Worker
 
-`Project A, Drinking Water, Borewell 1, Ramesh, Fridge 1 / Shelf A / Rack 01, Priya Nair, pH; TDS; Turbidity, 2026-08-20 17:00, Morning batch`
+```bash
+cd worker
+npm install
+npx wrangler dev            # local dev, uses the configured D1 + R2
+npx wrangler deploy         # deploy to Cloudflare
+```
 
-After creation, use **Print QR Labels** to print the compact tube-size labels for the whole batch.
+### Secrets
 
-## QR Scanning
+The Worker refuses to start without a 32+ character `JWT_SECRET`.
 
-The website camera scanner reads QR labels in supported browsers. This keeps the workflow low-cost because the lab can use printed QR labels and an existing phone/laptop camera. Manual sample-code entry is still available as backup.
+```bash
+cd worker
+npx wrangler secret put JWT_SECRET
+# optional (if you want outbound OTP email):
+npx wrangler secret put RESEND_API_KEY
+npx wrangler secret put SMTP_FROM
+# or the Gmail Apps Script relay URL instead:
+npx wrangler secret put GMAIL_APPS_SCRIPT_URL
+```
 
-A normal phone QR scanner is also enough. Set `FRONTEND_PUBLIC_URL` before starting the backend, for example `https://yourname.github.io/plasma-lab-lims`, and newly printed QR labels will open `?sample=PL-...` links directly instead of showing JSON.
+Non-secret vars live in `wrangler.jsonc` (ALLOWED_ORIGINS,
+FRONTEND_PUBLIC_URL, SMTP_FROM_NAME).
 
-## Remember Me
+### Database (D1)
 
-The login page has **Remember me on this device**. When selected, the browser remembers the email and keeps the secure login session longer. The app does not save the raw password; use the browser's built-in password manager if staff want password autofill.
+Create and migrate the database once per environment:
 
-## Email OTP Setup
+```bash
+npx wrangler d1 create plasma-lab-lims
+# paste the returned database_id into wrangler.jsonc d1_databases[0].database_id
+npx wrangler d1 execute plasma-lab-lims --remote --file=./migrations/0001_initial_schema.sql
+```
 
-Email OTP uses Gmail SMTP when `SMTP_USER` and `SMTP_PASS` are set.
+### Media (R2)
 
-Optional settings:
+```bash
+npx wrangler r2 bucket create plasma-lab-lims-media
+```
 
-- `SMTP_HOST`, default `smtp.gmail.com`
-- `SMTP_PORT`, default `465`
-- `SMTP_SECURE`, default `true`
-- `SMTP_USER`, your Gmail address
-- `SMTP_PASS`, your Gmail app password
-- `SMTP_FROM`
-- `SMTP_FROM_NAME`
+---
 
-If Gmail SMTP is not set, email OTP runs in local mode and prints the OTP in the server terminal only.
+## First user
 
-## Stored Data
+The first signed-up user is auto-approved as `admin` — no email delivery is
+needed to bootstrap. Every subsequent signup lands in a pending queue and
+needs admin approval before login.
 
-- Main local database: `data/db.json`
-- Online database: Neon PostgreSQL when `DATABASE_URL` is set
-- Automatic local database backups: `data/backups/`
-- Daily and weekly readable exports: `data/exports/`
-- Uploaded files: `uploads/`
-- Browser mirror cache: local browser storage
+Password requirements: minimum 6 characters. Passwords are hashed with
+PBKDF2-SHA256, 100,000 iterations.
 
-The local database uses atomic writes, rotating raw backups, and daily/weekly readable exports. For online hosting, set `DATABASE_URL` to the Neon PostgreSQL connection string. For very large long-term data, the next upgrade is a fully normalized PostgreSQL schema with managed backups.
+---
+
+## Deploying
+
+The frontend is served by GitHub Pages from the `public/` folder. Any push
+to `main` publishes within a minute. Cache-bust is handled by `?v=<tag>`
+query strings on `styles.css` and `app.js` — bump the tag when you want to
+force clients to re-fetch.
+
+The Worker is deployed with `wrangler deploy` from the `worker/` directory.
+
+The Worker runs a monthly cron (`0 3 1 * *`) that counts samples older than
+365 days with no `archived_at` and writes an `archive_reminder` row to the
+`meta` table. **Nothing is auto-deleted.** Admins export + optionally soft-
+archive from the Data Backup view.
+
+---
+
+## Testing credentials
+
+For a demo environment, the first signup acts as admin. For an existing
+deployment, ask the lab admin for a login or the one-off reset flow via
+`/api/password-reset/start`.
+
+---
+
+## Security posture
+
+- Passwords: PBKDF2-SHA256, 100k iterations, per-user salt.
+- Sessions: HS256 JWT, 12-hour lifetime, kept in sessionStorage (clears on
+  browser close). `/api/sign-out` bumps the user's `session_version` so a
+  future enforcement toggle is a one-line change.
+- Approval ceremony: approving a sample requires re-entering the admin's
+  password. Approval, chain of custody, and audit log are written in one
+  atomic D1 batch.
+- Password-reset start returns the same shape whether the email exists or
+  not (enumeration defense). An audit row is written for unknown emails.
+- R2 media endpoints are ACL-gated: the Worker finds the file's parent
+  sample and checks `canReadSample(user, sample)` before serving.
+- No sample data is ever deleted. Lifecycle `Disposed` only sets state.
+  Archive export can soft-archive (`archived_at`); hard delete is not an API.
+
+Known deferred items (post-demo):
+- Rate limiting on `/api/login` and OTP endpoints.
+- PBKDF2 iterations → 600k.
+- File upload size cap and MIME whitelist.
+- Pagination beyond the 2000-sample bootstrap cap.
+- Refresh token flow / shorter access token.
+
+---
+
+## License
+
+Internal lab tool. Not currently open-sourced.
