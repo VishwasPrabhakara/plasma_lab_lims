@@ -841,7 +841,22 @@ function renderSampleDetail(root, sample) {
             h('div', { class: 'facts' },
               factEl('Project / client', sample.clientName),
               factEl('Site', sample.collectionSite),
-              factEl('Source', sample.sourceType)
+              factEl('Source', sample.sourceType),
+              // Sampling GPS + sampled time land on the sample row during
+              // /collect — surfacing them here keeps the chain-of-custody
+              // visible on the main view instead of only in the audit log.
+              factEl('Sampling GPS', (sample.collectionLat && sample.collectionLng)
+                ? h('a', {
+                    href: `https://www.google.com/maps?q=${encodeURIComponent(sample.collectionLat + ',' + sample.collectionLng)}`,
+                    target: '_blank',
+                    rel: 'noopener noreferrer',
+                    class: 'gps-link',
+                    title: 'Open on Google Maps'
+                  }, `${sample.collectionLat}, ${sample.collectionLng}`)
+                : (sample.status === 'Bottle Ready' ? 'Not collected yet' : '—')),
+              factEl('Sampled at', sample.collectedAt
+                ? fmtDate(sample.collectedAt)
+                : (sample.status === 'Bottle Ready' ? 'Not collected yet' : '—'))
             )
           ),
           h('div', { class: 'facts-group' },
@@ -961,24 +976,16 @@ function samplePhotoCard(sample) {
   });
 
   if (photo) {
-    // Visible caption so the person who uploaded, when they took it, and the
-    // GPS coordinates (if any) are legible from the sample view itself — not
-    // only to someone opening DevTools against the API.
-    const captionBits = [];
-    if (photo.takenAt) captionBits.push('Captured ' + new Date(photo.takenAt).toLocaleString());
-    if (photo.lat && photo.lng) captionBits.push(`📍 ${photo.lat}, ${photo.lng}`);
-    if (photo.uploadedBy) captionBits.push('by ' + photo.uploadedBy);
-
+    // Clean image + Replace button on hover (and the previous-versions hint
+    // when there's more than one). The sampling GPS and sampled time live in
+    // the Identity panel below — they belong to the sample, not the photo.
     return h('div', { class: 'sample-photo-card has-photo' },
       h('img', { class: 'sample-photo', src: mediaUrl(photo.url), alt: 'Sample photo for ' + sample.sampleCode }),
-      h('div', { class: 'sample-photo-caption' },
-        h('div', { class: 'sample-photo-caption-main' }, captionBits.length ? captionBits.join(' · ') : 'Attached file'),
-        previousCount > 0
-          ? h('div', { class: 'sample-photo-prev muted text-xs' }, `${previousCount} earlier version${previousCount > 1 ? 's' : ''} in Files tab`)
-          : null
-      ),
       canUploadHere ? h('div', { class: 'sample-photo-actions' },
         h('button', { class: 'btn btn-sm', type: 'button', onclick: () => input.click() }, h('span', { class: 'btn-label' }, '📷 Replace photo')),
+        previousCount > 0
+          ? h('div', { class: 'sample-photo-prev muted text-xs' }, `${previousCount} earlier version${previousCount > 1 ? 's' : ''} in Files tab`)
+          : null,
         input,
         status
       ) : null
