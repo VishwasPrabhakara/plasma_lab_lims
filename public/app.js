@@ -1262,7 +1262,7 @@ function overviewTab(sample) {
         h('button', { class: 'btn btn-primary', type: 'button', onclick: () => saveWorkflowUpdate(sample) }, h('span',{class:'btn-label'},'Save update'))
       )
     )
-  );
+  ;
   return wrap;
 }
 function fieldWith(label, input) {
