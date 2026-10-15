@@ -982,7 +982,7 @@ function samplePhotoCard(sample) {
     return h('div', { class: 'sample-photo-card has-photo' },
       h('img', { class: 'sample-photo', src: mediaUrl(photo.url), alt: 'Sample photo for ' + sample.sampleCode }),
       canUploadHere ? h('div', { class: 'sample-photo-actions' },
-        h('button', { class: 'btn btn-sm', type: 'button', onclick: () => input.click() }, h('span', { class: 'btn-label' }, '📷 Replace photo')),
+        h('button', { class: 'btn btn-sm', type: 'button', onclick: () => input.click() }, h('span', { class: 'btn-label' }, 'Replace photo')),
         previousCount > 0
           ? h('div', { class: 'sample-photo-prev muted text-xs' }, `${previousCount} earlier version${previousCount > 1 ? 's' : ''} in Files tab`)
           : null,
@@ -995,7 +995,7 @@ function samplePhotoCard(sample) {
   // No photo yet — the Add CTA.
   return h('div', { class: 'sample-photo-card empty-photo-card' },
     h('div', { class: 'empty-photo-inner' },
-      h('div', { class: 'empty-photo-icon', 'aria-hidden': 'true' }, '📷'),
+      h('div', { class: 'empty-photo-icon', 'aria-hidden': 'true' }, ''),
       h('div', { class: 'empty-photo-title' }, 'No sample photo yet'),
       canUploadHere
         ? h('button', { class: 'btn btn-primary btn-sm', type: 'button', onclick: () => input.click() }, h('span', { class: 'btn-label' }, '+ Add sample photo'))
@@ -1862,7 +1862,7 @@ function renderApprovals() {
       `${enteredResults.length} result${enteredResults.length === 1 ? '' : 's'} · submitted ${fmtDate(sample.updatedAt)}`
     ));
     if (iEntered) {
-      card.appendChild(h('div', { class: 'locked-notice' }, '⚠ You entered result(s) on this sample — another admin must review.'));
+      card.appendChild(h('div', { class: 'locked-notice' }, 'You entered result(s) on this sample — another admin must review.'));
     }
     card.appendChild(h('div', { class: 'approval-actions' },
       h('button', { class: 'btn btn-sm', type: 'button', onclick: () => openSampleDetail(sample.id) }, h('span',{class:'btn-label'},'Review details')),
@@ -2375,13 +2375,13 @@ async function scanQuickMarkCollected(sample) {
         lat = pos.coords.latitude.toFixed(6);
         lng = pos.coords.longitude.toFixed(6);
         accuracy = Math.round(pos.coords.accuracy);
-        gpsStatus.textContent = `📍 GPS: ${lat}, ${lng}  (±${accuracy}m)`;
+        gpsStatus.textContent = `GPS captured: ${lat}, ${lng}  (±${accuracy}m)`;
       },
-      err => { gpsStatus.textContent = `⚠ GPS unavailable — ${err.message}. Sample will still record without coordinates.`; },
+      err => { gpsStatus.textContent = `GPS unavailable — ${err.message}. Sample will still record without coordinates.`; },
       { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 }
     );
   } else {
-    gpsStatus.textContent = '⚠ GPS not supported on this browser.';
+    gpsStatus.textContent = 'GPS not supported on this browser.';
   }
   // Photo picker — hidden, triggered by button
   const photoInput = h('input', { type: 'file', accept: 'image/*', capture: 'environment', style: { display: 'none' }, id: 'collectPhoto' });
@@ -2392,7 +2392,7 @@ async function scanQuickMarkCollected(sample) {
     h('button', {
       class: 'btn btn-primary', type: 'button', id: 'collectConfirmBtn',
       onclick: () => photoInput.click()
-    }, h('span',{class:'btn-label'},'📷 Take bottle photo'))
+    }, h('span',{class:'btn-label'},'Take bottle photo'))
   ));
   // When photo is taken, upload photo + patch sample with site + GPS + status
   photoInput.onchange = async () => {
@@ -2432,7 +2432,7 @@ async function scanQuickMarkCollected(sample) {
       });
     } catch (e) {
       notify({ type: 'error', title: 'Could not save', description: e.message });
-      if (btn) { btn.disabled = false; btn.querySelector('.btn-label').textContent = '📷 Take bottle photo'; }
+      if (btn) { btn.disabled = false; btn.querySelector('.btn-label').textContent = 'Take bottle photo'; }
     }
   };
   dlg.showModal();
