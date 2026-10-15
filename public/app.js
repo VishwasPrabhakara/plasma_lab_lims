@@ -36,6 +36,38 @@ registerSessionExpiredHandler(() => showAuth());
 
 const clearSession = clearSessionState;
 
+// Open a sample file in a new tab. Data URLs are blocked from top-level
+// navigation by most browsers (Chrome since 2017), so we convert them to
+// a Blob URL first and open that. R2-backed URLs go through mediaUrl which
+// adds the ?token= the Worker's auth middleware accepts for <img>/<a>.
+function openFile(url, originalName, mimeType) {
+  if (!url) return;
+  const dataMatch = /^data:([^;]+);base64,(.+)$/.exec(url);
+  if (dataMatch) {
+    try {
+      const mime = dataMatch[1] || mimeType || 'application/octet-stream';
+      const binary = atob(dataMatch[2]);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      const blob = new Blob([bytes], { type: mime });
+      const blobUrl = URL.createObjectURL(blob);
+      const win = window.open(blobUrl, '_blank', 'noopener');
+      // Release the URL after a minute — long enough for the tab to load it,
+      // short enough to not pin memory.
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
+      if (!win) {
+        notify({ type: 'warn', title: 'Popup blocked', description: 'Allow popups for this site to open the file.' });
+      }
+    } catch (e) {
+      notify({ type: 'error', title: 'Could not open file', description: e.message });
+    }
+    return;
+  }
+  // R2 (or any http) URL — straight open with the token appended.
+  const resolved = mediaUrl(url);
+  window.open(resolved, '_blank', 'noopener');
+}
+
 /* =============================================================================
  * Plasma Lab LIMS — v2 client
  * IISc CST · Bengaluru
@@ -1772,7 +1804,7 @@ async function deleteSampleFile(sample, file) {
         h('div', null, f.uploadedBy || '—'),
         h('small', { class: 'muted' }, fmtDate(f.uploadedAt))
       ),
-      h('td', { 'data-label': 'Open' }, f.url ? h('a', { href: mediaUrl(f.url), target: '_blank' }, 'View') : h('span', { class: 'muted' }, '—')),
+      h('td', { 'data-label': 'Open' }, f.url ? h('a', { href: '#', onclick: (e) => { e.preventDefault(); openFile(f.url, f.originalName, f.mimeType); } }, 'View') : h('span', { class: 'muted' }, '—')),
       can('admin') ? h('td', { 'data-label': 'Remove' }, h('button', { class: 'btn btn-sm btn-ghost', type: 'button', onclick: () => deleteSampleFile(sample, f) }, h('span',{class:'btn-label'},'Delete'))) : null
     )));
   }
