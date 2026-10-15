@@ -317,6 +317,61 @@ function render() {
 /* ---------------------------------------------------------------------- */
 /* Dashboard                                                              */
 /* ---------------------------------------------------------------------- */
+// A single group inside the "My queue" card: a labelled list of sample
+// rows, each a clickable chip with code, project/site, status, and target
+// date. Overdue items are badged red so priority is visible instantly.
+function myQueueGroup(title, samples, tone, emptyMessage) {
+  const now = Date.now();
+  const group = h('div', { class: 'my-queue-group', 'data-tone': tone },
+    h('div', { class: 'my-queue-group-head' },
+      h('span', { class: 'my-queue-group-title' }, title),
+      h('span', { class: 'my-queue-group-count' }, String(samples.length))
+    )
+  );
+  if (samples.length === 0) {
+    if (emptyMessage) {
+      group.appendChild(h('div', { class: 'my-queue-empty muted text-xs' }, emptyMessage));
+    }
+    return group;
+  }
+  // Sort by soonest due date first; items without a due date go to the end
+  const sorted = [...samples].sort((a, b) => {
+    const da = a.dueAt ? new Date(a.dueAt).getTime() : Infinity;
+    const db = b.dueAt ? new Date(b.dueAt).getTime() : Infinity;
+    return da - db;
+  });
+  const list = h('div', { class: 'my-queue-list' });
+  sorted.forEach(x => {
+    const due = x.dueAt ? new Date(x.dueAt) : null;
+    const dueMs = due ? due.getTime() : null;
+    const isOverdue = dueMs != null && dueMs < now && !['Approved','Disposed'].includes(x.status);
+    const isSoon = dueMs != null && dueMs >= now && dueMs - now < 24 * 60 * 60 * 1000 && !['Approved','Disposed'].includes(x.status);
+    const dueText = due
+      ? due.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+      : 'No target';
+    const row = h('button', {
+      class: 'my-queue-row', type: 'button',
+      onclick: () => openSampleDetail(x.id)
+    },
+      h('div', { class: 'my-queue-row-main' },
+        h('div', { class: 'my-queue-row-code mono' }, x.sampleCode),
+        h('div', { class: 'my-queue-row-sub muted text-xs' },
+          `${x.clientName || 'No project'} · ${x.collectionSite || 'No site'}`
+        )
+      ),
+      h('div', { class: 'my-queue-row-meta' },
+        h('span', { class: 'badge', 'data-status': x.status }, x.status),
+        h('span', {
+          class: 'my-queue-row-due' + (isOverdue ? ' is-overdue' : (isSoon ? ' is-soon' : ''))
+        }, isOverdue ? 'Overdue · ' + dueText : (isSoon ? 'Due soon · ' + dueText : 'Target · ' + dueText))
+      )
+    );
+    list.appendChild(row);
+  });
+  group.appendChild(list);
+  return group;
+}
+
 function renderDashboard() {
   const s = state.samples;
   const alerts = state.alerts || {};
@@ -336,6 +391,40 @@ function renderDashboard() {
     h('h3', null, `Good ${greeting()}, ${state.user?.name || 'there'}`),
     h('p', null, s.length === 0 ? 'No samples yet — press "+ New sample" to register the first bottle.' : `You have ${s.length} sample${s.length === 1 ? '' : 's'} across the lab.`)
   ));
+
+  // ---- My queue (analyst view) ------------------------------------------
+  // Analyst's own workload at the top of the dashboard, grouped by what they
+  // actually need to do: in-progress (my turn), awaiting approval (admin's
+  // turn), and completed (done). Each sample row shows the target date and
+  // flags overdue in red so the analyst sees priority at a glance.
+  if (can('analyst') && !can('admin') && state.user?.name) {
+    const myName = state.user.name;
+    const mine = s.filter(x => assignedList(x).includes(myName));
+    const inProgress = mine.filter(x => ['Sample Collected','Stored','Assigned','In Analysis'].includes(x.status));
+    const flagged    = mine.filter(x => x.status === 'Flagged');
+    const awaiting   = mine.filter(x => ['Needs Review','Results Entered'].includes(x.status));
+    const completed  = mine.filter(x => ['Approved','Disposed'].includes(x.status));
+
+    const myCard = h('section', { class: 'card my-queue' },
+      h('div', { class: 'card-header' },
+        h('div', null,
+          h('h3', { class: 'card-title' }, 'My queue'),
+          h('div', { class: 'card-subtitle muted text-sm' },
+            mine.length === 0
+              ? 'Nothing assigned to you yet — an admin will assign samples when ready.'
+              : `${mine.length} sample${mine.length === 1 ? '' : 's'} assigned to you`
+          )
+        )
+      ),
+      h('div', { class: 'card-body my-queue-body' },
+        myQueueGroup('For analysis', inProgress, 'needs-you', 'All caught up — nothing waiting for you.'),
+        flagged.length ? myQueueGroup('Flagged — needs attention', flagged, 'flagged', '') : null,
+        myQueueGroup('Awaiting admin approval', awaiting, 'waiting', 'None waiting for review.'),
+        myQueueGroup('Completed', completed, 'done', 'None completed yet.')
+      )
+    );
+    root.appendChild(myCard);
+  }
 
   root.appendChild(h('section', { class: 'metric-grid' },
     ...counts.map(c => h('div', { class: 'metric', 'data-tone': c.tone },

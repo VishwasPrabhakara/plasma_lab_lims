@@ -1717,6 +1717,113 @@ dialog.dialog::backdrop {
 .gps-link:hover {
   text-decoration-color: var(--accent);
 }
+
+/* --- My queue (analyst dashboard) --------------------------------------- */
+.my-queue .card-subtitle {
+  margin-top: 2px;
+}
+.my-queue-body {
+  display: grid;
+  gap: var(--s-4);
+}
+.my-queue-group {
+  display: grid;
+  gap: var(--s-2);
+}
+.my-queue-group-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+}
+.my-queue-group-title {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--text);
+}
+.my-queue-group[data-tone="needs-you"] .my-queue-group-title { color: var(--accent); }
+.my-queue-group[data-tone="flagged"]   .my-queue-group-title { color: var(--danger); }
+.my-queue-group[data-tone="waiting"]   .my-queue-group-title { color: var(--text-muted); }
+.my-queue-group[data-tone="done"]      .my-queue-group-title { color: var(--success); }
+.my-queue-group-count {
+  min-width: 20px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+.my-queue-list {
+  display: grid;
+  gap: var(--s-1);
+}
+.my-queue-empty {
+  padding: var(--s-2) 0;
+}
+.my-queue-row {
+  all: unset;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--s-3);
+  align-items: center;
+  padding: var(--s-2) var(--s-3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+  cursor: pointer;
+  transition: border-color 120ms ease, background 120ms ease;
+}
+.my-queue-row:hover,
+.my-queue-row:focus-visible {
+  border-color: var(--accent);
+  background: color-mix(in oklab, var(--accent) 6%, var(--surface-2));
+}
+.my-queue-row-main {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.my-queue-row-code {
+  font-weight: 600;
+}
+.my-queue-row-sub {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.my-queue-row-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  text-align: right;
+}
+.my-queue-row-due {
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.my-queue-row-due.is-overdue {
+  color: var(--danger);
+  font-weight: 600;
+}
+.my-queue-row-due.is-soon {
+  color: color-mix(in oklab, var(--danger) 50%, var(--text-muted));
+  font-weight: 500;
+}
+@media (max-width: 640px) {
+  .my-queue-row {
+    grid-template-columns: 1fr;
+  }
+  .my-queue-row-meta {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    text-align: left;
+  }
+}
 @media (hover: none) {
   /* On touch devices, keep the Replace button visible — hover doesn't exist. */
   .sample-photo-card.has-photo .sample-photo-actions {
