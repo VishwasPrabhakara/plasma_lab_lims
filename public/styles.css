@@ -40,24 +40,24 @@
   /* -- Surfaces (cool paper, hydrograph light theme) */
   --bg: #f3f6fb;
   --surface: #ffffff;
-  --surface-2: #e9eef6;
-  --surface-3: #dde4ef;
+  --surface-2: #f8f9fb;
+  --surface-3: #f0f2f5;
 
   /* -- Borders — hairline rules sampled from chart gridlines */
-  --border: #d6dde8;
-  --border-strong: #a9b4c3;
+  --border: #d8e1eb;
+  --border-strong: #b8c6d4;
   --border-focus: #2b6bb3;
 
   /* -- Text (deep navy ink, sampled from logo badge) */
   --text: #0a1628;
-  --text-muted: #4a5668;
+  --text-muted: #6b7a8c;
   --text-subtle: #7f8a9b;
   --text-on-accent: #0a1628;
 
   /* -- Primary action (muted institutional blue, LabWare/Agilent/Eurofins register) */
-  --accent: #1f4f87;
-  --accent-hover: #163e6c;
-  --accent-soft: #e3ecf5;
+  --accent: #2b6bb3;
+  --accent-hover: #1f4f87;
+  --accent-soft: rgba(43, 107, 179, 0.10);
   --accent-strong: #0a1628;
   /* -- Signal (plasma arc, reserved for live/active state only) */
   --signal: #2b6bb3;
@@ -65,19 +65,18 @@
   --signal-soft: rgba(43, 107, 179, 0.10);
 
   /* -- Semantic (hydrograph state system) */
-  --success: #0f8a56;
-  --success-soft: #e2f4ec;
-  --warn: #c47e18;
+  --success: #2fb97a;
+  --success-soft: #e7f7f1;
+  --warn: #e6a23c;
   --warn-soft: #fbefd8;
-  --danger: #c84133;
-  --danger-soft: #fbe5e2;
+  --danger: #e5604a;
+  --danger-soft: #fcf0ee;
   --info: #2b6bb3;
   --info-soft: #e2eef9;
 
   /* -- Type */
-  --font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-serif: "Fraunces", "Source Serif 4", Georgia, "Times New Roman", serif;
-  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
+  --font-ui: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'JetBrains Mono', 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
   --fs-xs: 0.75rem;
   --fs-sm: 0.8125rem;
   --fs-md: 0.9375rem;
@@ -134,29 +133,29 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #0a1628;                /* obsidian navy from the Plasma Lab badge */
-    --surface: #0f1d33;
-    --surface-2: #152742;
-    --surface-3: #1d3250;
-    --border: #223a5a;
-    --border-strong: #3b587f;
+    --surface: #10223b;
+    --surface-2: #142a4a;
+    --surface-3: #183359;
+    --border: #2b3a4a;
+    --border-strong: #4a5a6a;
     --border-focus: #8fd3ff;
-    --text: #e7f0fb;
-    --text-muted: #b4c4de;
+    --text: #c6dcf0;
+    --text-muted: #8b9fb0;
     --text-subtle: #8a99b4;
     --text-on-accent: #0a1628;
-    --accent: #4a8bc9;
-    --accent-hover: #5fa0dd;
-    --accent-soft: rgba(74, 139, 201, 0.14);
+    --accent: #2b6bb3;
+    --accent-hover: #3b8cd2;
+    --accent-soft: rgba(43, 107, 179, 0.14);
     --accent-strong: #c6dcf0;
     --signal: #8fd3ff;
     --signal-strong: #e5f3ff;
     --signal-soft: rgba(143, 211, 255, 0.14);
-    --success: #3fcf8e;
-    --success-soft: rgba(63, 207, 142, 0.14);
+    --success: #2fb97a;
+    --success-soft: rgba(47, 185, 122, 0.14);
     --warn: #e6a23c;
     --warn-soft: rgba(230, 162, 60, 0.16);
-    --danger: #ef6a5a;
-    --danger-soft: rgba(239, 106, 90, 0.14);
+    --danger: #e5604a;
+    --danger-soft: rgba(229, 96, 74, 0.14);
     --info: #4ab3ff;
     --info-soft: rgba(74, 179, 255, 0.14);
     --el-1: 0 0 0 1px rgba(143, 211, 255, 0.06);
@@ -167,29 +166,29 @@
 
 :root[data-theme="dark"] {
   --bg: #0a1628;
-  --surface: #0f1d33;
-  --surface-2: #152742;
-  --surface-3: #1d3250;
-  --border: #223a5a;
-  --border-strong: #3b587f;
+  --surface: #10223b;
+  --surface-2: #142a4a;
+  --surface-3: #183359;
+  --border: #2b3a4a;
+  --border-strong: #4a5a6a;
   --border-focus: #8fd3ff;
-  --text: #e7f0fb;
-  --text-muted: #9fb3ce;
+  --text: #c6dcf0;
+  --text-muted: #8b9fb0;
   --text-subtle: #6c82a0;
   --text-on-accent: #0a1628;
-  --accent: #4a8bc9;
-  --accent-hover: #5fa0dd;
-  --accent-soft: rgba(74, 139, 201, 0.14);
+  --accent: #2b6bb3;
+  --accent-hover: #3b8cd2;
+  --accent-soft: rgba(43, 107, 179, 0.14);
   --accent-strong: #c6dcf0;
   --signal: #8fd3ff;
   --signal-strong: #e5f3ff;
   --signal-soft: rgba(143, 211, 255, 0.14);
-  --success: #3fcf8e;
-  --success-soft: rgba(63, 207, 142, 0.14);
+  --success: #2fb97a;
+  --success-soft: rgba(47, 185, 122, 0.14);
   --warn: #e6a23c;
   --warn-soft: rgba(230, 162, 60, 0.16);
-  --danger: #ff8a7a;
-  --danger-soft: rgba(255, 138, 122, 0.14);
+  --danger: #e5604a;
+  --danger-soft: rgba(229, 96, 74, 0.14);
   --info: #4ab3ff;
   --info-soft: rgba(74, 179, 255, 0.14);
   --el-1: 0 0 0 1px rgba(143, 211, 255, 0.06);
@@ -229,7 +228,7 @@ h3 { font-size: var(--fs-lg); font-weight: 600; letter-spacing: -0.01em; }
 h4 { font-size: var(--fs-md); font-weight: var(--fw-b); letter-spacing: 0; }
 p, ul, ol { margin: 0; }
 a {
-  color: var(--accent);
+  color: var(--signal);
   text-decoration: none;
   font-weight: var(--fw-m);
   transition: color var(--dur-fast) var(--ease);
@@ -241,9 +240,12 @@ code, .mono { font-family: var(--font-mono); font-feature-settings: "zero"; }
 ::selection { background: var(--accent-soft); color: var(--text); }
 :focus:not(:focus-visible) { outline: none; }
 :focus-visible {
-  outline: 2px solid var(--border-focus);
-  outline-offset: 2px;
-  border-radius: 4px;
+  outline: none;
+  border: 1px solid var(--signal);
+  box-shadow: inset 0 0 0 1px var(--signal);
+  border-radius: var(--radius);
+  position: relative;
+  z-index: 1;
 }
 
 /* Scrollbars */
@@ -282,7 +284,7 @@ code, .mono { font-family: var(--font-mono); font-feature-settings: "zero"; }
   align-items: center;
   justify-content: center;
   gap: var(--s-2);
-  min-height: 40px;
+  min-height: 44px;
   padding: 0 var(--s-4);
   border: 1px solid var(--btn-border);
   border-radius: var(--r-md);
@@ -662,7 +664,7 @@ code, .mono { font-family: var(--font-mono); font-feature-settings: "zero"; }
   padding: var(--s-3) var(--s-4);
   background: var(--surface);
   border: 1px solid var(--border);
-  border-left: 3px solid var(--accent);
+  border-left: 1px solid var(--signal);
   border-radius: var(--r-md);
   box-shadow: var(--el-2);
   pointer-events: auto;
@@ -691,7 +693,7 @@ code, .mono { font-family: var(--font-mono); font-feature-settings: "zero"; }
   margin-top: 6px;
   font-size: var(--fs-sm);
   font-weight: var(--fw-b);
-  color: var(--accent);
+  color: var(--signal);
   background: none;
   border: 0;
   padding: 0;
@@ -918,7 +920,7 @@ dialog.dialog::backdrop {
   left: calc(-1 * var(--s-5) + 4px);
   top: 6px;
   width: 10px; height: 10px;
-  background: var(--accent);
+  background: var(--signal);
   border-radius: 50%;
   box-shadow: 0 0 0 3px var(--surface);
 }
@@ -1186,7 +1188,7 @@ dialog.dialog::backdrop {
   padding: 4px 10px;
   border-radius: var(--r-full);
   background: rgba(255,255,255,0.12);
-  color: color-mix(in oklab, var(--accent) 30%, #fff);
+  color: color-mix(in oklab, var(--signal) 30%, #fff);
   font-size: var(--fs-xs);
   font-weight: var(--fw-b);
   letter-spacing: 0.1em;
@@ -1233,7 +1235,7 @@ dialog.dialog::backdrop {
   animation: notif-enter var(--dur-med) var(--ease);
 }
 .auth-eyebrow-small {
-  color: var(--accent);
+  color: var(--signal);
   font-size: var(--fs-xs);
   font-weight: var(--fw-b);
   letter-spacing: 0.1em;
@@ -1285,8 +1287,8 @@ dialog.dialog::backdrop {
 
 .otp-callout {
   padding: var(--s-3);
-  background: var(--accent-soft);
-  border: 1px solid color-mix(in oklab, var(--accent) 20%, var(--border));
+  background: var(--surface-soft);
+  border: 1px solid color-mix(in oklab, var(--signal) 20%, var(--border));
   border-radius: var(--r-sm);
   font-size: var(--fs-sm);
   color: var(--text);
@@ -1342,8 +1344,8 @@ dialog.dialog::backdrop {
 .app-nav .brand .brand-mark {
   width: 36px; height: 36px;
   border-radius: 8px;
-  background: var(--accent);
-  color: var(--text-on-accent);
+  background: var(--signal);
+  color: var(--text-on-surface);
   display: grid; place-items: center;
   overflow: hidden;
   flex: 0 0 auto;
@@ -1388,13 +1390,13 @@ dialog.dialog::backdrop {
   background: var(--surface-2);
   color: var(--text);
   border-color: var(--border);
-  border-left-color: var(--accent);
+  border-left-color: var(--signal);
 }
 .app-nav .nav-item[aria-current="page"] {
-  background: var(--accent-soft);
-  color: var(--accent);
-  border-color: color-mix(in oklab, var(--accent) 30%, transparent);
-  border-left-color: var(--accent);
+  background: var(--surface-soft);
+  color: var(--signal);
+  border-color: color-mix(in oklab, var(--signal) 30%, transparent);
+  border-left-color: var(--signal);
   font-weight: var(--fw-b);
 }
 .app-nav .nav-item svg { width: 18px; height: 18px; flex: 0 0 auto; }
@@ -1410,8 +1412,8 @@ dialog.dialog::backdrop {
   text-align: center;
 }
 .app-nav .nav-item[aria-current="page"] .nav-count {
-  background: var(--accent);
-  color: var(--text-on-accent);
+  background: var(--signal);
+  color: var(--text-on-surface);
 }
 .app-nav .user-block {
   margin-top: auto;
@@ -1427,8 +1429,8 @@ dialog.dialog::backdrop {
 .app-nav .user-block .user-info .avatar {
   width: 32px; height: 32px;
   border-radius: 50%;
-  background: var(--accent-soft);
-  color: var(--accent);
+  background: var(--surface-soft);
+  color: var(--signal);
   display: grid; place-items: center;
   font-weight: var(--fw-b);
   flex: 0 0 auto;
@@ -1463,7 +1465,7 @@ dialog.dialog::backdrop {
   min-height: 52px;
   letter-spacing: 0.01em;
 }
-.tab-bar .tab[aria-current="page"] { color: var(--accent); }
+.tab-bar .tab[aria-current="page"] { color: var(--signal); }
 .tab-bar .tab svg { width: 22px; height: 22px; }
 
 /* Header */
@@ -1676,6 +1678,41 @@ dialog.dialog::backdrop {
   height: 100%;
   object-fit: cover;
   display: block;
+}
+.sample-photo-card.has-photo {
+  position: relative;
+}
+.sample-photo-card.has-photo .sample-photo-actions {
+  position: absolute;
+  left: var(--s-3);
+  right: var(--s-3);
+  bottom: var(--s-3);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--s-1);
+  padding: var(--s-2);
+  background: color-mix(in oklab, var(--bg) 70%, transparent);
+  backdrop-filter: blur(6px);
+  border-radius: var(--r-sm);
+  opacity: 0;
+  transition: opacity 120ms ease;
+  pointer-events: none;
+}
+.sample-photo-card.has-photo:hover .sample-photo-actions,
+.sample-photo-card.has-photo:focus-within .sample-photo-actions {
+  opacity: 1;
+  pointer-events: auto;
+}
+.sample-photo-card.has-photo .sample-photo-prev {
+  margin-top: 2px;
+}
+@media (hover: none) {
+  /* On touch devices, keep the Replace button visible — hover doesn't exist. */
+  .sample-photo-card.has-photo .sample-photo-actions {
+    opacity: 1;
+    pointer-events: auto;
+  }
 }
 .sample-photo-card .empty-photo {
   color: var(--text-muted);
@@ -1943,7 +1980,7 @@ dialog.dialog::backdrop {
   font-family: var(--font-mono);
   font-size: var(--fs-sm);
   font-weight: var(--fw-b);
-  color: var(--accent);
+  color: var(--signal);
   background: var(--surface);
   border: 1px solid var(--accent);
   border-radius: var(--r-sm);
@@ -1977,8 +2014,8 @@ dialog.dialog::backdrop {
   font-size: var(--fs-sm);
   color: var(--text-muted);
   padding: var(--s-2) var(--s-3);
-  background: var(--accent-soft);
-  border-left: 3px solid var(--accent);
+  background: var(--surface-soft);
+  border-left: 1px solid var(--signal);
   border-radius: var(--r-sm);
   margin-bottom: var(--s-3);
 }
@@ -1987,7 +2024,7 @@ dialog.dialog::backdrop {
 .replicate-grid th.rep-group {
   text-align: center;
   background: color-mix(in oklab, var(--accent) 8%, var(--surface-2));
-  color: var(--accent);
+  color: var(--signal);
   font-weight: var(--fw-b);
 }
 .replicate-grid th.derived,
@@ -2376,9 +2413,9 @@ dialog.dialog::backdrop {
 .sample-card.is-selected .select-box,
 .card-grid.bulk-mode .sample-card .select-box { opacity: 1; }
 .sample-card.is-selected .select-box {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--text-on-accent);
+  background: var(--signal);
+  border-color: var(--signal);
+  color: var(--text-on-surface);
 }
 .sample-card.is-selected .select-box::after {
   content: "✓";
@@ -2568,8 +2605,8 @@ dialog.dialog::backdrop {
   width: 48px;
   height: 48px;
   border-radius: 50%;
-  background: var(--accent-soft);
-  color: var(--accent);
+  background: var(--surface-soft);
+  color: var(--signal);
   display: grid;
   place-items: center;
   font-weight: var(--fw-x);
@@ -2621,11 +2658,12 @@ dialog.dialog::backdrop {
 
 /* Result grid keyboard nav — visual focus improvement */
 .result-grid .input:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: -2px;
-  background: color-mix(in oklab, var(--accent) 4%, var(--surface));
+  outline: none;
+  border: 1px solid var(--signal);
+  background: color-mix(in oklab, var(--signal) 4%, var(--surface));
   position: relative;
   z-index: 1;
+  box-shadow: inset 0 0 0 1px var(--signal);
 }
 .result-grid tr:focus-within td { background: color-mix(in oklab, var(--accent) 3%, var(--surface)); }
 
@@ -2700,7 +2738,7 @@ dialog.dialog::backdrop {
 }
 /* Mobile scan tab gets its own plasma indicator */
 .tab-bar .tab[aria-current="page"] {
-  color: var(--accent);
+  color: var(--signal);
   position: relative;
 }
 .tab-bar .tab[aria-current="page"] { color: var(--text); font-weight: var(--fw-b); }
@@ -2757,7 +2795,7 @@ dialog.dialog::backdrop {
 
 /* -- Primary button: flat solid, no glow, white ink -- */
 .btn.btn-primary {
-  background: var(--accent);
+  background: var(--signal);
   color: #ffffff;
   border-color: transparent;
   box-shadow: none;
@@ -2839,7 +2877,7 @@ dialog.dialog::backdrop {
 
 /* -- Attention / alert banner: hairline inset, not drop-shadow panel -- */
 .form-error-banner, .alert-banner {
-  border-left: 3px solid var(--danger);
+  border-left: 1px solid var(--signal);
   background: color-mix(in oklab, var(--danger) 6%, var(--surface));
   color: var(--text);
   padding: 10px 12px;

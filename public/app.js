@@ -887,55 +887,102 @@ function statTile(label, value, flag) {
     h('div', { class: 'stat-tile-value' }, value || '—')
   );
 }
-// Left column: sample photo, fills the full column height.
+// Sample photo card — supports both the first upload AND replacing an existing
+// photo. All versions stay in the Files tab for audit (append-only); the card
+// shows the newest one (the API returns files ORDER BY uploaded_at DESC and
+// we pick the first match). GPS is captured only when the uploader is the
+// named collector AND the sample is still in the field phase — in the lab,
+// GPS would be lab coordinates, which would be a misleading signal.
 function samplePhotoCard(sample) {
-  const photo = (sample.files || []).find(f => f.category === 'Sample Photo');
-  if (photo) {
-    return h('div', { class: 'sample-photo-card' },
-      h('img', { class: 'sample-photo', src: mediaUrl(photo.url), alt: 'Sample photo for ' + sample.sampleCode })
-    );
-  }
-  // No photo — turn the card into an "Add photo" CTA that any role who can
-  // upload files can trigger. Captures GPS + timestamp the same way intake does.
+  const photos = (sample.files || []).filter(f => f.category === 'Sample Photo');
+  const photo = photos[0];
+  const previousCount = Math.max(0, photos.length - 1);
+
   const input = h('input', {
     type: 'file', accept: 'image/*', capture: 'environment',
-    style: { display: 'none' }, id: 'lateSamplePhoto-' + sample.id
+    style: { display: 'none' }, id: 'samplePhotoPicker-' + sample.id
   });
   const status = h('div', { class: 'muted text-xs', style: { marginTop: '8px' } }, '');
+
+  const canUploadHere = canUploadFiles()
+    && (can('admin') || state.user?.name === sample.collector || canWorkOn(sample));
+
   input.onchange = safe(async () => {
     const file = input.files?.[0];
     if (!file) return;
     status.textContent = 'Compressing photo…';
     const compressed = await compressImage(file);
+    const takenAt = new Date().toISOString();
+
+    // GPS: only when the uploader is the named collector AND the sample is in
+    // the field phase. In every other case we skip GPS to avoid writing lab
+    // coordinates as if they were the sampling location.
+    const isCollectorInField = state.user?.name === sample.collector
+      && (sample.status === 'Bottle Ready' || sample.status === 'Sample Collected');
+    let lat = '', lng = '', accuracy = '';
+    if (isCollectorInField && 'geolocation' in navigator) {
+      status.textContent = 'Fetching GPS…';
+      await new Promise(resolve => {
+        navigator.geolocation.getCurrentPosition(
+          pos => {
+            lat = pos.coords.latitude.toFixed(6);
+            lng = pos.coords.longitude.toFixed(6);
+            accuracy = Math.round(pos.coords.accuracy);
+            resolve();
+          },
+          () => resolve(),            // on error, upload without GPS
+          { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 }
+        );
+      });
+    }
+
     status.textContent = 'Uploading photo…';
     const fd = new FormData();
     fd.append('category', 'Sample Photo');
     fd.append('files', compressed);
-    const takenAt = new Date().toISOString();
     fd.append('takenAt', takenAt);
-    // NOTE: Deliberately not capturing GPS on the add-later flow. An analyst
-    // uploading from the lab would just capture lab coordinates, which is
-    // misleading. GPS is only captured on the intake New Sample form where
-    // the admin/collector is presumably at the actual sampling location.
+    if (lat) fd.append('lat', lat);
+    if (lng) fd.append('lng', lng);
+
     try {
       await api(`/api/samples/${sample.id}/files`, { method: 'POST', body: fd });
       await load();
       notify({
         type: 'success',
-        title: 'Photo attached',
-        description: `Captured ${new Date(takenAt).toLocaleString()}`
+        title: photo ? 'Photo replaced' : 'Photo attached',
+        description: `Captured ${new Date(takenAt).toLocaleString()}${lat ? ` · GPS ${lat}, ${lng} (±${accuracy}m)` : ''}`
       });
     } catch (e) {
       notify({ type: 'error', title: 'Photo upload failed', description: e.message });
       status.textContent = '';
     }
   });
+
+  if (photo) {
+    // Existing photo — show it with a Replace affordance for anyone who could
+    // upload. The previous versions remain in the Files tab (append-only).
+    return h('div', { class: 'sample-photo-card has-photo' },
+      h('img', { class: 'sample-photo', src: mediaUrl(photo.url), alt: 'Sample photo for ' + sample.sampleCode }),
+      canUploadHere ? h('div', { class: 'sample-photo-actions' },
+        h('button', { class: 'btn btn-sm', type: 'button', onclick: () => input.click() }, h('span', { class: 'btn-label' }, '📷 Replace photo')),
+        previousCount > 0
+          ? h('div', { class: 'muted text-xs sample-photo-prev' }, `${previousCount} earlier version${previousCount > 1 ? 's' : ''} in Files tab`)
+          : null,
+        input,
+        status
+      ) : null
+    );
+  }
+
+  // No photo yet — the Add CTA.
   return h('div', { class: 'sample-photo-card empty-photo-card' },
     h('div', { class: 'empty-photo-inner' },
       h('div', { class: 'empty-photo-icon', 'aria-hidden': 'true' }, '📷'),
       h('div', { class: 'empty-photo-title' }, 'No sample photo yet'),
       h('div', { class: 'empty-photo-hint' }, 'Take one now — the time is captured automatically.'),
-      h('button', { class: 'btn btn-primary btn-sm', type: 'button', onclick: () => input.click() }, h('span',{class:'btn-label'},'+ Add sample photo')),
+      canUploadHere
+        ? h('button', { class: 'btn btn-primary btn-sm', type: 'button', onclick: () => input.click() }, h('span', { class: 'btn-label' }, '+ Add sample photo'))
+        : h('div', { class: 'muted text-xs' }, 'You cannot upload to this sample.'),
       input,
       status
     )
