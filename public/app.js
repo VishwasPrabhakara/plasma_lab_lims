@@ -931,13 +931,13 @@ function samplePhotoCard(sample) {
     const compressed = await compressImage(file);
     const takenAt = new Date().toISOString();
 
-    // GPS: only when the uploader is the named collector AND the sample is in
-    // the field phase. In every other case we skip GPS to avoid writing lab
-    // coordinates as if they were the sampling location.
-    const isCollectorInField = state.user?.name === sample.collector
-      && (sample.status === 'Bottle Ready' || sample.status === 'Sample Collected');
+    // GPS capture rule: when the sample is still in the field phase
+    // (Bottle Ready or Sample Collected), the person uploading is treated as
+    // being at the sampling site, so we ask the browser for coordinates. Past
+    // field phase, GPS would just be lab coordinates — skip it.
+    const inFieldPhase = sample.status === 'Bottle Ready' || sample.status === 'Sample Collected';
     let lat = '', lng = '', accuracy = '';
-    if (isCollectorInField && 'geolocation' in navigator) {
+    if (inFieldPhase && 'geolocation' in navigator) {
       status.textContent = 'Fetching GPS…';
       await new Promise(resolve => {
         navigator.geolocation.getCurrentPosition(
@@ -963,11 +963,40 @@ function samplePhotoCard(sample) {
 
     try {
       await api(`/api/samples/${sample.id}/files`, { method: 'POST', body: fd });
+
+      // If the sample is still Bottle Ready and we captured GPS, treat the
+      // upload as the field-collection act: fire /collect so the sample's
+      // own GPS, sampled-at and status (→ Sample Collected) are updated.
+      // The Identity panel reads from those sample columns, so this is what
+      // makes the Sampling GPS / Sampled at rows populate on the next render.
+      let advancedToCollected = false;
+      if (sample.status === 'Bottle Ready' && lat && lng && sample.collectionSite) {
+        try {
+          const collectBody = {
+            collectionSite: sample.collectionSite,
+            collectedAt: takenAt,
+            collectionLat: lat,
+            collectionLng: lng
+          };
+          await api(`/api/samples/${sample.id}/collect`, {
+            method: 'POST', body: JSON.stringify(collectBody)
+          });
+          advancedToCollected = true;
+        } catch (e) {
+          // /collect refuses non-admin, non-collector callers — in that case
+          // the photo is still saved; just the sample row doesn't advance.
+          console.warn('photo saved but /collect refused:', e.message);
+        }
+      }
+
       await load();
+      const gpsBit = lat ? ` · GPS ${lat}, ${lng} (±${accuracy}m)` : '';
       notify({
         type: 'success',
-        title: photo ? 'Photo replaced' : 'Photo attached',
-        description: `Captured ${new Date(takenAt).toLocaleString()}${lat ? ` · GPS ${lat}, ${lng} (±${accuracy}m)` : ''}`
+        title: advancedToCollected ? 'Sample collected' : (photo ? 'Photo replaced' : 'Photo attached'),
+        description: advancedToCollected
+          ? `${sample.sampleCode} marked collected at ${new Date(takenAt).toLocaleString()}${gpsBit}`
+          : `Captured ${new Date(takenAt).toLocaleString()}${gpsBit}`
       });
     } catch (e) {
       notify({ type: 'error', title: 'Photo upload failed', description: e.message });
