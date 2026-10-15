@@ -18,10 +18,12 @@ export async function tryFiles(request, env, ctx, { path, method, user }) {
   if (method === "POST" && path[0] === "api" && path[1] === "samples" && path[3] === "files" && !path[4]) {
     const s = await env.DB.prepare("SELECT * FROM samples WHERE id = ?").bind(path[2]).first();
     if (!s) throw httpError("Sample not found", 404);
-    const isAdmin = user.role === "admin";
-    const isCollector = s.collector === user.name;
-    if (!isAdmin && !isCollector && !canWorkOnSample(user, s)) {
-      throw httpError("Not allowed for this sample", 403);
+    // Any admin or analyst in the lab may attach a sample photo — the small
+    // team's workflow has colleagues snapping photos for each other
+    // pre-collection. Every row carries uploaded_by, so attribution survives
+    // the loose gate.
+    if (user.role !== "admin" && user.role !== "analyst") {
+      throw httpError("Not allowed to upload", 403);
     }
     const form = await request.formData();
     const category = String(form.get("category") || "Uploaded File");

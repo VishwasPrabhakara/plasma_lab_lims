@@ -904,8 +904,10 @@ function samplePhotoCard(sample) {
   });
   const status = h('div', { class: 'muted text-xs', style: { marginTop: '8px' } }, '');
 
-  const canUploadHere = canUploadFiles()
-    && (can('admin') || state.user?.name === sample.collector || canWorkOn(sample));
+  // Any admin or analyst in the lab may attach or replace a sample photo.
+  // Trust model: the lab is a small team; the audit log records uploadedBy on
+  // every file, so misuse is attributable rather than prevented at the API.
+  const canUploadHere = canUploadFiles();
 
   input.onchange = safe(async () => {
     const file = input.files?.[0];
@@ -959,15 +961,24 @@ function samplePhotoCard(sample) {
   });
 
   if (photo) {
-    // Existing photo — show it with a Replace affordance for anyone who could
-    // upload. The previous versions remain in the Files tab (append-only).
+    // Visible caption so the person who uploaded, when they took it, and the
+    // GPS coordinates (if any) are legible from the sample view itself — not
+    // only to someone opening DevTools against the API.
+    const captionBits = [];
+    if (photo.takenAt) captionBits.push('Captured ' + new Date(photo.takenAt).toLocaleString());
+    if (photo.lat && photo.lng) captionBits.push(`📍 ${photo.lat}, ${photo.lng}`);
+    if (photo.uploadedBy) captionBits.push('by ' + photo.uploadedBy);
+
     return h('div', { class: 'sample-photo-card has-photo' },
       h('img', { class: 'sample-photo', src: mediaUrl(photo.url), alt: 'Sample photo for ' + sample.sampleCode }),
+      h('div', { class: 'sample-photo-caption' },
+        h('div', { class: 'sample-photo-caption-main' }, captionBits.length ? captionBits.join(' · ') : 'Attached file'),
+        previousCount > 0
+          ? h('div', { class: 'sample-photo-prev muted text-xs' }, `${previousCount} earlier version${previousCount > 1 ? 's' : ''} in Files tab`)
+          : null
+      ),
       canUploadHere ? h('div', { class: 'sample-photo-actions' },
         h('button', { class: 'btn btn-sm', type: 'button', onclick: () => input.click() }, h('span', { class: 'btn-label' }, '📷 Replace photo')),
-        previousCount > 0
-          ? h('div', { class: 'muted text-xs sample-photo-prev' }, `${previousCount} earlier version${previousCount > 1 ? 's' : ''} in Files tab`)
-          : null,
         input,
         status
       ) : null
@@ -979,7 +990,6 @@ function samplePhotoCard(sample) {
     h('div', { class: 'empty-photo-inner' },
       h('div', { class: 'empty-photo-icon', 'aria-hidden': 'true' }, '📷'),
       h('div', { class: 'empty-photo-title' }, 'No sample photo yet'),
-      h('div', { class: 'empty-photo-hint' }, 'Take one now — the time is captured automatically.'),
       canUploadHere
         ? h('button', { class: 'btn btn-primary btn-sm', type: 'button', onclick: () => input.click() }, h('span', { class: 'btn-label' }, '+ Add sample photo'))
         : h('div', { class: 'muted text-xs' }, 'You cannot upload to this sample.'),

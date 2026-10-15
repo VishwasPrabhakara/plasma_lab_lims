@@ -1707,6 +1707,23 @@ dialog.dialog::backdrop {
 .sample-photo-card.has-photo .sample-photo-prev {
   margin-top: 2px;
 }
+.sample-photo-card.has-photo .sample-photo-caption {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  padding: var(--s-2) var(--s-3);
+  background: linear-gradient(to bottom,
+    color-mix(in oklab, var(--bg) 85%, transparent),
+    color-mix(in oklab, var(--bg) 0%, transparent));
+  color: var(--text);
+  font-size: var(--fs-xs);
+  line-height: 1.3;
+  pointer-events: none;
+}
+.sample-photo-card.has-photo .sample-photo-caption-main {
+  font-weight: 500;
+}
 @media (hover: none) {
   /* On touch devices, keep the Replace button visible — hover doesn't exist. */
   .sample-photo-card.has-photo .sample-photo-actions {
