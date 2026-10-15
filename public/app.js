@@ -1150,6 +1150,14 @@ function overviewTab(sample) {
         fieldWith('Analysts (pick 2)', analystMultiPicker(sample.assignedTo || '', 'editAnalyst')),
         fieldWith('Current storage', storageSelect(sample.storageLocationId, 'editStorage')),
         fieldWith('Target completion', h('input', { class: 'input', id: 'editDueAt', type: 'datetime-local', value: toDateTimeLocal(sample.dueAt) })),
+        h('div', { class: 'field' },
+          h('label', { class: 'field-label', for: 'editCollectionLat' }, 'Collection Latitude'),
+          h('input', { class: 'input', id: 'editCollectionLat', type: 'text', placeholder: 'Latitude' })
+        ),
+        h('div', { class: 'field' },
+          h('label', { class: 'field-label', for: 'editCollectionLng' }, 'Collection Longitude'),
+          h('input', { class: 'input', id: 'editCollectionLng', type: 'text', placeholder: 'Longitude' })
+        ),
         h('div', { class: 'field field-wide' },
           h('label', { class: 'field-label', for: 'editNotes' }, 'Movement / work note'),
           h('textarea', { class: 'textarea', id: 'editNotes' }, sample.notes || '')
@@ -1157,6 +1165,7 @@ function overviewTab(sample) {
         h('div', { class: 'field field-wide' },
           h('label', { class: 'field-label', for: 'editReason' }, 'Reason for change (optional)'),
           h('input', { class: 'input', id: 'editReason', placeholder: 'e.g. corrected storage location after inspection' })
+        )
         )
       ),
       h('div', { class: 'row', style: { justifyContent: 'flex-end', gap: '8px' } },
@@ -1261,7 +1270,9 @@ async function saveWorkflowUpdate(sample) {
       storageLocationId: $('#editStorage').value,
       dueAt: $('#editDueAt').value ? new Date($('#editDueAt').value).toISOString() : '',
       notes: $('#editNotes').value,
-      reasonForChange: $('#editReason').value // frontend-ready; backend ignores today
+      reasonForChange: $('#editReason').value,
+      collectionLat: $('#editCollectionLat')?.value || null,
+      collectionLng: $('#editCollectionLng')?.value || null
     };
     const updated = await api(`/api/samples/${sample.id}`, { method: 'PATCH', body: JSON.stringify(body) });
     Object.assign(sample, updated);
@@ -3280,6 +3291,40 @@ $('#downloadBulkTemplate').onclick = safe(async () => {
   const ws = XLSX.utils.json_to_sheet(sample, { header: headers });
   // Set reasonable column widths so the file opens cleanly in Excel
   ws['!cols'] = headers.map(h => ({ wch: Math.max(h.length + 2, 18) }));
+
+  // Add data validation dropdowns for specific columns
+  if (!ws['!dataValidations']) ws['!dataValidations'] = [];
+
+  // Get the column indices for fields that should have dropdowns
+  const colIndices = {};
+  headers.forEach((header, index) => {
+    colIndices[header] = index;
+  });
+
+  // Define dropdown values for each field
+  const dropdownValues = {
+    'Project': [...new Set((state.people || []).map(p => p.clientName).filter(Boolean))].sort(),
+    'Source Type': ['Water', 'Wastewater', 'Soil', 'Drinking Water', 'Treated Water'],
+    'Storage': (state.storageLocations || []).filter(s => s.active).map(s => s.name).sort(),
+    'Analyst': [...new Set((state.people || []).map(p => p.name).concat((state.users || []).filter(u => u.active && ['admin', 'analyst'].includes(u.role)).map(u => u.name))).filter(Boolean)].sort(),
+    'Tests': [] // Tests is free-form, no predefined values
+  };
+
+  // Add data validation for each applicable column
+  Object.entries(dropdownValues).forEach(([field, values]) => {
+    if (colIndices[field] !== undefined && values.length > 0) {
+      const colLetter = String.fromCharCode(65 + colIndices[field]); // A, B, C, ...
+      const dv = {
+        type: 'list',
+        allowBlank: true,
+        prompts: [],
+        sqref: `${colLetter}2:${colLetter}1000`, // Apply to rows 2-1000
+        formula1: `"${values.join(',')}"`
+      };
+      ws['!dataValidations'].push(dv);
+    }
+  });
+
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Samples');
 

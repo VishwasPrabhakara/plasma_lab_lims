@@ -217,9 +217,37 @@ export async function trySamples(request, env, ctx, { url, path, method, user })
     }
 
     const prev = s.storage_location_id || "";
-    if ("storageLocationId" in body && !(await storageIsAvailable(env, body.storageLocationId, prev))) {
-      throw httpError("Selected storage is full or inactive", 400);
+    const prevAssignedTo = s.assignedTo || "";
+    const prevCollectionLat = s.collectionLat || "";
+    const prevCollectionLng = s.collectionLng || "";
+    let statusToSet = body.status;
+
+    // Smart status updates based on data changes
+    if (!statusToSet) {
+      // If GPS data is being set for the first time, set to Sample Collected
+      if (("collectionLat" in body || "collectionLng" in body) &&
+          (!prevCollectionLat || !prevCollectionLng) &&
+          (body.collectionLat || body.collectionLng)) {
+        statusToSet = "Sample Collected";
+      }
+      // If storage is being set for the first time, set to Stored
+      else if ("storageLocationId" in body && body.storageLocationId && !prev) {
+        statusToSet = "Stored";
+      }
+      // If analysts are being assigned for the first time, set to In Analysis
+      else if ("assignedTo" in body && body.assignedTo && !prevAssignedTo) {
+        statusToSet = "In Analysis";
+      }
     }
+
+    // Validate status if being set (either directly or via smart update)
+    if (statusToSet && !PATCH_ALLOWED_STATUSES.has(statusToSet)) {
+      throw httpError(
+        `Status "${statusToSet}" cannot be set here. Use /approve for Approved and /lifecycle for Disposed; status must be one of: ${[...PATCH_ALLOWED_STATUSES].join(", ")}.`,
+        400
+      );
+    }
+
     if ("assignedTo" in body) body.assignedTo = normalizeAssignedTo(body.assignedTo);
     const parts = [], args = [];
     const map = {
@@ -227,15 +255,32 @@ export async function trySamples(request, env, ctx, { url, path, method, user })
       assignedTo: "assigned_to",
       storageLocationId: "storage_location_id",
       notes: "notes",
-      dueAt: "due_at"
+      dueAt: "due_at",
+      collectionLat: "collection_lat",
+      collectionLng: "collection_lng"
     };
     for (const [k, col] of Object.entries(map)) {
       if (k in body) { parts.push(`${col} = ?`); args.push(body[k] || null); }
     }
-    if ("status" in body) { parts.push("workflow_stage = ?"); args.push(body.status); }
+    // Apply smart status update if determined
+    if (statusToSet) {
+      parts.push("status = ?");
+      args.push(statusToSet);
+      parts.push("workflow_stage = ?");
+      args.push(statusToSet);
+    }
     parts.push("updated_at = ?"); args.push(now());
     args.push(s.id);
     await env.DB.prepare(`UPDATE samples SET ${parts.join(", ")} WHERE id = ?`).bind(...args).run();
+
+    // Handle chain of custody for GPS data
+    if ((body.collectionLat || body.collectionLng) &&
+        (!prevCollectionLat || !prevCollectionLng)) {
+      const locNote = body.collectionLat && body.collectionLng ? ` @ ${body.collectionLat},${body.collectionLng}` : "";
+      await env.DB.prepare("INSERT INTO chain_of_custody (id,sample_id,at,by_name,action,location_id) VALUES (?,?,?,?,?,?)")
+        .bind(crypto.randomUUID(), s.id, now(), user.name, `Sample collected at ${s.collection_site}${locNote}`, s.storage_location_id).run();
+    }
+
     if ("storageLocationId" in body && prev !== (body.storageLocationId || "")) {
       await env.DB.prepare("INSERT INTO chain_of_custody (id,sample_id,at,by_name,action,from_location_id,to_location_id,location_id,note) VALUES (?,?,?,?,?,?,?,?,?)")
         .bind(crypto.randomUUID(), s.id, now(), user.name, "Storage moved",
