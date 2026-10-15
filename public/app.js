@@ -3202,16 +3202,175 @@ $('#createBulkSamples').onclick = safe(async () => {
   updateBulkRowwiseCount();
   notify({ type: 'success', title: `${result.created.length} sample${result.created.length === 1 ? '' : 's'} created` });
 });
+// SheetJS is a ~500 KB dependency only needed for the bulk-import Excel flow.
+// Lazy-loaded from jsDelivr the first time an admin clicks either Download
+// Template or Import Excel. If the CDN is unreachable (offline, strict egress),
+// the error bubbles up as an inline notification instead of a cryptic failure.
+let _XLSX = null;
+async function loadXLSX() {
+  if (_XLSX) return _XLSX;
+  try {
+    const mod = await import('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm');
+    _XLSX = mod.default || mod;
+    return _XLSX;
+  } catch (e) {
+    throw new Error('Could not load the Excel parser. Check your internet connection and try again.');
+  }
+}
+
+// Columns the import understands. Headers are matched case-insensitively,
+// and both common aliases are accepted for each field so a workbook written
+// by a different lab member still imports.
+const BULK_EXCEL_COLUMNS = [
+  { header: 'Project',            aliases: ['Project', 'Client', 'Project / Client'] },
+  { header: 'Source Type',        aliases: ['Source Type', 'Source', 'Type'] },
+  { header: 'Site',               aliases: ['Site', 'Collection Site', 'Sampling Site'] },
+  { header: 'Brought By',         aliases: ['Brought By', 'Collector', 'Brought by'] },
+  { header: 'Storage',            aliases: ['Storage', 'Storage Location'] },
+  { header: 'Analyst',            aliases: ['Analyst', 'Analysts', 'Assigned To'] },
+  { header: 'Tests',              aliases: ['Tests', 'Requested Tests', 'Parameters'] },
+  { header: 'Target Completion',  aliases: ['Target Completion', 'Due', 'Due Date'] },
+  { header: 'Notes',              aliases: ['Notes', 'Note', 'Comments'] }
+];
+
+function pickRowValue(row, aliases) {
+  const keys = Object.keys(row);
+  for (const alias of aliases) {
+    const match = keys.find(k => String(k).trim().toLowerCase() === alias.toLowerCase());
+    if (match !== undefined) return row[match];
+  }
+  return '';
+}
+
+// Build a template .xlsx with two illustrative rows that match the lab's
+// real projects + a Storage Location present on this deployment, so the
+// admin can save, edit the real rows, and re-upload.
+$('#downloadBulkTemplate').onclick = safe(async () => {
+  const XLSX = await loadXLSX();
+  const firstStorage = state.storageLocations?.find(s => s.active && !s.isFull)?.name || 'Freezer A';
+  const todayPlus3 = new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 10);
+  const defaultCollector = state.user?.name || '';
+
+  const sample = [
+    {
+      'Project':           'Devanahalli',
+      'Source Type':       'Wastewater',
+      'Site':              'Devanahalli - Hoskote lake outlet 3',
+      'Brought By':        defaultCollector,
+      'Storage':           firstStorage,
+      'Analyst':           'Priya Nair, Rahul Menon',
+      'Tests':             'pH, BOD, COD',
+      'Target Completion': todayPlus3,
+      'Notes':             'Example row — delete before upload'
+    },
+    {
+      'Project':           'KC Valley Water',
+      'Source Type':       'Water',
+      'Site':              'KC Valley STP outlet',
+      'Brought By':        defaultCollector,
+      'Storage':           firstStorage,
+      'Analyst':           '',
+      'Tests':             'pH, TSS, NH4-N',
+      'Target Completion': todayPlus3,
+      'Notes':             ''
+    }
+  ];
+
+  const headers = BULK_EXCEL_COLUMNS.map(c => c.header);
+  const ws = XLSX.utils.json_to_sheet(sample, { header: headers });
+  // Set reasonable column widths so the file opens cleanly in Excel
+  ws['!cols'] = headers.map(h => ({ wch: Math.max(h.length + 2, 18) }));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Samples');
+
+  // Add a second sheet with cell-value reference so the lab can see what the
+  // Storage / Tests / Source Type values are expected to look like.
+  const refRows = [
+    { Field: 'Storage',     'Acceptable values': (state.storageLocations || []).filter(s => s.active).map(s => s.name).join(', ') || 'Any name from your Storage Locations' },
+    { Field: 'Source Type', 'Acceptable values': 'Water, Wastewater, Soil, Drinking Water, Treated Water' },
+    { Field: 'Tests',       'Acceptable values': 'Comma-separated. Any parameter names you use. Example: pH, BOD, COD, TSS, NH4-N' },
+    { Field: 'Analyst',     'Acceptable values': 'Comma-separated analyst names (max 2). Leave blank for Unassigned.' },
+    { Field: 'Target Completion', 'Acceptable values': 'YYYY-MM-DD or any date Excel recognises' }
+  ];
+  const refWs = XLSX.utils.json_to_sheet(refRows, { header: ['Field', 'Acceptable values'] });
+  refWs['!cols'] = [{ wch: 22 }, { wch: 80 }];
+  XLSX.utils.book_append_sheet(wb, refWs, 'Reference');
+
+  XLSX.writeFile(wb, 'plasma-lab-bulk-samples-template.xlsx');
+  notify({ type: 'success', title: 'Template downloaded', description: 'plasma-lab-bulk-samples-template.xlsx — fill in the Samples sheet and upload here.' });
+});
+
+// Parse the uploaded .xlsx client-side and POST to the existing
+// /api/samples/bulk endpoint — no new Worker route needed.
 $('#importBulkExcel').onclick = safe(async () => {
   const file = $('#bulkExcel').files[0];
   if (!file) throw new Error('Choose an Excel file');
-  const fd = new FormData();
-  fd.append('file', file);
-  fd.append('storageLocationId', $('#bulkStorage').value);
-  const result = await api('/api/samples/bulk/excel', { method: 'POST', body: fd });
+  const XLSX = await loadXLSX();
+  const buf = await file.arrayBuffer();
+  const wb = XLSX.read(buf);
+  const firstSheet = wb.Sheets[wb.SheetNames[0]];
+  if (!firstSheet) throw new Error('No sheet found in the workbook');
+  const raw = XLSX.utils.sheet_to_json(firstSheet, { defval: '', raw: false });
+  if (!raw.length) throw new Error('The sheet has no data rows — only a header row');
+
+  const defaultStorageId = $('#bulkStorage').value || '';
+  const storageByName = {};
+  for (const s of (state.storageLocations || [])) {
+    storageByName[s.name.toLowerCase().trim()] = s.id;
+  }
+
+  const rows = raw.map((r, idx) => {
+    const get = (field) => String(pickRowValue(r, BULK_EXCEL_COLUMNS.find(c => c.header === field).aliases) || '').trim();
+    const storageName = get('Storage').toLowerCase();
+    const storageId = storageName ? storageByName[storageName] : defaultStorageId;
+    const dueRaw = get('Target Completion');
+    let dueIso = '';
+    if (dueRaw) {
+      const d = new Date(dueRaw);
+      if (!isNaN(d.getTime())) dueIso = d.toISOString();
+    }
+    const tests = get('Tests').split(',').map(s => s.trim()).filter(Boolean);
+    const analystsRaw = get('Analyst').split(',').map(s => s.trim()).filter(Boolean);
+    return {
+      _rowNumber: idx + 2,  // +2 because row 1 is headers in the sheet
+      clientName:     get('Project'),
+      sourceType:     get('Source Type'),
+      collectionSite: get('Site'),
+      collector:      get('Brought By'),
+      storageLocationId: storageId || null,
+      assignedTo:     analystsRaw.join(', '),
+      requestedTests: tests,
+      notes:          get('Notes'),
+      dueAt:          dueIso || null
+    };
+  });
+
+  // Pre-validate so a bad sheet surfaces errors before we hit the API — the
+  // server validates too, but client-side check is friendlier.
+  const localErrors = [];
+  for (const r of rows) {
+    const missing = [];
+    if (!r.clientName)     missing.push('Project');
+    if (!r.sourceType)     missing.push('Source Type');
+    if (!r.collectionSite) missing.push('Site');
+    if (!r.collector)      missing.push('Brought By');
+    if (!r.requestedTests.length) missing.push('Tests');
+    if (missing.length) localErrors.push({ row: r._rowNumber, error: 'Missing: ' + missing.join(', ') });
+  }
+  if (localErrors.length) {
+    renderBulkResult([], localErrors);
+    throw new Error(`${localErrors.length} row${localErrors.length > 1 ? 's have' : ' has'} missing required fields. See the list below.`);
+  }
+
+  const payload = rows.map(({ _rowNumber, ...rest }) => rest);
+  const result = await api('/api/samples/bulk', { method: 'POST', body: JSON.stringify({ rows: payload }) });
   await load();
   renderBulkResult(result.created, result.errors);
-  notify({ type: 'success', title: `${result.created.length} sample${result.created.length === 1 ? '' : 's'} imported` });
+  notify({
+    type: 'success',
+    title: `${result.created.length} sample${result.created.length === 1 ? '' : 's'} imported`,
+    description: result.errors?.length ? `${result.errors.length} row${result.errors.length > 1 ? 's' : ''} failed — see list below.` : 'All rows accepted.'
+  });
 });
 // --- Row-wise bulk creation state + rendering ---
 function addBulkRowwiseRow() {
