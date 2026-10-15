@@ -1,6 +1,13 @@
 // Results entry: single row, bulk paste (CSV/TSV), or structured sheet.
-// Flags result rows through to the sample's workflow stage (Flagged if any
-// row has flag=Alert, otherwise Results Entered).
+// Advances the sample's workflow:
+//   - any row flagged Alert   → status = "Flagged" (admin reviews before
+//                                reclassifying)
+//   - otherwise               → status = "Needs Review" (actionable
+//                                "waiting for approval" state the admin
+//                                sees in the approvals queue)
+// "Results Entered" as a distinct status is retired for new submissions —
+// the presence of result rows on the Results tab tells you results exist;
+// the status itself signals what needs doing next.
 
 import { json, bodyJson, now, httpError } from "../lib/http.js";
 import { addAudit, loadSampleFull } from "../lib/db.js";
@@ -40,7 +47,7 @@ export async function tryResults(request, env, ctx, { path, method, user }) {
   if (!rows.length) throw httpError("Enter at least one result row", 400);
 
   const insertedAt = now();
-  const newStatus = rows.some(r => r.flag === "Alert") ? "Flagged" : "Results Entered";
+  const newStatus = rows.some(r => r.flag === "Alert") ? "Flagged" : "Needs Review";
 
   // Single atomic batch: results insert, sample status update, audit, custody.
   const batch = [
