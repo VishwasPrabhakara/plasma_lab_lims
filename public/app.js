@@ -1235,7 +1235,17 @@ function overviewTab(sample) {
     h('div', { class: 'card-body' },
       h('div', { class: 'form-error-banner hidden', 'data-form-error': true }),
       h('div', { class: 'form-grid' },
-        fieldWith('Lab step', selectFor(STATUS_OPTIONS, sample.status, 'editStatus')),
+        fieldWith('Lab step', (() => {
+          // "Approved" uses the signed /approve ceremony; "Disposed" uses the
+          // /lifecycle flow. Neither can be set here via PATCH, so hide them
+          // from the picker instead of inviting a failed save. Keep the
+          // current status visible even if it's one of those (so an already-
+          // Approved sample shows "Approved" selected, read-only).
+          const picker = STATUS_OPTIONS.filter(s =>
+            !['Approved','Disposed'].includes(s) || s === sample.status
+          );
+          return selectFor(picker, sample.status, 'editStatus');
+        })()),
         fieldWith('Analysts (pick 2)', analystMultiPicker(sample.assignedTo || '', 'editAnalyst')),
         fieldWith('Current storage', storageSelect(sample.storageLocationId, 'editStorage')),
         fieldWith('Target completion', h('input', { class: 'input', id: 'editDueAt', type: 'datetime-local', value: toDateTimeLocal(sample.dueAt) })),
@@ -1440,7 +1450,13 @@ function _openResultSheet(sample) {
   // Panel picker — project → parameter mapping.
   const guessed = guessPanelName(sample);
   const panelNames = Object.keys(PROJECT_PANELS);
-  const analystOptions = allAnalystNames();
+  // Analyst dropdown: only the two analysts assigned to this sample. The pair
+  // doing the work are the only valid attributions for R1 / R2 / R3 readings,
+  // so limit the list to them. No fallback — if the sample has no analysts
+  // assigned, the dropdown stays empty and the save gate blocks until an
+  // admin assigns the pair. A sample must be formally assigned before results
+  // can be attributed.
+  const analystOptions = assignedList(sample);
 
   // Header controls: panel + sampling date + analysis date + log book page
   const headerControls = h('div', { class: 'sheet-header-controls' },
