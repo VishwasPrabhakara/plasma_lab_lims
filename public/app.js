@@ -12,7 +12,7 @@ import { state, clearSessionState } from "./src/state.js";
 import { $, $$, esc, h, statusClass, roleLabel, initials, fmtDate } from "./src/utils/dom.js";
 import { computeRepStats } from "./src/utils/stats.js";
 import { compressImage } from "./src/utils/image.js";
-import { api, apiUrl, mediaUrl, registerSessionExpiredHandler } from "./src/api/client.js";
+import { api, apiUrl, mediaUrl, fetchSignedMediaUrl, signedHref, registerSessionExpiredHandler } from "./src/api/client.js";
 import { notify, confirmDialog, installConfirmClickHandler } from "./src/components/notify.js";
 import {
   PARAM, PROJECT_PANELS,
@@ -1156,10 +1156,25 @@ function samplePhotoCard(sample) {
   );
 }
 // Right column, below the readiness strip: QR + code caption + print buttons.
+// H1: QR + print URLs are fetched via POST /api/download-url (short-lived
+// signed URL) rather than appending ?token=. The bearer token never lands
+// in a URL that could leak into logs, history or referrer.
+async function openSignedPath(path) {
+  try {
+    const url = await fetchSignedMediaUrl(path);
+    if (url) window.open(url, '_blank');
+  } catch (e) {
+    notify({ type: 'error', title: 'Could not open', description: e.message });
+  }
+}
 function sampleQrPanel(sample) {
+  const qrImg = h('img', { class: 'qr-image', alt: 'QR code for ' + sample.sampleCode });
+  signedHref(`/api/samples/${sample.id}/qr.svg`, qrImg, 'src');
+  const pdfLink = h('a', { class: 'btn btn-primary btn-sm', href: '#', target: '_blank', rel: 'noopener' }, h('span',{class:'btn-label'},'Download PDF'));
+  signedHref(`/api/samples/${sample.id}/report.pdf`, pdfLink, 'href');
   return h('div', { class: 'qr-panel' },
     h('div', { class: 'qr-panel-main' },
-      h('img', { class: 'qr-image', src: apiUrl(`/api/samples/${sample.id}/qr.svg?token=${encodeURIComponent(state.token)}`), alt: 'QR code for ' + sample.sampleCode }),
+      qrImg,
       h('div', { class: 'qr-caption' },
         h('div', { class: 'qr-caption-label' }, 'Sample code'),
         h('div', { class: 'qr-caption-code mono' }, sample.sampleCode),
@@ -1167,9 +1182,9 @@ function sampleQrPanel(sample) {
       )
     ),
     h('div', { class: 'qr-panel-actions' },
-      h('button', { class: 'btn btn-sm', type: 'button', onclick: () => window.open(apiUrl(`/api/samples/${sample.id}/tube-label?token=${encodeURIComponent(state.token)}`), '_blank') }, h('span',{class:'btn-label'},'Print QR label')),
-      h('button', { class: 'btn btn-sm', type: 'button', onclick: () => window.open(apiUrl(`/api/samples/${sample.id}/report?token=${encodeURIComponent(state.token)}`), '_blank') }, h('span',{class:'btn-label'},'Print report')),
-      h('a', { class: 'btn btn-primary btn-sm', href: apiUrl(`/api/samples/${sample.id}/report.pdf?token=${encodeURIComponent(state.token)}`) }, h('span',{class:'btn-label'},'Download PDF'))
+      h('button', { class: 'btn btn-sm', type: 'button', onclick: () => openSignedPath(`/api/samples/${sample.id}/tube-label`) }, h('span',{class:'btn-label'},'Print QR label')),
+      h('button', { class: 'btn btn-sm', type: 'button', onclick: () => openSignedPath(`/api/samples/${sample.id}/report`) }, h('span',{class:'btn-label'},'Print report')),
+      pdfLink
     )
   );
 }
@@ -1363,8 +1378,13 @@ async function moveStorage(sample) {
 }
 async function saveWorkflowUpdate(sample) {
   try {
+    // Only send `status` if the user actually changed it. Posting the current
+    // value back is a no-op server-side AND, if the current value is Approved
+    // or Disposed (which the PATCH endpoint refuses on purpose), the request
+    // fails with 400. The dedicated /approve and /lifecycle flows own those
+    // transitions.
+    const chosenStatus = $('#editStatus').value;
     const body = {
-      status: $('#editStatus').value,
       assignedTo: $('#editAnalyst').value,
       storageLocationId: $('#editStorage').value,
       dueAt: $('#editDueAt').value ? new Date($('#editDueAt').value).toISOString() : '',
@@ -1373,6 +1393,7 @@ async function saveWorkflowUpdate(sample) {
       collectionLat: $('#editCollectionLat')?.value || null,
       collectionLng: $('#editCollectionLng')?.value || null
     };
+    if (chosenStatus && chosenStatus !== sample.status) body.status = chosenStatus;
     const updated = await api(`/api/samples/${sample.id}`, { method: 'PATCH', body: JSON.stringify(body) });
     Object.assign(sample, updated);
     await load();
@@ -2988,7 +3009,12 @@ function renderBackup() {
                 h('td', { 'data-label': 'Type' }, f.type),
                 h('td', { 'data-label': 'Updated' }, fmtDate(f.modifiedAt)),
                 h('td', { 'data-label': 'Size' }, formatBytes(f.size)),
-                h('td', { 'data-label': 'Download' }, h('a', { href: apiUrl(`/api/exports/${encodeURIComponent(f.file)}?token=${encodeURIComponent(state.token)}`) }, 'Download'))
+                h('td', { 'data-label': 'Download' }, (() => {
+                  // H1: swap bearer-in-URL for a 120s signed URL.
+                  const a = h('a', { href: '#', rel: 'noopener' }, 'Download');
+                  signedHref(`/api/exports/${encodeURIComponent(f.file)}`, a, 'href');
+                  return a;
+                })())
               ))
             )
           )
@@ -3916,4 +3942,3 @@ window.addEventListener('unhandledrejection', evt => {
 
 // Debug handle intentionally removed: exposing the live API client + bearer token
 // on window makes it trivial for any extension to act as the signed-in user.
-

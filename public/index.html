@@ -6,6 +6,12 @@
   <meta name="theme-color" content="#180510" media="(prefers-color-scheme: dark)">
   <meta name="theme-color" content="#fbf9f5" media="(prefers-color-scheme: light)">
   <meta name="description" content="Plasma Lab LIMS — laboratory information management system for the Centre for Sustainable Technologies, IISc Bengaluru.">
+  <!-- M6: tight CSP. Scripts only from self + jsDelivr (xlsx library).
+       Styles self + inline (component-level styles rely on it). Images self +
+       data: (QR codes) + blob: (object URLs from camera input). connect-src
+       is the single API origin. frame-ancestors=none mirrors the X-Frame
+       header the Worker also sends; both are needed in defense in depth. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://plasma-lab-lims-api.vishwas-borewellworkersdev.workers.dev; frame-ancestors 'none'; base-uri 'self'; form-action 'self';">
   <meta name="color-scheme" content="light dark">
   <title>Plasma Lab LIMS — IISc CST</title>
   <link rel="icon" type="image/png" href="assets/plasma-lab-icon.png">
@@ -86,7 +92,7 @@
       <div class="auth-slider">
 
         <!-- LOGIN -->
-        <form id="loginForm" class="auth-slide is-active" autocomplete="on">
+        <form id="loginForm" class="auth-slide is-active" autocomplete="on" method="post" action="javascript:void(0)">
           <div>
             <span class="auth-eyebrow-small">Welcome back</span>
             <h2>Sign in to your lab</h2>
@@ -117,7 +123,7 @@
         </form>
 
         <!-- SIGNUP -->
-        <form id="signupForm" class="auth-slide">
+        <form id="signupForm" class="auth-slide" method="post" action="javascript:void(0)">
           <div>
             <span class="auth-eyebrow-small">New staff access</span>
             <h2>Create a verified account</h2>
@@ -226,7 +232,7 @@
         </form>
 
         <!-- RESET (start) -->
-        <form id="resetStartForm" class="auth-slide">
+        <form id="resetStartForm" class="auth-slide" method="post" action="javascript:void(0)">
           <div>
             <span class="auth-eyebrow-small">Account recovery</span>
             <h2>Reset your password</h2>
@@ -243,7 +249,7 @@
         </form>
 
         <!-- RESET (confirm) -->
-        <form id="resetConfirmForm" class="auth-slide">
+        <form id="resetConfirmForm" class="auth-slide" method="post" action="javascript:void(0)">
           <div>
             <span class="auth-eyebrow-small">Verified reset</span>
             <h2>Set a new password</h2>
@@ -673,6 +679,6 @@
     })();
   </script>
   <script src="config.js"></script>
-  <script type="module" src="app.js?v=refactor14"></script>
+  <script type="module" src="app.js?v=refactor16"></script>
 </body>
 </html>
