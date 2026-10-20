@@ -4,7 +4,7 @@
 //
 // Results entry and file upload live in sibling route modules.
 
-import { json, html, bodyJson, now, addDays, httpError, APP_NAME } from "../lib/http.js";
+import { json, html, bodyJson, now, addDays, httpError, APP_NAME, esc } from "../lib/http.js";
 import { verifyPassword } from "../lib/crypto.js";
 import {
   addAudit, loadSampleFull, nextSampleCode, storageIsAvailable
@@ -124,6 +124,9 @@ export async function trySamples(request, env, ctx, { url, path, method, user })
   /* ---------- Samples: storage move (any analyst) ---------- */
   if (method === "POST" && path[0] === "api" && path[1] === "samples" && path[3] === "storage") {
     const s = await requireSample(env, path[2]);
+    // H2: an analyst can only move a sample they're assigned to. Previously
+    // any authenticated user could reroute someone else's sample.
+    if (!canWorkOnSample(user, s)) throw httpError("Not allowed for this sample", 403);
     const body = await bodyJson(request);
     const prev = s.storage_location_id || "";
     const next = body.storageLocationId || "";
@@ -158,6 +161,12 @@ export async function trySamples(request, env, ctx, { url, path, method, user })
       throw httpError("Signature password did not match. Approval refused.", 401);
     }
     const s = await requireSample(env, path[2]);
+    // M5 four-eyes rule: approver must differ from the admin who received
+    // the sample. Disable by setting APPROVE_ALLOW_SELF=true (single-admin
+    // labs during ramp-up). received_by was written as user.name.
+    if (!env.APPROVE_ALLOW_SELF && s.received_by === user.name) {
+      throw httpError("Four-eyes rule: approval must be by a different admin from the one who received this sample.", 403);
+    }
     const resultCount = (await env.DB.prepare("SELECT COUNT(*) AS n FROM sample_results WHERE sample_id = ?").bind(s.id).first()).n;
     if (resultCount === 0) throw httpError("Enter results before approval", 400);
     const t = now();
@@ -310,7 +319,13 @@ export async function trySamples(request, env, ctx, { url, path, method, user })
     const sId = path[2];
     const sub = path[3];
     const s = await env.DB.prepare("SELECT * FROM samples WHERE id = ?").bind(sId).first();
-    if (!s || !canReadSample(user, s)) throw httpError("Sample not found", 404);
+    // H1: when `user` is null, this request arrived via a signed download URL
+    // whose signature was verified by the router. POST /api/download-url
+    // already ran canReadSample before issuing that signature, so re-checking
+    // here against a null user would 404 the valid signed request. Fall
+    // through — the signature itself is the authorization.
+    if (!s) throw httpError("Sample not found", 404);
+    if (user && !canReadSample(user, s)) throw httpError("Sample not found", 404);
     const base = (env.FRONTEND_PUBLIC_URL || "").replace(/\/$/, "");
     const payload = `${base}/?sample=${encodeURIComponent(s.sample_code)}`;
 
@@ -320,15 +335,22 @@ export async function trySamples(request, env, ctx, { url, path, method, user })
       });
     }
     if (sub === "tube-label") {
+      // All DB-sourced strings run through esc() to stop stored XSS via a
+      // client name or collection site that reaches this inline template.
+      // The QR payload is a URL we constructed; the data: URL is produced
+      // from encodeURIComponent, so neither needs esc().
       const qr = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(await QRCode.toString(payload, { type: "svg", margin: 0, width: 110 }))}`;
-      return html(`<!doctype html><html><head><meta charset="utf-8"><title>${s.sample_code} label</title><style>body{font-family:Arial;margin:14px}.toolbar{margin-bottom:12px}.tube-label{width:38mm;height:18mm;border:1px solid #111;padding:1mm;display:grid;grid-template-columns:13mm 1fr;gap:1.5mm;align-items:center}.tube-label img{width:13mm;height:13mm}.tube-code{font-size:8px;font-weight:800}.tube-meta{font-size:6.5px}@media print{.toolbar{display:none}body{margin:0}}</style></head><body><div class="toolbar"><button onclick="window.print()">Print</button></div><div class="tube-label"><img src="${qr}"><div><div class="tube-code">${s.sample_code}</div><div class="tube-meta">${s.collection_site || ""}</div></div></div></body></html>`);
+      return html(`<!doctype html><html><head><meta charset="utf-8"><title>${esc(s.sample_code)} label</title><style>body{font-family:Arial;margin:14px}.toolbar{margin-bottom:12px}.tube-label{width:38mm;height:18mm;border:1px solid #111;padding:1mm;display:grid;grid-template-columns:13mm 1fr;gap:1.5mm;align-items:center}.tube-label img{width:13mm;height:13mm}.tube-code{font-size:8px;font-weight:800}.tube-meta{font-size:6.5px}@media print{.toolbar{display:none}body{margin:0}}</style></head><body><div class="toolbar"><button onclick="window.print()">Print</button></div><div class="tube-label"><img src="${qr}"><div><div class="tube-code">${esc(s.sample_code)}</div><div class="tube-meta">${esc(s.collection_site || "")}</div></div></div></body></html>`);
     }
     if (sub === "report" || sub === "report.pdf") {
       const results = (await env.DB.prepare("SELECT * FROM sample_results WHERE sample_id = ? ORDER BY entered_at").bind(s.id).all()).results || [];
+      // Escape every DB-sourced string before interpolating into the HTML
+      // report template — parameter/value/unit/limit/method/flag/analyst
+      // may all contain user-entered text.
       const rows = results.map(r =>
-        `<tr><td>${r.parameter}</td><td>${r.value} ${r.unit || ""}</td><td>${r.limit || ""}</td><td>${r.method || ""}</td><td>${r.flag || "OK"}</td><td>${r.analyst || ""}</td></tr>`
+        `<tr><td>${esc(r.parameter)}</td><td>${esc(r.value)} ${esc(r.unit || "")}</td><td>${esc(r.limit || "")}</td><td>${esc(r.method || "")}</td><td>${esc(r.flag || "OK")}</td><td>${esc(r.analyst || "")}</td></tr>`
       ).join("");
-      return html(`<!doctype html><html><head><meta charset="utf-8"><title>${s.sample_code} report</title><style>body{font-family:Arial;margin:28px}table{border-collapse:collapse;width:100%;margin-top:14px}td,th{border:1px solid #999;padding:8px}@media print{button{display:none}}</style></head><body><button onclick="window.print()">Print</button><h1>${APP_NAME} — ${s.sample_code}</h1><p><b>Project:</b> ${s.client_name}<br><b>Site:</b> ${s.collection_site}<br><b>Status:</b> ${s.status}</p><table><thead><tr><th>Parameter</th><th>Result</th><th>Limit</th><th>Method</th><th>Flag</th><th>Analyst</th></tr></thead><tbody>${rows || "<tr><td colspan=6>No results entered</td></tr>"}</tbody></table></body></html>`);
+      return html(`<!doctype html><html><head><meta charset="utf-8"><title>${esc(s.sample_code)} report</title><style>body{font-family:Arial;margin:28px}table{border-collapse:collapse;width:100%;margin-top:14px}td,th{border:1px solid #999;padding:8px}@media print{button{display:none}}</style></head><body><button onclick="window.print()">Print</button><h1>${APP_NAME} — ${esc(s.sample_code)}</h1><p><b>Project:</b> ${esc(s.client_name)}<br><b>Site:</b> ${esc(s.collection_site)}<br><b>Status:</b> ${esc(s.status)}</p><table><thead><tr><th>Parameter</th><th>Result</th><th>Limit</th><th>Method</th><th>Flag</th><th>Analyst</th></tr></thead><tbody>${rows || "<tr><td colspan=6>No results entered</td></tr>"}</tbody></table></body></html>`);
     }
     // Fall through — some other /samples/:id/sub route may handle it.
   }

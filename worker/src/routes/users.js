@@ -90,7 +90,10 @@ export async function tryUsers(request, env, ctx, { path, method, user }) {
     const target = await env.DB.prepare("SELECT * FROM users WHERE id = ?").bind(path[2]).first();
     if (!target) throw httpError("User not found", 404);
     if (target.id === user.id) throw httpError("You cannot delete your own login", 400);
-    await env.DB.prepare("UPDATE users SET active = 0, deleted_at = ?, deleted_by = ? WHERE id = ?").bind(now(), user.name, target.id).run();
+    // L5: wipe the stored password hash on soft-delete so an attacker who
+    // later reactivates the row cannot sign in as the deleted user. A real
+    // reactivation path has to go through password reset.
+    await env.DB.prepare("UPDATE users SET active = 0, password_hash = NULL, deleted_at = ?, deleted_by = ? WHERE id = ?").bind(now(), user.name, target.id).run();
     const updated = await env.DB.prepare("SELECT * FROM users WHERE id = ?").bind(target.id).first();
     return json(rowToPublicUser(updated));
   }

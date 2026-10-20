@@ -169,16 +169,28 @@ export async function addAudit(env, user, action, entity, entityId, detail) {
 }
 
 export async function nextSampleCode(env) {
+  // L1: codes are now PL-YYYY-NNNNNN-XXXX (year, monotonic index, 4-hex
+  // random suffix). The suffix defeats "guess the next sample code" from
+  // one leaked label, without losing the human-readable year + sequence.
+  // The DB index LIKE on the year prefix still works. Existing codes
+  // without the suffix remain valid — nothing parses the suffix for
+  // meaning, it is only there to break guessability.
   const year = new Date().getFullYear();
   const row = await env.DB.prepare(
     "SELECT sample_code FROM samples WHERE sample_code LIKE ? ORDER BY sample_code DESC LIMIT 1"
   ).bind(`PL-${year}-%`).first();
   let next = 1;
   if (row?.sample_code) {
-    const parsed = Number(row.sample_code.split("-").pop());
+    // The counter sits at position 2 (0:"PL", 1:year, 2:counter, 3?:suffix).
+    // Parsing by position tolerates both old (no suffix) and new (with suffix)
+    // formats; .pop() alone would read the random suffix on new codes.
+    const parts = String(row.sample_code).split("-");
+    const parsed = Number(parts[2]);
     if (parsed) next = parsed + 1;
   }
-  return `PL-${year}-${String(next).padStart(6, "0")}`;
+  const suffix = crypto.getRandomValues(new Uint16Array(1))[0]
+    .toString(16).padStart(4, "0").toUpperCase();
+  return `PL-${year}-${String(next).padStart(6, "0")}-${suffix}`;
 }
 
 export async function storageIsAvailable(env, id, currentId = "") {

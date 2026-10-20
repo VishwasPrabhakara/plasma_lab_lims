@@ -21,6 +21,13 @@ export async function tryResults(request, env, ctx, { path, method, user }) {
   const s = await env.DB.prepare("SELECT * FROM samples WHERE id = ?").bind(path[2]).first();
   if (!s) throw httpError("Sample not found", 404);
   if (!canWorkOnSample(user, s)) throw httpError("Not allowed for this sample", 403);
+  // C4: once a sample is Approved or Disposed, new result rows are refused.
+  // Admin must /lifecycle back to Active (or re-open path) before results
+  // can be re-entered — otherwise an analyst can quietly rewrite a signed
+  // record.
+  if (s.status === "Approved" || s.status === "Disposed") {
+    throw httpError("Sample is finalized — admin must re-open before new results are entered.", 409);
+  }
 
   const body = await bodyJson(request);
   let rows = [];

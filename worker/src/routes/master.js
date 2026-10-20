@@ -1,5 +1,10 @@
 // Master data CRUD: people, storage locations, tests. Admin-only.
 // Treats the three tables uniformly through a tiny whitelist.
+//
+// SECURITY INVARIANT: ${table} and the column names in PATCH_COLUMN_WHITELIST
+// are server-controlled identifiers. If a future contributor adds a
+// user-supplied value to either, this becomes SQL injection. Keep both
+// lists hard-coded in this file.
 
 import { json, bodyJson, now } from "../lib/http.js";
 import { requireRole } from "../lib/perms.js";

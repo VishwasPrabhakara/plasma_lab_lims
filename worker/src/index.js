@@ -70,9 +70,23 @@ export default {
         headers
       });
     } catch (error) {
+      // M4: an HTTPError carries a known status + a message safe for the
+      // caller (produced by httpError). Everything else is an uncaught
+      // runtime error whose message may leak stack traces, SQL fragments
+      // or secret-adjacent context, so we log it with a short correlation
+      // id and return a generic 500. The correlation id gives the admin
+      // reading the log a way to tie a user report back to the stack trace.
+      if (error.status) {
+        return json(
+          { error: error.message, errors: error.errors, approvalStatus: error.approvalStatus },
+          { status: error.status, headers: cors }
+        );
+      }
+      const correlationId = crypto.randomUUID().slice(0, 8);
+      console.error(`[fetch] uncaught error [cid=${correlationId}]:`, error);
       return json(
-        { error: error.message || "Worker error", errors: error.errors, approvalStatus: error.approvalStatus },
-        { status: error.status || 500, headers: cors }
+        { error: "Internal error", correlationId },
+        { status: 500, headers: cors }
       );
     }
   }
