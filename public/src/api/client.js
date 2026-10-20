@@ -22,9 +22,11 @@ export function apiUrl(path) {
 }
 
 // Resolve a file.url for use as an <img src> or <a href>. Data URLs pass
-// through unchanged. API paths get prefixed with API_BASE AND get the token
-// appended as ?token= because <img> and <a href> cannot send Authorization
-// headers. The Worker's auth middleware accepts ?token= as a fallback.
+// through unchanged. For an API path, callers that can `await` should use
+// fetchSignedMediaUrl() — it exchanges the bearer token for a 120-second
+// signed URL via POST /api/download-url (H1). mediaUrl() stays synchronous
+// for the few remaining call sites that cannot be made async; it still
+// returns a ?token= URL and the Worker stamps a deprecation header.
 export function mediaUrl(path) {
   if (!path) return "";
   if (path.startsWith("data:")) return path;
@@ -32,6 +34,28 @@ export function mediaUrl(path) {
   if (!state.token) return resolved;
   const joiner = resolved.includes("?") ? "&" : "?";
   return `${resolved}${joiner}token=${encodeURIComponent(state.token)}`;
+}
+
+// H1: exchange our bearer for a short-lived signed URL for `path`. The
+// backend ACL-checks the path before signing. 120s TTL. Prefer this over
+// mediaUrl() for new code; it does not leak the token into referrer or
+// browser history.
+export async function fetchSignedMediaUrl(path) {
+  if (!path) return "";
+  if (path.startsWith("data:")) return path;
+  // Only API paths need signing; outside paths pass through.
+  if (!path.startsWith("/api/")) return apiUrl(path);
+  const data = await api("/api/download-url", {
+    method: "POST",
+    body: JSON.stringify({ path })
+  });
+  return data?.url ? apiUrl(data.url) : apiUrl(path);
+}
+
+// Helper for the <a href>/<img src> pattern: fetch the signed URL and
+// assign it to the given element's attribute when it resolves.
+export function signedHref(path, el, attr = "href") {
+  fetchSignedMediaUrl(path).then(url => { if (url) el[attr] = url; }).catch(() => {});
 }
 
 export function api(path, options = {}) {

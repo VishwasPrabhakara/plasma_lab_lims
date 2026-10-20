@@ -3942,3 +3942,4 @@ window.addEventListener('unhandledrejection', evt => {
 
 // Debug handle intentionally removed: exposing the live API client + bearer token
 // on window makes it trivial for any extension to act as the signed-in user.
+
