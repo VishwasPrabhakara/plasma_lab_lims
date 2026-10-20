@@ -66,21 +66,49 @@ export async function tryUsers(request, env, ctx, { path, method, user }) {
     return json(rowToPublicUser(updated));
   }
 
-  /* ---------- Modify role/active ---------- */
+  /* ---------- Modify role/active ----------
+     Also invalidates every outstanding token for the target user by bumping
+     session_version — otherwise a demoted admin keeps their admin role in-
+     flight until their JWT expires (role is loaded from DB per request, but
+     the user keeps the UI they already have). Case-insensitive role match
+     catches the "Admin" / "ADMIN" input and still rejects anything else. */
   if (method === "PATCH") {
     requireRole(user, "admin");
     const target = await env.DB.prepare("SELECT * FROM users WHERE id = ?").bind(path[2]).first();
     if (!target) throw httpError("User not found", 404);
     const body = await bodyJson(request);
     const parts = [], args = [];
-    if (body.role && ["admin", "analyst"].includes(body.role)) { parts.push("role = ?"); args.push(body.role); }
-    if (typeof body.active === "boolean") { parts.push("active = ?"); args.push(body.active ? 1 : 0); }
-    if (parts.length) {
-      args.push(target.id);
-      await env.DB.prepare(`UPDATE users SET ${parts.join(", ")} WHERE id = ?`).bind(...args).run();
+    let roleChanged = false, activeChanged = false;
+    if (body.role != null) {
+      const normalizedRole = String(body.role).trim().toLowerCase();
+      if (!["admin", "analyst"].includes(normalizedRole)) {
+        throw httpError(`Invalid role "${body.role}" — must be admin or analyst.`, 400);
+      }
+      if (normalizedRole !== target.role) {
+        parts.push("role = ?"); args.push(normalizedRole); roleChanged = true;
+      }
     }
+    if (typeof body.active === "boolean") {
+      const nextActive = body.active ? 1 : 0;
+      if (nextActive !== (target.active ? 1 : 0)) {
+        parts.push("active = ?"); args.push(nextActive); activeChanged = true;
+      }
+    }
+    // Role or active change invalidates existing sessions for that user.
+    if (roleChanged || activeChanged) {
+      parts.push("session_version = COALESCE(session_version, 0) + 1");
+    }
+    if (!parts.length) {
+      // Nothing changed. Don't pretend it did — tell the caller plainly.
+      return json(rowToPublicUser(target));
+    }
+    args.push(target.id);
+    await env.DB.prepare(`UPDATE users SET ${parts.join(", ")} WHERE id = ?`).bind(...args).run();
     const updated = await env.DB.prepare("SELECT * FROM users WHERE id = ?").bind(target.id).first();
-    await addAudit(env, user, "Modified user", "user", target.id, `${target.name}: role=${updated.role}, active=${updated.active}`);
+    const changes = [];
+    if (roleChanged) changes.push(`role=${target.role}->${updated.role}`);
+    if (activeChanged) changes.push(`active=${target.active ? 1 : 0}->${updated.active}`);
+    await addAudit(env, user, "Modified user", "user", target.id, `${target.name}: ${changes.join(", ")}`);
     return json(rowToPublicUser(updated));
   }
 

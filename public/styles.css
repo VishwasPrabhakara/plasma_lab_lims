@@ -3078,3 +3078,105 @@ dialog.dialog { border: 1px solid var(--border); }
 /* -- Readiness strip: hairline tag, not pill -- */
 .ready-item { border-radius: 3px; border: 1px solid var(--border); padding: 3px 8px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 600; color: var(--text-muted); background: var(--surface-2); }
 .ready-item[data-done="true"] { color: var(--success); border-color: color-mix(in oklab, var(--success) 28%, var(--border)); background: color-mix(in oklab, var(--success) 7%, var(--surface-2)); }
+
+/* ============================================================
+   MOBILE DENSITY V2 — one-screen sample detail (<= 640px)
+   Goal: fit the status strip, identity, QR+actions, and readiness
+   on the first mobile viewport. Secondary groups (Custody timestamps,
+   Timeline dates) move behind the History tab, which is one tap away.
+   ============================================================ */
+@media (max-width: 640px) {
+
+  /* Sample header: inline, chip beside code, slimmer subline */
+  .sample-header {
+    display: flex; flex-direction: row; align-items: center;
+    gap: 8px; padding: 10px 12px; flex-wrap: wrap;
+  }
+  .sample-header > div:first-child { flex: 1 1 60%; min-width: 0; }
+  .sample-header h2 { font-size: 15px; line-height: 1.15; margin: 0; }
+  .sample-header .subline { font-size: 11px; line-height: 1.2; margin-top: 2px; }
+  .sample-header .chip { margin-left: auto; font-size: 10px; padding: 2px 8px; flex-shrink: 0; }
+
+  /* Lifecycle strip: horizontally scrollable, compact */
+  .lifecycle-strip {
+    overflow-x: auto; scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch;
+    padding: 8px 10px; gap: 4px;
+  }
+  .lifecycle-strip::-webkit-scrollbar { display: none; }
+  .lifecycle-strip .step { font-size: 10px; white-space: nowrap; scroll-snap-align: start; gap: 4px; }
+  .lifecycle-strip .step .dot { width: 9px; height: 9px; border-width: 1.5px; }
+  .lifecycle-strip .connector { min-width: 12px; max-width: 16px; }
+
+  /* Detail body: single column with compact photo strip at top */
+  .detail-body {
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .detail-right { display: flex; flex-direction: column; gap: 8px; }
+  /* Compact photo: short strip, not a full card */
+  .sample-photo-card { max-width: none; padding: 0; }
+  .sample-photo-card img, .sample-photo-card .photo-placeholder {
+    max-height: 110px; height: 110px; object-fit: cover; width: 100%;
+    border-radius: var(--r-sm);
+  }
+  .sample-photo-caption { display: none; }
+  .sample-photo-actions { padding: 6px 0; }
+  .sample-photo-actions .btn { font-size: 11px; padding: 4px 8px; min-height: 32px; }
+
+  /* Stat tiles: single horizontal scroll row, no vertical stacking */
+  .detail-stat-strip {
+    display: flex !important;
+    grid-template-columns: none;
+    overflow-x: auto; scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch;
+    gap: 6px; margin-bottom: 2px; padding-bottom: 4px;
+  }
+  .detail-stat-strip::-webkit-scrollbar { display: none; }
+  .stat-tile {
+    padding: 6px 10px;
+    min-width: 118px; flex: 0 0 auto;
+    scroll-snap-align: start;
+  }
+  .stat-tile-label { font-size: 9px; margin-bottom: 2px; letter-spacing: 0.04em; }
+  .stat-tile-value { font-size: 12px; line-height: 1.2; font-weight: 600; }
+
+  /* Facts: Identity-only on mobile (Custody dates + Timeline live in History tab) */
+  .facts-grouped { grid-template-columns: 1fr; gap: 0; }
+  .facts-grouped .facts-group { padding: 8px 10px; border-radius: var(--r-sm); }
+  .facts-grouped .facts-group-head { font-size: 10px; margin-bottom: 4px; }
+  .facts-grouped .facts-group .facts { gap: 2px; }
+  .facts-grouped .fact { padding-bottom: 2px; }
+  .facts-grouped .fact-label { font-size: 10px; }
+  .facts-grouped .fact-value { font-size: 12px; line-height: 1.25; }
+  /* Keep Identity (1st group); hide Custody (2nd) + Timeline (3rd) — those
+     already exist in the History tab one tap away, no data lost. */
+  .facts-grouped .facts-group:nth-child(2),
+  .facts-grouped .facts-group:nth-child(3) { display: none; }
+
+  /* Readiness: compact chip row */
+  .readiness { padding: 6px 10px; gap: 4px; }
+  .readiness .ready-item { font-size: 10px; padding: 2px 8px; }
+
+  /* QR panel: compact — small QR, inline caption, tight actions */
+  .qr-panel { padding: 8px; gap: 8px; }
+  .qr-panel-main { grid-template-columns: 72px 1fr; gap: 8px; align-items: center; }
+  .qr-panel img.qr-image { width: 72px; height: 72px; }
+  .qr-panel .qr-caption-label, .qr-panel .qr-caption-hint { font-size: 10px; }
+  .qr-panel .qr-caption-code { font-size: 11px; }
+  .qr-panel-actions { gap: 4px; flex-wrap: nowrap; }
+  .qr-panel-actions .btn { min-width: 0; flex: 1 1 0; font-size: 10px; padding: 6px 4px; min-height: 34px; }
+  .qr-panel-actions .btn .btn-label { font-size: 10px; }
+
+  /* Shrink the detail-card wrapper so it uses screen edges tightly */
+  .ledger-layout > div .card { margin-bottom: 8px; }
+  .ledger-layout > div .card .card-body { padding: 8px 10px; gap: 8px; }
+
+  /* Tabs row: scrollable horizontally with current tab emphasised */
+  .tabs {
+    overflow-x: auto; scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch;
+    gap: 2px; padding-bottom: 4px;
+  }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tabs .tab { font-size: 12px; padding: 6px 10px; white-space: nowrap; scroll-snap-align: start; }
+}
