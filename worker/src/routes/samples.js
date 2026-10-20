@@ -361,11 +361,14 @@ export async function trySamples(request, env, ctx, { url, path, method, user })
 /* ---------- helpers ---------- */
 
 function validateSampleBody(body) {
+  // Use httpError (400) so a malformed POST returns a proper validation error
+  // instead of bubbling to the 500 handler and burning a correlation id on
+  // what is just bad input — and so the client gets a readable message.
   if (!body.clientName || !body.collectionSite || !body.sourceType || !body.collector) {
-    throw new Error("Project/client, site, source type, and brought by are required");
+    throw httpError("Project/client, site, source type, and brought by are required", 400);
   }
   if (!Array.isArray(body.requestedTests) || body.requestedTests.length === 0) {
-    throw new Error("Choose at least one requested test");
+    throw httpError("Choose at least one requested test", 400);
   }
 }
 

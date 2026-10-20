@@ -33,7 +33,19 @@ export async function auth(request, env) {
   const token = authHeader || queryToken;
   if (!token) throw httpError("Login required", 401);
 
-  const payload = await verifyJwt(token, env.JWT_SECRET);
+  // Any failure in verifyJwt (bad signature, alg confusion, truncated token,
+  // expired, malformed base64) must respond 401 — not bubble to the generic
+  // 500 handler, which would both leak that the token was weird AND waste a
+  // correlation id on a hostile request.
+  let payload;
+  try {
+    payload = await verifyJwt(token, env.JWT_SECRET);
+  } catch {
+    throw httpError("Invalid or expired session", 401);
+  }
+  if (!payload || typeof payload.id !== "string") {
+    throw httpError("Invalid session payload", 401);
+  }
   const user = await env.DB.prepare("SELECT * FROM users WHERE id = ? AND active = 1").bind(payload.id).first();
   if (!user) throw httpError("Invalid user", 401);
 
