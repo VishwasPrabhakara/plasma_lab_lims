@@ -448,7 +448,12 @@ function renderDashboard() {
   const storageCounts = (state.storageLocations || []).map(loc => ({
     loc,
     count: s.filter(x => x.storageLocationId === loc.id && x.status !== 'Disposed').length
-  })).filter(x => x.count > 0 || state.storageLocations.length <= 6);
+  }))
+    // Hide full locations: this widget is a "where can I put the next bottle"
+    // view, so a shelf with no capacity left is noise. Full locations are still
+    // visible in the registry's storage filter.
+    .filter(({ loc }) => !loc.isFull)
+    .filter(x => x.count > 0 || state.storageLocations.length <= 6);
   const unstoredCount = s.filter(x => !x.storageLocationId && x.status !== 'Disposed').length;
   if (storageCounts.length || unstoredCount) {
     const storageCard = h('div', { class: 'card' },
@@ -511,7 +516,10 @@ function renderDashboard() {
     root.appendChild(storageCard);
   }
 
-  const list = h('div', { class: 'card' });
+  // "Recent samples" is a desktop-only panel — on mobile the Samples tab in the
+  // bottom nav is a tap away and the dashboard is for at-a-glance signals
+  // (metrics + storage) only.
+  const list = h('div', { class: 'card dashboard-recent-samples' });
   list.appendChild(h('div', { class: 'card-header' },
     h('h3', { class: 'card-title' }, 'Recent samples'),
     h('button', { class: 'btn btn-sm', type: 'button', onclick: () => switchView('samples') }, h('span',{class:'btn-label'},'Open registry'))
