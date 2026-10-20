@@ -3264,3 +3264,61 @@ dialog.dialog { border: 1px solid var(--border); }
   /* Role / status selects: cap width so the row doesn't force scroll */
   .data-table .select { min-width: 0; width: auto; max-width: 180px; }
 }
+
+/* ============================================================
+   COLLAPSIBLE FILTER CARD — Samples page
+   On mobile the filter form is collapsed by default (recovers ~half a
+   viewport). Users tap the "Filters" summary row to expand; a chevron
+   rotates on open. On desktop the <details> is rendered open.
+   ============================================================ */
+.filters-collapse { border: 0; }
+.filters-collapse > summary.filters-summary {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: 10px 16px;
+  border-top: 1px solid var(--border);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-m);
+  color: var(--text-muted);
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.filters-collapse > summary.filters-summary::-webkit-details-marker { display: none; }
+.filters-collapse > summary.filters-summary::marker { content: ''; }
+.filters-summary-label { font-weight: var(--fw-b); color: var(--text); }
+.filters-summary-count {
+  display: inline-flex;
+  align-items: center; justify-content: center;
+  min-width: 20px; height: 20px;
+  padding: 0 6px;
+  border-radius: var(--r-full);
+  background: var(--accent); color: #fff;
+  font-size: 11px; font-weight: var(--fw-b);
+}
+.filters-summary-chevron {
+  margin-left: auto;
+  width: 10px; height: 10px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(45deg);
+  transition: transform 0.18s ease;
+  margin-top: -4px;
+}
+.filters-collapse[open] > summary.filters-summary .filters-summary-chevron {
+  transform: rotate(-135deg);
+  margin-top: 4px;
+}
+.filters-collapse > .card-body {
+  padding-top: 10px;
+}
+
+/* On desktop, keep the collapse always open and hide the summary — the
+   filter card goes back to being an always-visible band. */
+@media (min-width: 821px) {
+  .filters-collapse > summary.filters-summary { display: none; }
+  .filters-collapse[open] > .card-body,
+  .filters-collapse > .card-body { display: block; }
+}

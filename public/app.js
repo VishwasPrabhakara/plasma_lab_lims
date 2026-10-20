@@ -735,6 +735,43 @@ function sampleFiltersEl(count) {
   const projects = uniqueValues(state.samples.map(x => x.clientName));
   const collectors = uniqueValues(state.samples.map(x => x.collector));
   const analysts = uniqueValues(state.samples.map(x => x.assignedTo));
+  // Mobile default: collapsed to recover vertical space. Desktop: open.
+  // After the first interaction, we respect state.sampleFiltersOpen so the
+  // user's choice sticks across renders. activeCount lets the summary flash
+  // the fact that filters are applied even when collapsed.
+  const activeCount = [f.q, f.status, f.from, f.to, f.project, f.collector, f.analyst].filter(Boolean).length;
+  const isDesktop = (typeof window !== 'undefined') && window.matchMedia && window.matchMedia('(min-width: 821px)').matches;
+  if (state.sampleFiltersOpen == null) state.sampleFiltersOpen = isDesktop;
+  // Build filter body separately so we can wrap it in <details> cleanly.
+  const filtersBody = h('div', { class: 'card-body' },
+    h('div', { class: 'filters-bar' },
+      fieldEl({ id: 'fSearch', label: 'Search', input: h('input', { class: 'input', id: 'fSearch', value: f.q, placeholder: 'Code, site, project, collector', oninput: e => {
+        f.q = e.target.value;
+        state.samplesShown = 0; // reset paging on new search
+        clearTimeout(state._searchTimer);
+        state._searchTimer = setTimeout(() => render(), 200);
+      } }) }),
+      fieldEl({ id: 'fStatus', label: 'Status', input: selectEl('fStatus', ['', ...STATUS_OPTIONS], f.status, v => { f.status = v; render(); }, 'All statuses') }),
+      h('div', { class: 'field' },
+        h('label', { class: 'field-label', for: 'fFrom' }, 'From date'),
+        h('input', { class: 'input', type: 'date', id: 'fFrom', value: f.from, onchange: e => { f.from = e.target.value; render(); } })
+      ),
+      h('div', { class: 'field' },
+        h('label', { class: 'field-label', for: 'fTo' }, 'To date'),
+        h('input', { class: 'input', type: 'date', id: 'fTo', value: f.to, onchange: e => { f.to = e.target.value; render(); } })
+      ),
+      h('div', null,
+        h('button', { class: 'btn', type: 'button', onclick: () => showMoreFilters(projects, collectors, analysts, f) }, h('span',{class:'btn-label'},'More filters'))
+      )
+    )
+  );
+  const detailsAttrs = { class: 'filters-collapse', open: state.sampleFiltersOpen ? true : null,
+    ontoggle: e => { state.sampleFiltersOpen = e.target.open; } };
+  const summary = h('summary', { class: 'filters-summary' },
+    h('span', { class: 'filters-summary-label' }, 'Filters'),
+    activeCount ? h('span', { class: 'filters-summary-count' }, String(activeCount)) : null,
+    h('span', { class: 'filters-summary-chevron', 'aria-hidden': 'true' }, '')
+  );
   return h('div', { class: 'card' },
     h('div', { class: 'card-header' },
       h('h3', { class: 'card-title' }, `${count} matching · ${state.samples.length} total`),
@@ -747,28 +784,7 @@ function sampleFiltersEl(count) {
         h('button', { class: 'btn btn-sm', type: 'button', onclick: resetFilters }, h('span',{class:'btn-label'},'Reset filters'))
       )
     ),
-    h('div', { class: 'card-body' },
-      h('div', { class: 'filters-bar' },
-        fieldEl({ id: 'fSearch', label: 'Search', input: h('input', { class: 'input', id: 'fSearch', value: f.q, placeholder: 'Code, site, project, collector', oninput: e => {
-          f.q = e.target.value;
-          state.samplesShown = 0; // reset paging on new search
-          clearTimeout(state._searchTimer);
-          state._searchTimer = setTimeout(() => render(), 200);
-        } }) }),
-        fieldEl({ id: 'fStatus', label: 'Status', input: selectEl('fStatus', ['', ...STATUS_OPTIONS], f.status, v => { f.status = v; render(); }, 'All statuses') }),
-        h('div', { class: 'field' },
-          h('label', { class: 'field-label', for: 'fFrom' }, 'From date'),
-          h('input', { class: 'input', type: 'date', id: 'fFrom', value: f.from, onchange: e => { f.from = e.target.value; render(); } })
-        ),
-        h('div', { class: 'field' },
-          h('label', { class: 'field-label', for: 'fTo' }, 'To date'),
-          h('input', { class: 'input', type: 'date', id: 'fTo', value: f.to, onchange: e => { f.to = e.target.value; render(); } })
-        ),
-        h('div', null,
-          h('button', { class: 'btn', type: 'button', onclick: () => showMoreFilters(projects, collectors, analysts, f) }, h('span',{class:'btn-label'},'More filters'))
-        )
-      )
-    )
+    h('details', detailsAttrs, summary, filtersBody)
   );
 }
 function showMoreFilters(projects, collectors, analysts, f) {
