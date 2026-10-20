@@ -426,7 +426,7 @@
             <div class="muted text-xs" style="margin-top:4px;">When the collector is going out to sample. Actual date + location fill in when the photo is uploaded.</div>
           </div>
           <div class="field"><label class="field-label" for="fStorage">Initial storage</label><select class="select" id="fStorage" name="storageLocationId"></select></div>
-          <div class="field"><label class="field-label" for="fAnalyst">Analysts (pick 2)</label><div id="fAnalystWrap"></div><input type="hidden" id="fAnalyst" name="assignedTo"></div>
+          <div class="field"><div class="field-label" id="fAnalystLabel">Analysts (pick 2)</div><div id="fAnalystWrap" role="group" aria-labelledby="fAnalystLabel"></div></div>
           <div class="field"><label class="field-label" for="fDue">Target completion</label><input class="input" id="fDue" name="dueAt" type="datetime-local"></div>
           <div class="field"><label class="field-label" for="fPhoto">
               Sample photo (auto-captures GPS + timestamp)
@@ -682,6 +682,6 @@
     })();
   </script>
   <script src="config.js"></script>
-  <script type="module" src="app.js?v=refactor22"></script>
+  <script type="module" src="app.js?v=refactor23"></script>
 </body>
 </html>

@@ -1316,18 +1316,37 @@ function overviewTab(sample) {
   return wrap;
 }
 function fieldWith(label, input) {
-  // Accessibility: wire label ↔ input via `for=`. If the input already has an
-  // id use it; otherwise mint a stable id so screen readers announce the field
-  // name. Also tag the input with aria-label as a belt-and-suspenders fallback
-  // for the case where `input` is a composite element (hidden input + picker).
-  const existingId = input?.id;
-  const genId = existingId || ('f-' + Math.random().toString(36).slice(2, 10));
-  if (!existingId && input && input.setAttribute) input.setAttribute('id', genId);
-  if (input && input.setAttribute && !input.hasAttribute('aria-label')) {
-    input.setAttribute('aria-label', typeof label === 'string' ? label : '');
+  // Accessibility: for a native form control (input/select/textarea/button/
+  // output/meter/progress) wire a real <label for=…>. For a composite element
+  // (a wrapper <div> that holds its own picker + hidden field) do NOT create
+  // a <label for=…> — Chrome's auditor flags it as "Incorrect use of
+  // <label for=FORM_ELEMENT>" because the target isn't a form control.
+  // Instead expose the composite as role=group with aria-labelledby so screen
+  // readers still announce its name.
+  const nativeFormTags = ['INPUT','SELECT','TEXTAREA','BUTTON','OUTPUT','METER','PROGRESS'];
+  const isNative = input && input.tagName && nativeFormTags.includes(input.tagName);
+  if (isNative) {
+    const existingId = input.id;
+    const genId = existingId || ('f-' + Math.random().toString(36).slice(2, 10));
+    if (!existingId) input.setAttribute('id', genId);
+    if (!input.hasAttribute('aria-label')) {
+      input.setAttribute('aria-label', typeof label === 'string' ? label : '');
+    }
+    return h('div', { class: 'field' },
+      h('label', { class: 'field-label', for: genId }, label),
+      input
+    );
+  }
+  // Composite element: wrap with role=group + aria-labelledby.
+  const groupId = 'g-' + Math.random().toString(36).slice(2, 10);
+  if (input && input.setAttribute) {
+    if (!input.hasAttribute('role')) input.setAttribute('role', 'group');
+    if (!input.hasAttribute('aria-labelledby') && !input.hasAttribute('aria-label')) {
+      input.setAttribute('aria-labelledby', groupId);
+    }
   }
   return h('div', { class: 'field' },
-    h('label', { class: 'field-label', for: genId }, label),
+    h('div', { class: 'field-label', id: groupId }, label),
     input
   );
 }
@@ -1363,7 +1382,7 @@ function analystMultiPicker(initial, id) {
     sel.disabled = atMax;
     if (!atMax) allAnalystNames().filter(n => !picked.includes(n)).forEach(n => sel.appendChild(h('option', { value: n }, n)));
   };
-  const sel = h('select', { class: 'select analyst-picker-add', 'aria-label': 'Add analyst to this sample' });
+  const sel = h('select', { class: 'select analyst-picker-add', name: 'addAnalyst', 'aria-label': 'Add analyst to this sample' });
   sel.onchange = () => {
     if (!sel.value) return;
     const picked = names();
@@ -2906,10 +2925,13 @@ function renderUsers() {
       h('div', { class: 'card-header' }, h('h3', { class: 'card-title' }, 'Create user')),
       h('div', { class: 'card-body' },
         h('div', { class: 'form-error-banner hidden', 'data-form-error': true }),
-        h('div', { class: 'field' }, h('label', { class: 'field-label', for: 'uName' }, 'Name'), h('input', { class: 'input', id: 'uName', name: 'name', required: true })),
-        h('div', { class: 'field' }, h('label', { class: 'field-label', for: 'uEmail' }, 'Email'), h('input', { class: 'input', id: 'uEmail', name: 'email', type: 'email', required: true })),
-        h('div', { class: 'field' }, h('label', { class: 'field-label', for: 'uPhone' }, 'Phone'), h('input', { class: 'input', id: 'uPhone', name: 'phone', type: 'tel', required: true })),
-        h('div', { class: 'field' }, h('label', { class: 'field-label', for: 'uPassword' }, 'Initial password'), h('input', { class: 'input', id: 'uPassword', name: 'password', type: 'password', required: true, minlength: '6' })),
+        // Admin creating ANOTHER user — not their own account. autocomplete="off"
+        // on identity fields and "new-password" on the password keep the admin's
+        // own browser-stored creds from auto-filling.
+        h('div', { class: 'field' }, h('label', { class: 'field-label', for: 'uName' }, 'Name'), h('input', { class: 'input', id: 'uName', name: 'name', autocomplete: 'off', required: true })),
+        h('div', { class: 'field' }, h('label', { class: 'field-label', for: 'uEmail' }, 'Email'), h('input', { class: 'input', id: 'uEmail', name: 'email', type: 'email', autocomplete: 'off', required: true })),
+        h('div', { class: 'field' }, h('label', { class: 'field-label', for: 'uPhone' }, 'Phone'), h('input', { class: 'input', id: 'uPhone', name: 'phone', type: 'tel', autocomplete: 'off', required: true })),
+        h('div', { class: 'field' }, h('label', { class: 'field-label', for: 'uPassword' }, 'Initial password'), h('input', { class: 'input', id: 'uPassword', name: 'password', type: 'password', autocomplete: 'new-password', required: true, minlength: '10' })),
         h('div', { class: 'field' }, h('label', { class: 'field-label', for: 'uRole' }, 'Role'), (() => {
           const s = h('select', { class: 'select', id: 'uRole', name: 'role' });
           s.appendChild(h('option', { value: 'admin' }, 'Admin / Manager'));
@@ -2953,7 +2975,7 @@ function renderUsers() {
   });
 }
 function pendingUserRow(u) {
-  const roleSel = h('select', { class: 'select' });
+  const roleSel = h('select', { class: 'select', 'aria-label': 'Approve as role', name: 'approveRole' });
   roleSel.appendChild(h('option', { value: 'analyst', selected: true }, 'Analyst'));
   roleSel.appendChild(h('option', { value: 'admin' }, 'Admin / Manager'));
   const approveBtn = h('button', { class: 'btn btn-primary btn-sm', type: 'button' }, h('span',{class:'btn-label'},'✓ Approve'));
@@ -2982,11 +3004,11 @@ function pendingUserRow(u) {
   );
 }
 function userRow(u) {
-  const roleSel = h('select', { class: 'select', style: { minWidth: '160px' }, 'data-user-role': u.id },
+  const roleSel = h('select', { class: 'select', style: { minWidth: '160px' }, 'data-user-role': u.id, 'aria-label': 'Role for ' + (u.name || u.email), name: 'role-' + u.id },
     h('option', { value: 'admin',   selected: u.role === 'admin' ? true : null }, 'Admin / Manager'),
     h('option', { value: 'analyst', selected: u.role === 'analyst' ? true : null }, 'Analyst')
   );
-  const statusSel = h('select', { class: 'select', style: { minWidth: '120px' }, 'data-user-active': u.id },
+  const statusSel = h('select', { class: 'select', style: { minWidth: '120px' }, 'data-user-active': u.id, 'aria-label': 'Status for ' + (u.name || u.email), name: 'status-' + u.id },
     h('option', { value: 'true', selected: u.active ? true : null }, 'Active'),
     h('option', { value: 'false', selected: !u.active ? true : null }, 'Inactive')
   );
@@ -3703,7 +3725,7 @@ function renderBulkRowwiseList() {
         wrap.appendChild(chip);
       });
       if (picked.length < 2) {
-        const sel = h('select', { class: 'select select-sm' });
+        const sel = h('select', { class: 'select select-sm', name: 'addAnalyst', 'aria-label': 'Add analyst' });
         sel.appendChild(h('option', { value: '' }, '+ Add'));
         names.filter(n => !picked.includes(n)).forEach(n => sel.appendChild(h('option', { value: n }, n)));
         sel.onchange = () => { if (!sel.value) return; picked.push(sel.value); r.assignedTo = picked.join(', '); render(); };
@@ -3723,7 +3745,7 @@ function renderBulkRowwiseList() {
             r.requestedTests = r.requestedTests.filter(x => x !== t); render();
           } }, '×')));
       });
-      const sel = h('select', { class: 'select select-sm' });
+      const sel = h('select', { class: 'select select-sm', name: 'addTest', 'aria-label': 'Add requested test' });
       sel.appendChild(h('option', { value: '' }, '+ Add test'));
       options.filter(o => !(r.requestedTests || []).includes(o)).forEach(o => sel.appendChild(h('option', { value: o }, o)));
       sel.onchange = () => { if (!sel.value) return; r.requestedTests = [...(r.requestedTests || []), sel.value]; render(); };
