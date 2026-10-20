@@ -1036,7 +1036,8 @@ function samplePhotoCard(sample) {
 
   const input = h('input', {
     type: 'file', accept: 'image/*', capture: 'environment',
-    style: { display: 'none' }, id: 'samplePhotoPicker-' + sample.id
+    style: { display: 'none' }, id: 'samplePhotoPicker-' + sample.id,
+    'aria-label': 'Choose a sample photo (opens the camera on mobile)'
   });
   const status = h('div', { class: 'muted text-xs', style: { marginTop: '8px' } }, '');
 
@@ -1291,7 +1292,20 @@ function overviewTab(sample) {
   return wrap;
 }
 function fieldWith(label, input) {
-  return h('div', { class: 'field' }, h('label', { class: 'field-label' }, label), input);
+  // Accessibility: wire label ↔ input via `for=`. If the input already has an
+  // id use it; otherwise mint a stable id so screen readers announce the field
+  // name. Also tag the input with aria-label as a belt-and-suspenders fallback
+  // for the case where `input` is a composite element (hidden input + picker).
+  const existingId = input?.id;
+  const genId = existingId || ('f-' + Math.random().toString(36).slice(2, 10));
+  if (!existingId && input && input.setAttribute) input.setAttribute('id', genId);
+  if (input && input.setAttribute && !input.hasAttribute('aria-label')) {
+    input.setAttribute('aria-label', typeof label === 'string' ? label : '');
+  }
+  return h('div', { class: 'field' },
+    h('label', { class: 'field-label', for: genId }, label),
+    input
+  );
 }
 function selectFor(options, value, id) {
   const sel = h('select', { class: 'select', id });
@@ -1325,7 +1339,7 @@ function analystMultiPicker(initial, id) {
     sel.disabled = atMax;
     if (!atMax) allAnalystNames().filter(n => !picked.includes(n)).forEach(n => sel.appendChild(h('option', { value: n }, n)));
   };
-  const sel = h('select', { class: 'select analyst-picker-add' });
+  const sel = h('select', { class: 'select analyst-picker-add', 'aria-label': 'Add analyst to this sample' });
   sel.onchange = () => {
     if (!sel.value) return;
     const picked = names();
